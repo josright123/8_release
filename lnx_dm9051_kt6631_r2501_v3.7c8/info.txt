@@ -1,0 +1,153 @@
+PART1:
+(1)
+In dm9051.h:
+
+/* This version can support for Linux kernel 5.10, 5.15, 6.1 and 6.6
+ * Please select either one, by define your KERNEL_BUILD_CONF.
+ * Bellow is an example for Linux 6.6
+ */
+
+#define DM9051_KERNEL_5_10		5
+#define DM9051_KERNEL_5_15		6
+#define DM9051_KERNEL_6_1		7
+#define DM9051_KERNEL_6_6		8
+
+ (1-1) 
+ Process RXB 
+ 
+ * Make rxb check exactly 
+ * Introduce the usage of SCAN_BH(dw)
+
+ (1-2) 
+ Process TX end check 
+ 
+ * Make TX end check exactly 
+ * Longer .tx_timeout_us make it adapt to lower speed networking
+
+(2) rpi5
+In dm9051.c
+
+#define KERNEL_BUILD_CONF			DM9051_KERNEL_6_6 //(tested in rpi5)
+
+ (2-1)
+ Process TX / RX: 
+ 
+ * work around to dm9051_write_mem/dm9051_read_mem for solve below issue:
+   "dw_axi_dmac_platform 1f0018000.dma: invalid buffer alignment.... "
+ * run with BURST_ALIGNMENT_CONF, while tx_blk, rx_blk are 32, 64.
+
+(3) rpi4
+In dm9051.c
+
+#define KERNEL_BUILD_CONF        DM9051_KERNEL_6_1 //(tested in rpi4, well performance)
+
+* run with BURST_FULL_CONF.
+* run with FORCE_SILENCE_RXB, FORCE_SILENCE_TXEC.
+
+(4) Using the configuration structure data
+
+   Type structure definition: 
+
+   struct driver_config {
+       struct {
+         int force_monitor_rxb;
+         int force_monitor_txec;
+       } dm9051mm;
+       struct {
+         int burst_mode;
+         size_t tx_blk;	//alignment, 'software_build_kernel_conf'
+         size_t rx_blk;
+      } align;
+       struct {
+         u64 tx_timeout_us;	//escape, 'software_build_kernel_conf'
+      } escape;
+   };
+   
+   ex1:
+   = {
+      { FORCE_SILENCE_RXB, FORCE_SILENCE_TXEC},
+      { BURST_ALIGNMENT_CONF, 32, 64},
+      { 2100},
+   }
+
+   ex2:
+   = {
+      { FORCE_MONITOR_RXB, FORCE_MONITOR_TXEC},
+      { BURST_FULL_CONF, 0, 0},
+      { 2100},
+   }
+
+   ex3:
+   = {
+      { FORCE_SILENCE_RXB, FORCE_SILENCE_TXEC},
+      { BURST_FULL_CONF, 0, 0},
+      { 2100},
+   }
+   
+(5) Memo: Further support configuration structure data
+
+This memo item is just a memo, Not include in this version. 
+Intend to provide several pre-define information,
+Such as the supported customer's platform info, 'verify_info'
+fields which were made to setup the history track data gradually.
+
+//Memo: Example
+//typedef struct {
+//    char *driver_name;
+//    char *driver_release_version_candidate;
+//    int build_conf;	//build,
+//    int os64; //aarch, 
+//    struct {
+//		char *kernel_ver_brief;
+//		char *verify_info;
+//    } dm9051note;
+//	...
+//} driver_cfg_t;
+//
+//static const driver_cfg_t kernel_conf_6_1 = {
+//    "lnx_dm9051 kt6631_driver",
+//    "lnx_dm9051_kt6631_r2501_v3.6",
+//    DM9051_KERNEL_6_1,
+//    AARCH_OS_64,
+//    { "KT6.1.0", "test in rpi4 bcm2711"},
+//};
+//
+//static const driver_cfg_t kernel_conf_6_6_31 = {
+//    "lnx_dm9051 kt6631_driver",
+//    "lnx_dm9051_kt6631_r2501_v3.6", //previous was "r2501.v3.5e",
+//    DM9051_KERNEL_6_6,
+//    AARCH_OS_64,
+//    { "KT6.6.31", "test in rpi5 bcm2712"},
+//};
+
+PART2:
+(6) 
+Checksum offload support
+  .ndo_set_features (struct net_device_ops)
+
+(7)
+Enhance Statistics Info.
+  .get_ethtool_stats
+  .get_sset_count
+  .get_strings 
+  .ndo_get_stats (struct net_device_ops)
+
+(8)
+Enhance flow-control 
+- REG3DH.D[3:0] PAUSE_MAX = 0xF (default 0x1)
+
+(9)
+Enhance Random MAC address
+- Provide 00:60:6e:xx:xx;xx RANDOM
+
+(10)
+TX continue support
+- Program control
+
+(11)
+Encrypt mode support
+- Program control
+
+(12)
+RX Schedule delay configurable
+- Program control
