@@ -193,7 +193,7 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 #define BURST_FULL_CONF			1
 
 #define SCHED_MAXNUM			5
-#define TARGET_MAXNUM			1
+#define TARGET_RANG_MAXNUM		1
 
 #define DRVNAME_9051	"dm9051"
 

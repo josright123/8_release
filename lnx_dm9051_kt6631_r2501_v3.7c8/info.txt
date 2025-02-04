@@ -1,3 +1,15 @@
+Sunmary:
+
+ * A: Tested in DM9051_KERNEL_5_10/ DM9051_KERNEL_5_15/ DM9051_KERNEL_6_1/ DM9051_KERNEL_6_6
+ * B: Longer .tx_timeout_us make it adapt to 10Mbps lower speed networking
+ * C: Device= rpi4, run with FORCE_SILENCE_RXB, FORCE_SILENCE_TXEC, [FORCE_TX_CONTI_ON], DEFAULT_CHECKSUM_OFF, BURST_FULL_CONF/best_speed, 
+ * D: Device= rpi4, run with FORCE_SILENCE_RXB, FORCE_SILENCE_TXEC, [FORCE_TX_CONTI_ON], DEFAULT_CHECKSUM_ON, BURST_FULL_CONF/best_speed, (FORCE_BUS_ENCPT_OFF)(todo)
+ * E
+ * F
+ * G
+ * H
+ * I
+
 PART1:
 (1)
 In dm9051.h:
@@ -22,7 +34,7 @@ In dm9051.h:
  Process TX end check 
  
  * Make TX end check exactly 
- * Longer .tx_timeout_us make it adapt to lower speed networking
+ * Longer .tx_timeout_us make it adapt to 10Mbps lower speed networking
 
 (2) rpi5
 In dm9051.c

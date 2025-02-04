@@ -56,9 +56,9 @@ struct driver_config {
 	{ FORCE_SILENCE_RXB, FORCE_SILENCE_TXEC},
 	{ FORCE_BUS_ENCPT_FAB_ON, FORCE_BUS_ENCPT_NUL_KEY,
 	  FORCE_TX_CONTI_ON, DEFAULT_CHECKSUM_OFF},
-	{ BURST_ALIGNMENT_CONF, 32, 64},
+	{ BURST_FULL_CONF, 0, 0}, //alternate slower { BURST_ALIGNMENT_CONF, 32, 64},
 	{ 2100},
-	{ SCHED_MAXNUM, TARGET_MAXNUM, {0,1,0,0,1}},
+	{ SCHED_MAXNUM, TARGET_RANG_MAXNUM, {0,1,0,0,1}},
 };
 
 static const struct driver_config *kernel_conf = &confdata;
@@ -283,6 +283,21 @@ static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void 
 	return ret;
 }
 
+static int dm9051_tx_write(struct board_info *db, u8 *buff, unsigned int crlen)
+{
+	if (confdata.dm9051_new.encpt_setted_key &&
+		confdata.dm9051_new.encpt_mode != FORCE_BUS_ENCPT_OFF) {
+		/* crypt.tx */
+		unsigned int j; //, _crlen = len;
+		for (j = 0; j < crlen; j++) {
+			buff[j] ^= confdata.dm9051_new.encpt_setted_key;
+		}
+	}
+
+	/* send.tx */
+	return dm9051_write_mem(db, DM_SPI_MWCMD, buff, crlen); //'!wb'
+}
+
 static int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 			   size_t len)
 {
@@ -322,6 +337,18 @@ static int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 	return ret;
 }
 
+/* transmit a packet,
+ * return value,
+ *   0 - succeed
+ *  -ETIMEDOUT - timeout error
+ */
+void dm9051_create_tx_head(u8 *th, unsigned int len) {
+	th[0] = len  & 0xff;; //;;todo
+	th[1] = (len >> 8) & 0xff;
+	th[2] = 0x00;
+	th[3] = 0x80;
+}
+
 /* Get space of 3b max
  */
 static unsigned int get_tx_free(struct board_info *db) {
@@ -337,24 +364,6 @@ static unsigned int get_tx_free(struct board_info *db) {
 	}
 		
     return (rb & 0xff) * 64;
-}
-
-static int tx_free_enough(struct board_info *db, unsigned int tx_tot) {
-    static unsigned int tx_space_max = 0;
-    static unsigned int tx_space_min = 3072;
-    
-    unsigned int tx_free = get_tx_free(db);
-    if (tx_free > tx_space_max) {
-	printk("TX. on current, tx-maxspace from %d enlarge to %d [TCM]\n", tx_space_max, tx_free); //"%d, REG 3BH= %03x, ", tx_in, rb
-	tx_space_max = tx_free; }
-    if (tx_free < tx_space_min) { 
-	printk("TX. on current, tx-minspace from %d reduce to %d [TCM]\n", tx_space_min, tx_free); //"%d, REG 3BH= %03x, ", tx_in, rb
-	tx_space_min = tx_free; }
-    #if 1 //todo
-    if (tx_tot > tx_free)
-	printk("tx waiting send.s tx_total %d (tx_free %d) [TCM]\n", tx_tot, tx_free);
-    #endif
-    return (tx_tot <= tx_free) ? 1 : 0;
 }
 
 static int tx_free_enough0(struct board_info *db, unsigned int tx_tot) {
@@ -382,33 +391,6 @@ static unsigned int tx_free_poll_timeout(struct board_info *db, unsigned int tx_
 		udelay(sleep_us);
 	}
     return 0;
-}
-
-/* wait tx memory
- * Return : tx_tot, which dm9051 is rdy to send
- *          0, if no memory by time-out! 
- */
-static unsigned int dm9051_tx_free_poll(struct board_info *db, unsigned int tx_tot) {
-    //unsigned int tx_free;
-
-    /* here, enable rx and watchdog timer disable, already done in dm9051_set_recv()
-     */
-    //dm9051_set_reg(db, DM9051_RCR, db->rctl.rcr_all | RCR_DIS_WATCHDOG_TIMER); /* ? */
-
-    /* or, be OK to put in dm9051_set_recv()
-     */
-    //dm9051_set_reg(db, DM9051_ATCR, ATCR_TX_MODE2); /* ? */
-
-    if (tx_free_enough(db, tx_tot)) 
-		return tx_tot;
-
-	tx_tot = tx_free_poll_timeout(db, tx_tot, 
-						1, kernel_conf->escape.tx_timeout_us); //2100 <- 20
-
-	if (!tx_tot)
-		printk("tx waiting send.e tx_total %d (NOT enough tx_free) [TCM] - ERROR, NO ENOUGH TX FREE MEMORY!\n", tx_tot);
-
-	return tx_tot;
 }
 
 /* waiting tx-end rather than tx-req
@@ -1448,8 +1430,8 @@ static int dm9051_loop_rx(struct board_info *db)
 		if (confdata.dm9051_new.encpt_setted_key &&
 			confdata.dm9051_new.encpt_mode != FORCE_BUS_ENCPT_OFF) {
 			/* crypt.rx */
-			int j, crlen = (rxlen + 1) & (~1);
 			/* rdptr = skb->data; */ /* no need. */
+			int j, crlen = rxlen; //(rxlen + 1) & (~1);
 			for (j = 0; j < crlen; j++) {
 				rdptr[j] ^= confdata.dm9051_new.encpt_setted_key;
 			}
@@ -1484,65 +1466,35 @@ static int dm9051_loop_rx(struct board_info *db)
  *   0 - succeed
  *  -ETIMEDOUT - timeout error
  */
-void dm9051_create_tx_head(u8 *th, unsigned int len) {
-	th[0] = len  & 0xff;; //;;todo
-	th[1] = (len >> 8) & 0xff;
-	th[2] = 0x00;
-	th[3] = 0x80;
-}
-
-/* transmit a packet,
- * return value,
- *   0 - succeed
- *  -ETIMEDOUT - timeout error
- */
 static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int len)
 {
 	int ret;
 		
 	if (confdata.dm9051_new.tx_mode == FORCE_TX_CONTI_ON) {
-		unsigned int tx_tot = dm9051_tx_free_poll(db, (((len + 4) + 3) / 4) * 4);
-
-		if (!tx_tot)
+		const unsigned int tx_xxhead = 4;
+		unsigned int tx_xxbst = ((len + 3) / 4) * 4;
+		u8 th[4];
+		dm9051_create_tx_head(th, len);
+	
+		if (!tx_free_poll_timeout(db, tx_xxhead + tx_xxbst, 1, kernel_conf->escape.tx_timeout_us)) { //2100 <- 20
+			printk("dm9051 tx -ENOMEM\n");
 			return -ENOMEM; //-ETIMEDOUT or
-
-		do {
-			/* head.tx */
-			u8 th[4];
-			dm9051_create_tx_head(th, len);
-			ret = dm9051_write_mem(db, DM_SPI_MWCMD, th, 4);
-			if (ret)
-				return ret;
-		} while(0);
-		
-		if (confdata.dm9051_new.encpt_setted_key &&
-			confdata.dm9051_new.encpt_mode != FORCE_BUS_ENCPT_OFF) {
-			/* crypt.tx */
-			int j, crlen = tx_tot - 4; //instead of original's: (len + 1) & (~1);
-			for (j = 0; j < crlen; j++) {
-				buff[j] ^= confdata.dm9051_new.encpt_setted_key;
-			}
 		}
 
-		/* send.tx */
-		ret = dm9051_write_mem(db, DM_SPI_MWCMD, buff, tx_tot - 4); //'wb'
+		ret = dm9051_write_mem(db, DM_SPI_MWCMD, th, 4);
+		if (ret)
+			return ret;
+		
+
+		ret = dm9051_tx_write(db, buff, tx_xxbst); //'tx_xxbst', DM_SPI_MWCMD
 		if (ret)
 			return ret;
 	} else {
 		ret = dm9051_nsr_poll(db);
 		if (ret)
 			return ret;
-
-		if (confdata.dm9051_new.encpt_setted_key &&
-			confdata.dm9051_new.encpt_mode != FORCE_BUS_ENCPT_OFF) {
-			/* crypt.tx */
-			int j, crlen = (len + 1) & (~1);
-			for (j = 0; j < crlen; j++) {
-				buff[j] ^= confdata.dm9051_new.encpt_setted_key;
-			}
-		}
 		
-		ret = dm9051_write_mem(db, DM_SPI_MWCMD, buff, len);
+		ret = dm9051_tx_write(db, buff, len); //'!wb'
 		if (ret)
 			return ret;
 
