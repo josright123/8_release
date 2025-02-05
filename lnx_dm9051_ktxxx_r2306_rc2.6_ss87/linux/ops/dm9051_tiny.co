@@ -1,0 +1,187 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2022 Davicom Semiconductor,Inc.
+ * Davicom DM9051 SPI Fast Ethernet Linux driver
+ */
+
+#include <linux/cdev.h> //Neww.JJ.20230301.KT5.4
+#include <linux/crc32.h> //Neww.JJ.20230301.KT5.4
+#include <linux/etherdevice.h>
+#include <linux/ethtool.h>
+#include <linux/gpio.h> //Neww.JJ.20220907
+#include <linux/interrupt.h>
+#include <linux/iopoll.h>
+#include <linux/irq.h>
+#include <linux/mii.h>
+#include <linux/module.h>
+#include <linux/netdevice.h>
+#include <linux/phy.h>
+#include <linux/regmap.h>
+#include <linux/skbuff.h>
+#include <linux/spinlock.h>
+#include <linux/spi/spi.h>
+#include <linux/types.h>
+
+/**
+ * struct rx_ctl_mach - rx activities record
+ * @status_err_counter: rx status error counter
+ * @large_err_counter: rx get large packet length error counter
+ * @rx_err_counter: receive packet error counter
+ * @tx_err_counter: transmit packet error counter
+ * @fifo_rst_counter: reset operation counter
+ *
+ * To keep track for the driver operation statistics
+ */
+struct rx_ctl_mach {
+	u16				status_err_counter;
+	u16				large_err_counter;
+	u16				rx_err_counter;
+	u16				tx_err_counter;
+	u16				fifo_rst_counter;
+};
+
+/**
+ * struct dm9051_rxctrl - dm9051 driver rx control
+ * @hash_table: Multicast hash-table data
+ * @rcr_all: KS_RXCR1 register setting
+ *
+ * The settings needs to control the receive filtering
+ * such as the multicast hash-filter and the receive register settings
+ */
+struct dm9051_rxctrl {
+	u16				hash_table[4];
+	u8				rcr_all;
+};
+
+/**
+ * struct dm9051_rxhdr - rx packet data header
+ * @headbyte: lead byte equal to 0x01 notifies a valid packet
+ * @status: status bits for the received packet
+ * @rxlen: packet length
+ *
+ * The Rx packed, entered into the FIFO memory, start with these
+ * four bytes which is the Rx header, followed by the ethernet
+ * packet data and ends with an appended 4-byte CRC data.
+ * Both Rx packet and CRC data are for check purpose and finally
+ * are dropped by this driver
+ */
+struct dm9051_rxhdr {
+	u8				headbyte;
+	u8				status;
+	__le16				rxlen;
+};
+
+/**
+ * struct board_info - maintain the saved data
+ * @spidev: spi device structure
+ * @ndev: net device structure
+ * @mdiobus: mii bus structure
+ * @phydev: phy device structure
+ * @txq: tx queue structure
+ * @regmap_dm: regmap for register read/write
+ * @regmap_dmbulk: extra regmap for bulk read/write
+ * @rxctrl_work: Work queue for updating RX mode and multicast lists
+ * @tx_work: Work queue for tx packets
+ * @pause: ethtool pause parameter structure
+ * @spi_lockm: between threads lock structure
+ * @reg_mutex: regmap access lock structure
+ * @bc: rx control statistics structure
+ * @rxhdr: rx header structure
+ * @rctl: rx control setting structure
+ * @msg_enable: message level value
+ * @imr_all: to store operating imr value for register DM9051_IMR
+ * @lcr_all: to store operating rcr value for register DM9051_LMCR
+ *
+ * The saved data variables, keep up to date for retrieval back to use
+ */
+ 
+#define MOD_REGMAP 0
+#define MOD_REGMAP0ExT 0
+#define MOD_PHYLIB 0
+#define MOD_OBJ_MII 0
+ 
+struct board_info {
+	u32				msg_enable;
+	struct spi_device		*spidev;
+	struct net_device		*ndev;
+#if MOD_PHYLIB == 1
+	struct mii_bus			*mdiobus;
+	struct phy_device		*phydev;
+#endif
+	struct sk_buff_head		txq;
+#if MOD_REGMAP == 1
+	struct regmap			*regmap_dm;
+	struct regmap			*regmap_dmbulk;
+#endif
+	struct work_struct		rxctrl_work;
+	struct work_struct		tx_work;
+#if MOD_OBJ_MII == 1
+	struct mii_if_info 		mii;
+	struct delayed_work		phy_poll;
+	//struct work_struct	phy_poll;
+#endif
+	struct ethtool_pauseparam	pause;
+	struct mutex			spi_lockm;
+	struct mutex			reg_mutex;
+	struct rx_ctl_mach		bc;
+	struct dm9051_rxhdr		rxhdr;
+	struct dm9051_rxctrl	rctl;
+	u8				imr_all;
+	u8				lcr_all;
+#if MOD_REGMAP == 0
+#if MOD_REGMAP0ExT == 1
+	#if 0
+	//
+	// No lagcy[] here; (so not memcpy in _dm9051_write_mem() before _spi_sync())
+	//
+	#else
+	u8						lagcy_buf[1536+ 4];
+	#endif
+#endif
+#endif
+};
+
+#define DM9051_KT				"KT5.15"
+#define DM9051_DRC			"r2306_rc26.next.ss7"
+#define DRVNAME_9051			"dm9051"
+#define DM9051_CLEANUP()  printk("[dm9 cleanup]\n")
+
+static int dm9051_probe(struct spi_device *spi)
+{
+	struct device *dev = &spi->dev;
+	dev_info(dev, "dm9051_probe - %s (%s)\n", DM9051_KT, DM9051_DRC);
+	return 0;
+}
+
+static int dm9051_drv_remove(struct spi_device *spi)
+{
+	DM9051_CLEANUP();
+	return 0;
+}
+
+static const struct of_device_id dm9051_match_table[] = {
+	{ .compatible = "davicom,dm9051" },
+	{}
+};
+
+static const struct spi_device_id dm9051_id_table[] = {
+	{ "dm9051", 0 },
+	{}
+};
+
+static struct spi_driver dm9051_driver = {
+	.driver = {
+		.name = DRVNAME_9051,
+		.of_match_table = dm9051_match_table,
+	},
+	.probe = dm9051_probe,
+	.remove = dm9051_drv_remove,
+	.id_table = dm9051_id_table,
+};
+
+		
+module_spi_driver(dm9051_driver);
+
+MODULE_AUTHOR("Joseph CHANG <joseph_chang@davicom.com.tw>");
+MODULE_DESCRIPTION("Davicom DM9051 network SPI driver");
+MODULE_LICENSE("GPL");

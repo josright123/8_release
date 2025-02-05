@@ -1,0 +1,150 @@
+
+#ifndef DAVICOM_KERNEL_CONF_H_
+#define DAVICOM_KERNEL_CONF_H_
+
+#define DM9051_VINF             kernel_conf.dm9051kc[DAVICOM_CONF].verify_info
+#define BOARD_KT                kernel_conf.dm9051kc[BOARD_CONF].version
+#define DM9051_KT               kernel_conf.dm9051kc[DAVICOM_CONF].version
+#define DM9051_DRV_NAME        kernel_conf.driver_name //(e.g. "lnx_dm9051 driver")
+#define DM9051_DRC              kernel_conf.driver_release_candidate //(e.g. "r2306_rc26.next.ss6")
+
+/*
+ * In some cases, linux kernel discard certain APIs,
+ * and use newer design functions'-name instead.
+ * BOARD CONFIGURE: Your H/W
+ *
+ * Usually define to be equal to BOARD CONFIGURE,
+ * But it is also ok to be elder kernel's version
+ * since they can be used also good in functions's
+ * perform. 
+ * DAVICOM CONFIGURE: Your S/W
+ */
+#define DM9051_KERNEL_3_18      0
+#define DM9051_KERNEL_4_1       1
+#define DM9051_KERNEL_4_9       2
+#define DM9051_KERNEL_4_19      3
+
+#define DM9051_KERNEL_5_4       4
+#define DM9051_KERNEL_5_10      5
+#define DM9051_KERNEL_5_15      6
+#define DM9051_KERNEL_NUM (7)
+
+static const struct {
+    char        *driver_name;
+    char        *driver_release_candidate;
+    dm9051_kc dm9051kc[DM9051_KERNEL_NUM];
+} kernel_conf = {
+    "lnx_dm9051 driver",
+    "r2306_rc26.next.ss7.1",
+    {
+        { DM9051_KERNEL_3_18,   "KT3.18",   "to be verify"},
+        { DM9051_KERNEL_4_1,    "KT4.1",    "test to rpi2"},
+        { DM9051_KERNEL_4_9,    "KT4.9",    "test to microchip"},
+        { DM9051_KERNEL_4_19,   "KT4.19",   "to be verify"},
+
+        { DM9051_KERNEL_5_4,    "KT5.4",    "to be verify"},
+        { DM9051_KERNEL_5_10,   "KT5.10",   "test to rpi2"},
+        { DM9051_KERNEL_5_15,   "KT5.15",   "test to rpi4"},
+    },
+};
+
+#define BOARD_CONF            	DM9051_KERNEL_4_1
+
+#define DAVICOM_CONF            DM9051_KERNEL_4_1
+// 'Testing items' recently,
+//#define DAVICOM_CONF          BOARD_CONF
+//#define DAVICOM_CONF          DM9051_KERNEL_4_9   // - kernel macro define for execution environment and also syntex correcting for compiler!
+// 'User specific items' recently,
+//#define DAVICOM_CONF          DM9051_KERNEL_5_15
+//#define DAVICOM_CONF          DM9051_KERNEL_5_4
+//#define DAVICOM_CONF          DM9051_KERNEL_4_19
+
+//.#define DAVICOM_CONF DM9051_KERNEL_4_19, tested in microchip board, tested for 5.10 ok too (rpi2). //todo: tested ok for 4.9 ? tested also ok for Linux 4.1 (rpi2)
+//.#define DAVICOM_CONF DM9051_KERNEL_5_10, tested in rpi2, tested for 5.15 ok (ndts, rpi4).
+//.#define DAVICOM_CONF DM9051_KERNEL_5_15, tested in rpi4 for 5.15 ok.
+#define LEGEND_K(a) (DAVICOM_CONF <= a) //enum new to old
+#define FIT_K(a)    (DAVICOM_CONF >= a) //enum old to new
+
+/* Driver configuration-
+ */
+
+//Note: MOD_REGMAP  (1)
+// KT515,       MOD_REGMAP 1 (regmap OK), MOD_REGMAP 0 (and spi_write_then_read OK)
+//Note: MOD_REGMAP  (0)
+// kt515low     MOD_REGMAP 1 (regmap NG), MOD_REGMAP 0 (else spi_sync OK)
+
+/*
+ * Rule to construct:
+ * (1) MOD_REGMAP 1  -- rank1, regmap, first priority
+ * (2) MOD_REGMAP 0  -- rank2, spi_sync, second priority
+ *
+ *  Note: MOD_REGMAP0ExT 1 //spi_sync, if KT5.10?
+ *  Note: MOD_REGMAP0ExB 1 //spi_sync (burst)(real ncpy), if KT5.15?
+ */
+
+//#define MOD_REGMAP    1 //REGMAP
+//#define MOD_REGMAP    0 //SPI.SYNC
+
+/* Selection
+ */
+#define MOD_REGMAP  0
+//#define MOD_REGMAP    1 //REGMAP or SPI.SYNC
+
+#if MOD_REGMAP == 0
+    //#define MOD_REGMAP0ExT 0
+    //#define MOD_REGMAP0ExB 1 //(burst)(real ncpy)
+
+    //#define MOD_REGMAP0ExT 1 //(tradition)
+    //#define MOD_REGMAP0ExB 0
+
+    /* Selection for if MOD_REGMAP is 0
+     */
+    #define MOD_REGMAP0ExT 1 //(tradition)
+    #define MOD_REGMAP0ExB 0
+#endif
+
+/* Support older linux Kernel versions
+ */
+
+/*
+ * Rule to construct:
+ * (1) MOD_PHYLIB 1, MOD_OBJ_MII 0  -- rank2, phylib, first priority
+ * (2) MOD_PHYLIB 0, MOD_OBJ_MII 1  -- rank1, objmii, second priority
+ * (3) MOD_PHYLIB 0, MOD_OBJ_MII 0  -- rank0, no any control to phy, last priority
+ *
+ * Note: MOD_OBJ_MIIExT 1 //traditional polling (INIT_DELAY_WORK())
+ * Note: MOD_OBJ_MIIExB 1 //timer polling (B.Choice)
+ */
+
+//#define MOD_PHYLIB    1 //phylib
+//#define MOD_OBJ_MII   0
+
+//#define MOD_PHYLIB    0
+//#define MOD_OBJ_MII   1 //objmii
+
+//#define MOD_PHYLIB    0
+//#define MOD_OBJ_MII   0
+
+/* Selection
+ * Note: KT_4_1_11 has such as mdiobus_alloc_size(), and phy_connect() support,
+ *       So we compile succeed,
+ *       How ever my rpi2 KT4.1 had no added 'phy_device.c' in the system,
+ *       So I can not use by define MOD_PHYLIB 1, in my rpi2 kt4.1.11.
+ */
+#define MOD_PHYLIB      0 //phylib
+#define MOD_OBJ_MII     1 //objmii
+
+#if MOD_OBJ_MII == 1
+    //#define MOD_OBJ_MIIExtMII		1
+    //#define MOD_OBJ_MIIExtMDIO	0 //(MDIO)(READ/WRITE)
+    
+    //#define MOD_OBJ_MIIExtMII		0
+    //#define MOD_OBJ_MIIExtMDIO	1 //(MDIO)(READ/WRITE)
+
+    /* Selection for if MOD_OBJ_MII is 1
+     */
+    #define MOD_OBJ_MIIExtMII		0
+    #define MOD_OBJ_MIIExtMDIO		1 //(mdio)(read/write)
+#endif
+
+#endif  /* DAVICOM_KERNEL_CONF_H_ */
