@@ -39,6 +39,7 @@
 #define	DM9051_TXFSSR		0x3B
 #define DM9051_PPCR		0x3D
 
+#define DM9051_IPCOCR		0x54
 #define DM9051_MPCR		0x55
 #define DM9051_LMCR		0x57
 #define DM9051_MBNDRY		0x5E
@@ -118,6 +119,9 @@
  //Pause Packet Control Register - default = 1 
 #define PPCR_PAUSE_COUNT	0x08
 #define PPCR_PAUSE_UNLIMIT	0x00
+ //0x54
+#define IPCOCR_CLKOUT		BIT(7)
+#define IPCOCR_DUTY_LEN		1
  //0x55 
 #define MPCR_RSTTX		BIT(1)
 #define MPCR_RSTRX		BIT(0)
@@ -192,8 +196,9 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 #define BURST_ALIGNMENT_CONF		0
 #define BURST_FULL_CONF			1
 
-#define SCHED_OPERATE_NUM		1
-#define SCHED_TABLE_NUM			5
+#define POLL_OPERATE_INIT		0
+#define POLL_OPERATE_NUM		1
+#define POLL_TABLE_NUM			5
 
 #define DRVNAME_9051	"dm9051"
 

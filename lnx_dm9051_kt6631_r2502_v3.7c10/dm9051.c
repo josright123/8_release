@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022 Davicom Semiconductor,Inc.
+ * Copyright (c) 2025 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
-
 #include <linux/etherdevice.h>
 #include <linux/ethtool.h>
 #include <linux/interrupt.h>
@@ -19,53 +18,88 @@
 #include <linux/spi/spi.h>
 #include <linux/types.h>
 #include <linux/of.h>
-
 #include "dm9051.h"
 
-//#define LNX_DM9051_RELEASE_VERSION	"lnx_dm9051_kt6631_r2501_v3.7c10" //note only
 #define MORDEN_LXR_CONF            		DM9051_KERNEL_6_6
 #define KERNEL_BUILD_CONF				DM9051_KERNEL_6_6
 #define AARCH_OS_BITS            		AARCH_OS_64
-#define KERNEL_TEST_INFO				"test in rpi4 bcm2711"
+
+enum {
+	MODE_POLL = 0,
+	MODE_INTERRUPT,
+	MODE_INTERRUPT_CLKOUT, //need pi3/pi5 test verify more
+};
+enum {
+	MODE_A = 0,
+	MODE_B,
+	MODE_C,
+	MODE_NUM
+};
 
 struct driver_config {
 	char *release_version;
 	int interrupt;
-    struct {
-		int force_monitor_rxb;
-		int force_monitor_txec;
-    } dm9051mm;
-    struct {
+	int mid;
+	struct mod_config {
+		char *test_info;
 		u8 encpt_mode, //encpt_mode;
 		   encpt_setted_key; //encpt KEY; from FIXED code or from efuse!
 		int tx_mode;
 		int checksuming;
-	} dm9051_new; //checksum offload, 'kernel_conf->dm9051cso.checksuming'
+		struct {
+			int burst_mode;
+			size_t tx_blk;	//alignment, 'software_build_kernel_conf'
+			size_t rx_blk;
+		} align;;
+	} mod[MODE_NUM];
+	int force_monitor_rxb;
+	int force_monitor_txec;
     struct {
-		int burst_mode;
-		size_t tx_blk;	//alignment, 'software_build_kernel_conf'
-		size_t rx_blk;
-	} align;
-    struct {
-		u64 tx_timeout_us;	//escape, 'software_build_kernel_conf'
-	} escape;
-    struct {
-		int nTargetMaxNum;
-		int ndelayF;
-		unsigned long delayF[SCHED_TABLE_NUM];
+		unsigned long delayF[POLL_TABLE_NUM];
+		u16 nTargetMaxNum;
+		u16 ndelayF;
 	} sched;
-} confdata = {
-	"lnx_dm9051_kt6631_r2501_v3.7c10",
-	0, 
-	{ FORCE_SILENCE_RXB, FORCE_SILENCE_TXEC},
-	{ FORCE_BUS_ENCPT_FAB_ON, FORCE_BUS_ENCPT_NUL_KEY,
-	  FORCE_TX_CONTI_ON, DEFAULT_CHECKSUM_OFF},
-	{ BURST_ALIGNMENT_CONF, 32, 64}, //alternate full-speed { BURST_FULL_CONF, 0, 0}, //alternate slower { BURST_ALIGNMENT_CONF, 32, 64},
-	{ 2100},
-	{ SCHED_OPERATE_NUM, SCHED_TABLE_NUM, {0,1,0,0,1}},
+	u64 tx_timeout_us;	//escape, 'software_build_kernel_conf'
 };
 
-static const struct driver_config *kernel_conf = &confdata;
+struct driver_config confdata = {
+	"lnx_dm9051_kt6631_r2502_v3.7c10p",
+	MODE_INTERRUPT, //or MODE_INTERRUPT_CLKOUT 
+	MODE_B,
+	{{
+		"Test in rpi5 bcm2712",
+		FORCE_BUS_ENCPT_FAB_ON, 
+		FORCE_BUS_ENCPT_NUL_KEY,
+		FORCE_TX_CONTI_OFF,
+		DEFAULT_CHECKSUM_OFF,
+		{ BURST_ALIGNMENT_CONF, 32, 64}, //alternate slower { BURST_ALIGNMENT_CONF, 32, 64},
+	},
+	{
+		"Test in rpi4 bcm2711",
+		FORCE_BUS_ENCPT_FAB_ON, 
+		FORCE_BUS_ENCPT_NUL_KEY,
+		FORCE_TX_CONTI_ON,
+		DEFAULT_CHECKSUM_OFF,
+		{ BURST_FULL_CONF, 0, 0}, //alternate full-speed
+	},
+	{
+		"Test in processor Cortex-A",
+		FORCE_BUS_ENCPT_FAB_ON, 
+		FORCE_BUS_ENCPT_NUL_KEY,
+		FORCE_TX_CONTI_OFF,
+		DEFAULT_CHECKSUM_ON,
+		{ BURST_ALIGNMENT_CONF, 32, 64}, //alternate slower { BURST_ALIGNMENT_CONF, 32, 64},
+	}},
+	FORCE_SILENCE_RXB, 
+	FORCE_SILENCE_TXEC,
+	{ {0,1,0,0,1}, POLL_OPERATE_NUM, POLL_OPERATE_INIT},
+	2100,
+};
+
+#define mconf (&confdata.mod[confdata.mid])
+#define kconf (&confdata)
+#define cint  (confdata.interrupt)
+#define csched  (confdata.sched)
 
 #define SCAN_BL(dw)		(dw & GENMASK(7, 0))
 #define SCAN_BH(dw)		((dw & GENMASK(15, 8)) >> 8)
@@ -260,11 +294,11 @@ static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void 
 {
 	int ret;
 
-	if (kernel_conf->align.burst_mode) { //tx
+	if (mconf->align.burst_mode) { //tx
 		ret = regmap_noinc_write(db->regmap_dm, reg, buff, len);
 	} else {
 		const u8 *p = (const u8 *) buff;
-		size_t BLKTX = kernel_conf->align.tx_blk;
+		size_t BLKTX = mconf->align.tx_blk;
 		while (len >= BLKTX) {
 			ret = regmap_noinc_write(db->regmap_dm, reg, p, BLKTX);
 			p += BLKTX;
@@ -294,11 +328,11 @@ static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void 
 
 static int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen)
 {
-	if (confdata.dm9051_new.encpt_setted_key &&
-		confdata.dm9051_new.encpt_mode != FORCE_BUS_ENCPT_OFF) {
+	if (mconf->encpt_setted_key &&
+		mconf->encpt_mode != FORCE_BUS_ENCPT_OFF) {
 		unsigned int j;
 		for (j = 0; j < crlen; j++) {
-			buff[j] ^= confdata.dm9051_new.encpt_setted_key;
+			buff[j] ^= mconf->encpt_setted_key;
 		}
 	}
 
@@ -330,12 +364,12 @@ static int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 {
 	int ret;
 
-	if (kernel_conf->align.burst_mode) { //rx
+	if (mconf->align.burst_mode) { //rx
 		ret = regmap_noinc_read(db->regmap_dm, reg, buff, len);
 	} else {
 		u8 *p = buff;
 		unsigned int rb;
-		size_t BLKRX = kernel_conf->align.rx_blk;
+		size_t BLKRX = mconf->align.rx_blk;
 		while (len >= BLKRX) {
 			ret = regmap_noinc_read(db->regmap_dm, reg, p, BLKRX);
 			if (ret < 0) {			
@@ -372,11 +406,11 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 {
 	int ret = dm9051_read_mem(db, reg, buff, crlen);
 
-	if (ret == 0 && confdata.dm9051_new.encpt_setted_key &&
-		confdata.dm9051_new.encpt_mode != FORCE_BUS_ENCPT_OFF) {
+	if (ret == 0 && mconf->encpt_setted_key &&
+		mconf->encpt_mode != FORCE_BUS_ENCPT_OFF) {
 		size_t j;
 		for (j = 0; j < crlen; j++) {
-			buff[j] ^= confdata.dm9051_new.encpt_setted_key;
+			buff[j] ^= mconf->encpt_setted_key;
 		}
 	}
 	return ret;
@@ -410,19 +444,13 @@ static unsigned int get_tx_free(struct board_info *db) {
     return (rb & 0xff) * 64;
 }
 
-//static int tx_free_enough0(struct board_info *db, unsigned int tx_tot) {
-//    
-//    unsigned int tx_free = get_tx_free(db);
-//    return (tx_tot <= tx_free) ? 1 : 0;
-//}
-
 static unsigned int tx_free_poll_timeout(struct board_info *db, unsigned int tx_tot,
 						u32 sleep_us, u64 timeout_us)
 {
 	unsigned int tx_free;
 	for (;;) {
 		tx_free = get_tx_free(db);
-		if (tx_free >= tx_tot) //tx_free_enough0(db, tx_tot) ?
+		if (tx_free >= tx_tot)
 			return tx_tot;
 		if (!sleep_us)
 			break;
@@ -445,8 +473,8 @@ static int dm9051_nsr_poll(struct board_info *db)
 
 	ret = regmap_read_poll_timeout(db->regmap_dm, DM9051_NSR, mval,
 				       mval & (NSR_TX2END | NSR_TX1END), 
-				       1, kernel_conf->escape.tx_timeout_us); //2100 <- 20
-	if (kernel_conf->dm9051mm.force_monitor_txec && ret == -ETIMEDOUT)
+				       1, kconf->tx_timeout_us); //2100 <- 20
+	if (kconf->force_monitor_txec && ret == -ETIMEDOUT)
 		netdev_err(db->ndev, "timeout in checking for tx end\n");
 	return ret;
 }
@@ -506,7 +534,7 @@ static int dm9051_set_fcr(struct board_info *db)
 
 static int dm9051_set_rcr(struct board_info *db)
 {
-	if (confdata.dm9051_new.tx_mode == FORCE_TX_CONTI_ON) {
+	if (mconf->tx_mode == FORCE_TX_CONTI_ON) {
 		/* or, be OK to put in dm9051_set_rcr()
 		 */
 		dm9051_set_reg(db, DM9051_ATCR, ATCR_TX_MODE2); /* tx continue on */
@@ -793,18 +821,17 @@ static u8 dm9051_read_crypt_word(struct board_info *db) {
 	ret = dm9051_get_reg(db, 0x49, &key);
 	if (ret)
 		return 0;
-	//printk("_reset [dm9051a_read_cryp-key] 0x%02x\n", key & 0xff);
-	dev_info(dev, "[Encrypt mode]= on, key 0x%02x\n", key & 0xff); //confdata.dm9051_new.encpt_setted_key
+	dev_info(dev, "[Encrypt mode]= on, key 0x%02x\n", key & 0xff); //mconf->encpt_setted_key
 	return (u8)(key & 0xff);
 }
 
 static int dm9051_setup_crypt(struct board_info *db)
 {
-	if (confdata.dm9051_new.encpt_mode == FORCE_BUS_ENCPT_FIX_ON) {
-		dm9051_write_crypt_word(db, confdata.dm9051_new.encpt_setted_key);
-		confdata.dm9051_new.encpt_setted_key = dm9051_read_crypt_word(db); //read to be sure!
-	} else if (confdata.dm9051_new.encpt_mode == FORCE_BUS_ENCPT_FAB_ON) {
-		confdata.dm9051_new.encpt_setted_key = dm9051_read_crypt_word(db);
+	if (mconf->encpt_mode == FORCE_BUS_ENCPT_FIX_ON) {
+		dm9051_write_crypt_word(db, mconf->encpt_setted_key);
+		mconf->encpt_setted_key = dm9051_read_crypt_word(db); //read to be sure!
+	} else if (mconf->encpt_mode == FORCE_BUS_ENCPT_FAB_ON) {
+		mconf->encpt_setted_key = dm9051_read_crypt_word(db);
 	}
 
 	return 0;
@@ -822,57 +849,37 @@ static int dm9051_core_reset(struct board_info *db)
 
 	dm9051_ncr_poll(db);
 
-#if 1
+	/* debug */
 	do {
-		unsigned int val = 0xffff;
-		//ret = dm9051_phyread_log(db, "_core", 1, 1, &val); //'dm9051_phyread'
-		//if (ret) {
-		//	printk("_reset [dm9051_core_reset] dm9051_phyread(1), ret = %d\n", ret);
-		//	return ret;
-		//}
-		//printk("_reset [dm9051_core_reset] dm9051_phyread(1), %04x\n", val);
+		unsigned int val;
 		ret = dm9051_phyread(db, 0, &val);
 		if (ret) {
 			printk("_reset [dm9051_core_reset] dm9051_phyread(0), ret = %d\n", ret);
 			return ret;
 		}
 		printk("_reset [dm9051_core_reset] dm9051_phyread(0), %04x\n", val);
-
-		ret = dm9051_phyread(db, 2, &val);
-		if (ret) {
-			printk("_reset [dm9051_core_reset] dm9051_phyread(2), ret = %d\n", ret);
-			return ret;
-		}
-		printk("_reset [dm9051_core_reset] dm9051_phyread(2), %04x\n", val);
 		ret = dm9051_phyread(db, 3, &val);
 		if (ret) {
 			printk("_reset [dm9051_core_reset] dm9051_phyread(3), ret = %d\n", ret);
 			return ret;
 		}
 		printk("_reset [dm9051_core_reset] dm9051_phyread(3), %04x\n", val);
-		ret = dm9051_phyread(db, 17, &val);
-		if (ret) {
-			printk("_reset [dm9051_core_reset] dm9051_phyread(17), ret = %d\n", ret);
+
+		ret = dm9051_phywrite(db, 0, 0x8000);
+		if (ret)
 			return ret;
-		}
-		printk("_reset [dm9051_core_reset] dm9051_phyread(17), %04x\n", val);
+		printk("_reset [dm9051_core_reset] set phy MII_BMCR, %04x\n", 0x8000);
+
+		/* dm9051 chip registers could not be accessed within 1 ms
+		 * after GPR power on, delay 1 ms is essential
+		 */
+		msleep(1);
+
+		//printk("_reset [dm9051_core_reset] set phy MII_BMCR, %04x\n", 0x3300);
+		//ret = dm9051_phywrite(db, 0, 0x3300);
+		//if (ret)
+		//	return ret;
 	} while(0);
-	
-	printk("_reset [dm9051_core_reset] set phy MII_BMCR, %04x\n", 0x8000);
-	ret = dm9051_phywrite(db, 0, 0x8000); //dm9051_phywrite(db, 0, 0x3100);
-	if (ret)
-		return ret;
-
-	/* dm9051 chip registers could not be accessed within 1 ms
-	 * after GPR power on, delay 1 ms is essential
-	 */
-	msleep(1);
-
-	printk("_reset [dm9051_core_reset] set phy MII_BMCR, %04x\n", 0x3300);
-	ret = dm9051_phywrite(db, 0, 0x3300);
-	if (ret)
-		return ret;
-#endif
 
 	dm9051_setup_crypt(db);
 	if (ret)
@@ -893,6 +900,16 @@ static int dm9051_core_reset(struct board_info *db)
 	ret = regmap_write(db->regmap_dm, DM9051_LMCR, db->lcr_all); /* LEDMode1 */
 	if (ret)
 		return ret;
+		
+	/* Diagnostic contribute: In dm9051_enable_interrupt() 
+	 * (or located in the core reset subroutine is better!!)
+	 */
+	if (cint == MODE_INTERRUPT_CLKOUT) {
+		printk("_reset [dm9051_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
+		ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
+		if (ret)
+			return ret;
+	}
 
 	return ret; /* return dm9051_set_reg(db, DM9051_INTCR, dm9051_intcr_value(db)) */
 }
@@ -943,7 +960,7 @@ static struct regmap_config regconfigdmbulk = {
  */
 #define	KERNEL_ROADMAP_CONF_H_
 #ifdef	KERNEL_ROADMAP_CONF_H_
-		#undef __devm_regmap_init_spi //compiler not undefined, since used in _wrapper
+#undef __devm_regmap_init_spi //compiler not undefined, since used in _wrapper
 
 	static int regmap_spi_write(void *context, const void *data, size_t count)
 	{
@@ -1060,22 +1077,20 @@ static int dm9051_map_chipid(struct board_info *db)
 	}
 
 	dev_info(dev, "chip %04x found\n", wid);
-	dev_info(dev, "LXR coorespond to: %s, KERNEL: %s\n", linux_name[MORDEN_LXR_CONF], linux_name[KERNEL_BUILD_CONF]);
-	dev_info(dev, "NOTE: %s\n", KERNEL_TEST_INFO);
-	dev_info(dev, "DRVR= %s, %s\n",
-		kernel_conf->dm9051mm.force_monitor_rxb ? "monitor rxb" : "silence rxb",
-		kernel_conf->dm9051mm.force_monitor_txec ? "monitor tx_ec" : "silence tx_ec");
-	dev_info(dev, "[Encrypt mode]= %s\n",
-		(confdata.dm9051_new.encpt_mode != FORCE_BUS_ENCPT_OFF) ? "on" : "off"); //xxx
+	//dev_info(dev, "Davicom: %s\n", mconf->test_info);
+	//dev_info(dev, "LXR: %s, KERNEL: %s\n", linux_name[MORDEN_LXR_CONF], linux_name[KERNEL_BUILD_CONF]);
 	dev_info(dev, "[TX mode]= %s mode\n",
-		(confdata.dm9051_new.tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");
-	dev_info(dev, "SPI_XFER_MEM= %s\n",
-		kernel_conf->align.burst_mode ? "burst mode" : "alignment mode");
-	if (!kernel_conf->align.burst_mode) {
-		dev_info(dev, "Alignment TX: %lu\n", kernel_conf->align.tx_blk);
-		dev_info(dev, "Alignment RX: %lu\n", kernel_conf->align.rx_blk);
-	}
-	dev_info(dev, "Check End TX: %llu\n", kernel_conf->escape.tx_timeout_us);
+		(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");
+	dev_info(dev, "[Encrypt mode]= %s\n",
+		(mconf->encpt_mode != FORCE_BUS_ENCPT_OFF) ? "on" : "off"); //xxx
+	//dev_info(dev, "SPI_XFER_MEM= %s\n", mconf->align.burst_mode ? "burst mode" : "alignment mode");
+		//if (!mconf->align.burst_mode) { }
+		//dev_info(dev, "Alignment TX: %lu\n", mconf->align.tx_blk);
+		//dev_info(dev, "Alignment RX: %lu\n", mconf->align.rx_blk);
+	dev_info(dev, "Check TX End: %llu\n", kconf->tx_timeout_us);
+	dev_info(dev, "DRVR= %s, %s\n",
+		kconf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
+		kconf->force_monitor_txec ? "monitor tx_ec" : "silence tx_ec");
 	return 0;
 }
 
@@ -1268,7 +1283,8 @@ static int dm9051_all_start(struct board_info *db)
 	if (ret)
 		return ret;
 
-	printk("_open [dm9051_all_start] set reg DM9051_GPR, %x\n", 0);
+	//printk("_open [dm9051_all_start] set reg DM9051_GPR, %x\n", 0);
+
 	ret = dm9051_set_reg(db, DM9051_GPR, 0);
 	if (ret)
 		return ret;
@@ -1277,18 +1293,6 @@ static int dm9051_all_start(struct board_info *db)
 	 * after GPR power on, delay 1 ms is essential
 	 */
 	msleep(1);
-
-#if 0
-	//printk("_open [dm9051_all_start] set phy MII_BMCR, %04x\n", 0x8000);
-	//ret = dm9051_phywrite(db, 0, 0x8000); //dm9051_phywrite(db, 0, 0x3100);
-	//if (ret)
-	//	return ret;
-
-	/* dm9051 chip registers could not be accessed within 1 ms
-	 * after GPR power on, delay 1 ms is essential
-	 */
-	//msleep(1);
-#endif
 
 	ret = dm9051_core_reset(db);
 	if (ret)
@@ -1383,7 +1387,7 @@ void trap_clr(struct board_info *db)
 
 void monitor_rxb0(unsigned int rxbyte)
 {
-	if (kernel_conf->dm9051mm.force_monitor_rxb) {
+	if (kconf->force_monitor_rxb) {
 		static int rxbz_counter = 0;
 		static unsigned int inval_rxb[TIMES_TO_RST] = { 0 };
 		unsigned int i;
@@ -1512,10 +1516,6 @@ static int dm9051_loop_rx(struct board_info *db)
 		if (ret)
 			return ret;
 
-		//ret = dm9051_stop_mrcmd(db);
-		//if (ret)
-		//	return ret;
-
 		rxlen = le16_to_cpu(db->rxhdr.rxlen);
 		if (db->rxhdr.status & RSR_ERR_BITS || rxlen > DM9051_PKT_MAX) {
 			printk("dm9.Monitor headbyte/status/rxlen %2x %2x %04x\n", 
@@ -1570,12 +1570,17 @@ static int dm9051_loop_rx(struct board_info *db)
 	
 	nloop_rx += scanrr;
 	if (nloop_rx > 125) {
-		if (kernel_conf->align.burst_mode)	printk("___[nloop_rx Burst mode, tx Burst mode] %d\n", nloop_rx); //if .BURST_FULL_CONF
+		if (mconf->align.burst_mode)
+			printk("___[nloop_rx Burst mode, tx Burst mode] %d\n", nloop_rx); //if .BURST_FULL_CONF
 		else									
 		#if AARCH_OS_BITS
-			printk("___[nloop_rx SizeAlignRX %lu, SizeAlignTX %lu] %d\n", kernel_conf->align.rx_blk, kernel_conf->align.tx_blk, nloop_rx);
+			printk("___[nloop_rx SizeAlignRX %lu, SizeAlignTX %lu] %d\n", 
+				mconf->align.rx_blk, 
+				mconf->align.tx_blk, nloop_rx);
 		#else
-			printk("___[nloop_rx SizeAlignRX %u, SizeAlignTX %u] %d\n", kernel_conf->align.rx_blk, kernel_conf->align.tx_blk, nloop_rx);
+			printk("___[nloop_rx SizeAlignRX %u, SizeAlignTX %u] %d\n", 
+				mconf->align.rx_blk, 
+				mconf->align.tx_blk, nloop_rx);
 		#endif
 		nloop_rx = 0;
 	}
@@ -1592,13 +1597,13 @@ static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int len)
 {
 	int ret;
 		
-	if (confdata.dm9051_new.tx_mode == FORCE_TX_CONTI_ON) {
+	if (mconf->tx_mode == FORCE_TX_CONTI_ON) {
 		const unsigned int tx_xxhead = 4;
 		unsigned int tx_xxbst = ((len + 3) / 4) * 4;
 		u8 th[4];
 		dm9051_create_tx_head(th, len);
 
-		if (!tx_free_poll_timeout(db, tx_xxhead + tx_xxbst, 1, kernel_conf->escape.tx_timeout_us)) { //2100 <- 20
+		if (!tx_free_poll_timeout(db, tx_xxhead + tx_xxbst, 1, kconf->tx_timeout_us)) { //2100 <- 20
 			return -ENOMEM; //-ETIMEDOUT or
 		}
 
@@ -1742,15 +1747,13 @@ static void dm9051_irq_delayp(struct work_struct *work)
 
 	dm9051_rx_threaded_irq(0, db); // 0 is no-used.
 
-	//if (confdata.sched.ndelayF >= SCHED_MAXNUM)
-	//	confdata.sched.ndelayF = 0;
-	//schedule_delayed_work(&db->irq_workp, confdata.sched.delayF[confdata.sched.ndelayF++]); //DM_TIMER_EXPIRE1,DM_TIMER_EXPIRE2
-	if (confdata.sched.ndelayF >= confdata.sched.nTargetMaxNum)
-		confdata.sched.ndelayF = 0;
+	if (csched.ndelayF >= csched.nTargetMaxNum)
+		(csched.ndelayF) = POLL_OPERATE_INIT;
 
-	if (!confdata.interrupt) //redundent, but for safe
-		schedule_delayed_work(&db->irq_workp, confdata.sched.delayF[confdata.sched.ndelayF++]);
-	//schedule_delayed_work(&db->irq_workp, 0);
+	/* redundent, but for safe */
+	if (!cint) 
+		//schedule_delayed_work(&db->irq_workp, 0);
+		schedule_delayed_work(&db->irq_workp, csched.delayF[(csched.ndelayF)++]);
 }
 
 /* Open network device
@@ -1771,7 +1774,7 @@ static int dm9051_open(struct net_device *ndev)
 	ndev->irq = spi->irq; /* by dts */
 
 	/* interrupt work */
-	if (confdata.interrupt) {
+	if (cint) {
 		ret = request_threaded_irq(spi->irq, NULL, dm9051_rx_threaded_irq,
 					   dm9051_irq_flag(db) | IRQF_ONESHOT,
 					   ndev->name, db);
@@ -1797,7 +1800,7 @@ static int dm9051_open(struct net_device *ndev)
 	ret = dm9051_all_start(db);
 	if (ret) {
 		phy_stop(db->phydev);
-		if (confdata.interrupt)
+		if (cint)
 			free_irq(spi->irq, db);
 		return ret;
 	}
@@ -1816,11 +1819,9 @@ static int dm9051_open(struct net_device *ndev)
 #endif
 
 	netif_wake_queue(ndev);
-	
+
 	/* schedule delay work */
-	
-	if (!confdata.interrupt)
-		/* when (threadedcfg.interrupt_supp == THREADED_POLL) */
+	if (!cint)
 		schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
 	return 0;
 }
@@ -1840,7 +1841,7 @@ static int dm9051_stop(struct net_device *ndev)
 		return ret;
 		
 	/* schedule delay work */
-	if (!confdata.interrupt)
+	if (!cint)
 		cancel_delayed_work_sync(&db->irq_workp);
 
 	flush_work(&db->tx_work);
@@ -1849,7 +1850,7 @@ static int dm9051_stop(struct net_device *ndev)
 	phy_stop(db->phydev);
 
 	/* when (threadedcfg.interrupt_supp == THREADED_INT) */
-	if (confdata.interrupt) {
+	if (cint) {
 		free_irq(db->spidev->irq, db);
 		printk("_stop [free irq %d]\n", db->spidev->irq);
 	}
@@ -2048,7 +2049,7 @@ static int dm9051_probe(struct spi_device *spi)
 
 //Spenser - Setup for Checksum Offload
 	/* Set default features */
-	if (kernel_conf->dm9051_new.checksuming) {
+	if (mconf->checksuming) {
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 		ndev->hw_features |= ndev->features;
 	}
@@ -2059,9 +2060,8 @@ static int dm9051_probe(struct spi_device *spi)
 	INIT_WORK(&db->rxctrl_work, dm9051_rxctl_delay);
 	INIT_WORK(&db->tx_work, dm9051_tx_delay);
 
-	if (!confdata.interrupt)
+	if (!cint)
 		/* schedule delay work */
-		/* ='dm9051_continue_poll' */
 		INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp);
 
 	ret = dm9051_map_init(spi, db);
@@ -2069,30 +2069,36 @@ static int dm9051_probe(struct spi_device *spi)
 		return ret;
 
 	printk("\n");
-	dev_info(dev, "Davicom: %s", confdata.release_version); //kernel_conf->driver_release_version_candidate //LNX_DM9051_RELEASE_VERSION
+	dev_info(dev, "Davicom: %s", kconf->release_version); //kconf->driver_release_version_candidate //LNX_DM9051_RELEASE_VERSION
 
 	/* [dbg] spi.speed */
 	do {
 		unsigned int speed;
 		of_property_read_u32(spi->dev.of_node, "spi-max-frequency", &speed);
 		dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
-		
-		//of_property_read_u32_array(spi->dev.of_node, "interrupts", &intpin, 1);
-		if (confdata.interrupt) {
+
+		if (cint) {
 			unsigned int intdata[2];
 			of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-			dev_info(dev, "Operation: Interrupt mode\n");
+			dev_info(dev, "Operation: Interrupt mode/ %s\n", (cint == MODE_INTERRUPT_CLKOUT) ?
+					"CLKOUT" : "REG39H");
 			dev_info(dev, "Operation: Interrupt pin: %d\n", intdata[0]); //intpin
 			dev_info(dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
 		} else {
 			int i;
 			dev_info(dev, "Operation: Polling mode\n"); //~intpin
-			dev_info(dev, "Operation: Polling operate count %d\n", confdata.sched.nTargetMaxNum);
-			for (i = 0; i < confdata.sched.nTargetMaxNum; i++) {
-				dev_info(dev, "Operation: Polling operate delayF[%d]= %lu\n", i, confdata.sched.delayF[i]);
+			dev_info(dev, "Operation: Polling operate count %d\n", csched.nTargetMaxNum);
+			for (i = 0; i < csched.nTargetMaxNum; i++) {
+				dev_info(dev, "Operation: Polling operate delayF[%d]= %lu\n", i, csched.delayF[i]);
 			}
 		}
 	} while(0);
+	printk("\n");
+	dev_info(dev, "Davicom: %s", mconf->test_info);
+	dev_info(dev, "LXR: %s, KERNEL: %s\n", linux_name[MORDEN_LXR_CONF], linux_name[KERNEL_BUILD_CONF]);
+	dev_info(dev, "SPI_XFER_MEM= %s\n", mconf->align.burst_mode ? "burst mode" : "alignment mode");
+	dev_info(dev, "Alignment TX: %lu\n", mconf->align.tx_blk);
+	dev_info(dev, "Alignment RX: %lu\n", mconf->align.rx_blk);
 
 	ret = dm9051_map_chipid(db);
 	if (ret)
