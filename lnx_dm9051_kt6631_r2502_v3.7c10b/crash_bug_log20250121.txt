@@ -1,0 +1,61 @@
+[66593.681111] Unable to handle kernel paging request at virtual address ffffff7f7ffbfffc
+[66593.689067] Mem abort info:
+[66593.691862]   ESR = 0x0000000096000006
+[66593.695767]   EC = 0x25: DABT (current EL), IL = 32 bits
+[66593.701104]   SET = 0, FnV = 0
+[66593.704161]   EA = 0, S1PTW = 0
+[66593.707308]   FSC = 0x06: level 2 translation fault
+[66593.712209] Data abort info:
+[66593.715100]   ISV = 0, ISS = 0x00000006, ISS2 = 0x00000000
+[66593.720603]   CM = 0, WnR = 0, TnD = 0, TagAccess = 0
+[66593.725714]   GCS = 0, Overlay = 0, DirtyBit = 0, Xs = 0
+[66593.731066] swapper pgtable: 16k pages, 47-bit VAs, pgdp=0000000001380000
+[66593.737903] [ffffff7f7ffbfffc] pgd=0000000001ab4003, p4d=0000000001ab4003, pud=0000000001ab4003, pmd=0000000000000000
+[66593.748576] Internal error: Oops: 0000000096000006 [#1] PREEMPT SMP
+[66593.754869] Modules linked in: dm9051(O) rfcomm snd_seq_dummy snd_hrtimer snd_seq snd_seq_device algif_hash algif_skcipher af_alg bnep brcmfmac_wcc hci_uart btbcm binfmt_misc bluetooth brcmfmac ecdh_generic brcmutil raspberrypi_hwmon ecc cfg80211 rpivid_hevc(C) pisp_be v4l2_mem2mem videobuf2_dma_contig videobuf2_memops videobuf2_v4l2 videodev rfkill videobuf2_common joydev mc raspberrypi_gpiomem aes_ce_blk aes_ce_cipher ghash_ce gf128mul libaes rp1_adc sha2_ce sha256_arm64 sha1_ce uio_pdrv_genirq uio pwm_fan nvmem_rmem i2c_dev fuse dm_mod ip_tables x_tables ipv6 vc4 snd_soc_hdmi_codec drm_display_helper cec drm_dma_helper spidev drm_kms_helper v3d gpu_sched drm_shmem_helper snd_soc_core snd_compress spi_bcm2835 i2c_brcmstb drm gpio_keys snd_pcm_dmaengine snd_pcm drm_panel_orientation_quirks snd_timer snd backlight spi_dw_mmio spi_dw [last unloaded: dm9051(O)]
+[66593.831443] CPU: 3 PID: 7079 Comm: kworker/3:4 Tainted: G         C O       6.6.31+rpt-rpi-2712 #1  Debian 1:6.6.31-1+rpt1
+[66593.842532] Hardware name: Raspberry Pi 5 Model B Rev 1.0 (DT)
+[66593.848382] Workqueue: events dm9051_irq_delayp [dm9051]
+[66593.853719] pstate: 80400009 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[66593.860705] pc : skb_release_data+0x98/0x1d8
+[66593.864988] lr : consume_skb+0x58/0x138
+[66593.868832] sp : ffffc00080c13c10
+[66593.872150] x29: ffffc00080c13c10 x28: 0000000000000000 x27: ffff800107460b40
+[66593.879312] x26: ffff80010782f600 x25: 0000000000000002 x24: ffffd0006a5c8198
+[66593.886474] x23: 0000000000000000 x22: 0000000000000036 x21: ffff8001004e7968
+[66593.893636] x20: ffff8001004e7940 x19: 0000000000000010 x18: 0000000000000000
+[66593.900797] x17: ffffb0017a860000 x16: ffffd00084ad78a0 x15: 00005555b2774ab0
+[66593.907958] x14: 0000000000000000 x13: ffffd00084d52bb0 x12: 00000000fa83b2da
+[66593.915119] x11: 0000000000000040 x10: ffffd000856a7be8 x9 : ffffd00084ad78f8
+[66593.922280] x8 : ffff800102000028 x7 : 0000000000000000 x6 : 0000000000000000
+[66593.929441] x5 : ffff800102000000 x4 : ffff800107460b40 x3 : ffff800107460a00
+[66593.936602] x2 : 0000000000000140 x1 : ffffff7f7ffbfffc x0 : 0000000000000095
+[66593.943763] Call trace:
+[66593.946210]  skb_release_data+0x98/0x1d8
+[66593.950143]  consume_skb+0x58/0x138
+[66593.953638]  dm9051_loop_tx+0x1c4/0x478 [dm9051]
+[66593.958271]  dm9051_irq_delayp+0x218/0x548 [dm9051]
+[66593.963165]  process_one_work+0x148/0x3b8
+[66593.967184]  worker_thread+0x32c/0x450
+[66593.970940]  kthread+0x11c/0x128
+[66593.974174]  ret_from_fork+0x10/0x20
+[66593.977758] Code: b40001e1 38626873 121c0273 37000121 (f9400023) 
+[66593.983872] ---[ end trace 0000000000000000 ]---
+
+
+[TRY solution:]
+
+/* schedule delay work */
+static void dm9051_irq_delayp(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
+
+	dm9051_rx_threaded_irq(0, db); // 0 is no-used.
+#if 0
+	if (confdata.sched.ndelayF >= 5)
+		confdata.sched.ndelayF = 0;
+	schedule_delayed_work(&db->irq_workp, confdata.sched.delayF[confdata.sched.ndelayF++]); //DM_TIMER_EXPIRE1,DM_TIMER_EXPIRE2
+#endif
+	schedule_delayed_work(&db->irq_workp, 0);
+}
