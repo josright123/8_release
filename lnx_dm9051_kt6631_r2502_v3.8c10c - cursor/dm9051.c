@@ -48,8 +48,8 @@ enum
 #define DM9051_SKB_PROTECT		  //tX 'wb' do skb protect
 enum
 {
-	FORCE_SKB_WB_OFF = 0,
-	FORCE_SKB_WB_ON = 1, //'wb'
+	SKB_WB_OFF = 0,
+	SKB_WB_ON = 1, //'wb'
 };
 
 enum
@@ -72,7 +72,7 @@ struct driver_config
 		int skb_wb_mode;
 		int tx_mode;
 		int checksuming;
-		struct
+		struct align_config
 		{
 			int burst_mode;
 			size_t tx_blk; /* alignment, software_build_kernel_conf */
@@ -91,7 +91,7 @@ const struct driver_config confdata = {
 			.test_info = "Test in rpi5 bcm2712",
 			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
 			.encpt_pad = 0x00, /* or FORCE_BUS_ENCPT_NUL_KEY */
-			.skb_wb_mode = FORCE_SKB_WB_ON; 
+			.skb_wb_mode = SKB_WB_ON; 
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
 			.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
@@ -100,7 +100,7 @@ const struct driver_config confdata = {
 			.test_info = "Test in rpi4 bcm2711",
 			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
 			.encpt_pad = 0x00, /* or FORCE_BUS_ENCPT_NUL_KEY */
-			.skb_wb_mode = FORCE_SKB_WB_ON; 
+			.skb_wb_mode = SKB_WB_ON; 
 			.tx_mode = FORCE_TX_CONTI_ON,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
 			.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
@@ -109,7 +109,7 @@ const struct driver_config confdata = {
 			.test_info = "Test in processor Cortex-A",
 			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
 			.encpt_pad = 0x00, /* or FORCE_BUS_ENCPT_NUL_KEY */
-			.skb_wb_mode = FORCE_SKB_WB_OFF; 
+			.skb_wb_mode = SKB_WB_OFF; 
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_ON,
 			.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
