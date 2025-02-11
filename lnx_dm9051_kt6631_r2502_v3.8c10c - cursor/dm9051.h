@@ -188,10 +188,6 @@ const struct eng_config engdata = {
 #define FORCE_BUS_ENCPT_NUL_KEY		0x00 //for NOTE!
 #define FORCE_BUS_ENCPT_FIX_KEY		0x95 //for selected, for test in the lab.
 
-#define	FORCE_RXTX_WB_OFF 		0
-#define	FORCE_RXTX_WB_ON  		1 //'wb'
-#define DM9051_SKB_PROTECT		  //tX 'wb' do skb protect
-
 #define	FORCE_TX_CONTI_OFF		0
 #define	FORCE_TX_CONTI_ON		1
 

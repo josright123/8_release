@@ -45,6 +45,13 @@ enum
 	MODE_NUM = 3
 };
 
+#define DM9051_SKB_PROTECT		  //tX 'wb' do skb protect
+enum
+{
+	FORCE_SKB_WB_OFF = 0,
+	FORCE_SKB_WB_ON = 1, //'wb'
+};
+
 enum
 {
 	BURST_MODE_ALIGN = 0,
@@ -62,7 +69,7 @@ struct driver_config
 		char *test_info;
 		u8 encpt_mode; /* encpt_mode */
 		u8 encpt_pad;  /* encpt_setted_key */
-		int rxtx_mode;
+		int skb_wb_mode;
 		int tx_mode;
 		int checksuming;
 		struct
@@ -84,7 +91,7 @@ const struct driver_config confdata = {
 			.test_info = "Test in rpi5 bcm2712",
 			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
 			.encpt_pad = 0x00, /* or FORCE_BUS_ENCPT_NUL_KEY */
-			.rxtx_mode = FORCE_RXTX_WB_ON; 
+			.skb_wb_mode = FORCE_SKB_WB_ON; 
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
 			.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
@@ -93,7 +100,7 @@ const struct driver_config confdata = {
 			.test_info = "Test in rpi4 bcm2711",
 			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
 			.encpt_pad = 0x00, /* or FORCE_BUS_ENCPT_NUL_KEY */
-			.rxtx_mode = FORCE_RXTX_WB_ON; 
+			.skb_wb_mode = FORCE_SKB_WB_ON; 
 			.tx_mode = FORCE_TX_CONTI_ON,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
 			.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
@@ -102,7 +109,7 @@ const struct driver_config confdata = {
 			.test_info = "Test in processor Cortex-A",
 			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
 			.encpt_pad = 0x00, /* or FORCE_BUS_ENCPT_NUL_KEY */
-			.rxtx_mode = FORCE_RXTX_WB_OFF; 
+			.skb_wb_mode = FORCE_SKB_WB_OFF; 
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_ON,
 			.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
@@ -1048,7 +1055,7 @@ static int dm9051_core_reset(struct board_info *db)
 	if (ret)
 		return ret;
 
-	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (mconf->rxtx_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
+	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (mconf->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
 	if (ret)
 		return ret;
 	// Spenser
@@ -1835,7 +1842,7 @@ static int dm9051_loop_rx(struct board_info *db)
 #endif
 
 		rxlen = le16_to_cpu(db->rxhdr.rxlen);
-		padlen = (mconf->rxtx_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
+		padlen = (mconf->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
 		skb = dev_alloc_skb(padlen);
 		if (!skb)
 		{
@@ -1936,7 +1943,7 @@ static int dm9051_loop_tx(struct board_info *db)
 			else
 			{
 				unsigned int pad = 0; //'~wb'
-				if (mconf->rxtx_mode && (skb->len & 1))
+				if (mconf->skb_wb_mode && (skb->len & 1))
 				{
 					pad = 1;
 					/* protection */
