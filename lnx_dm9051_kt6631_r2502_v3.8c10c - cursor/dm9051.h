@@ -88,6 +88,10 @@ typedef uint64_t        u64;
 #define NSR_TX2END             BIT(3)
 #define NSR_TX1END             BIT(2)
 
+/* 0x5E */
+#define MBNDRY_BYTE            BIT(7)
+#define MBNDRY_WORD            0
+
 /* Continue with rest of register bits... */
 
 /* Constants */
@@ -104,16 +108,6 @@ typedef uint64_t        u64;
 #define DM9051_KERNEL_5_15     6
 #define DM9051_KERNEL_6_1      7
 #define DM9051_KERNEL_6_6      8
-
-/* Architecture definitions */
-#define AARCH_OS_32            0
-#define AARCH_OS_64            1
-
-/* Feature control flags */
-#define FORCE_SILENCE_RXB      0
-#define FORCE_MONITOR_RXB      1
-
-/* Continue with rest of definitions... */
 
 /* Helper functions */
 static inline struct board_info *to_dm9051_board(struct net_device *ndev)
@@ -144,6 +138,20 @@ const static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
         "fifo_rst",
 };
 
+/* Feature control flags */
+#define FORCE_SILENCE_RXB               0
+#define FORCE_MONITOR_RXB               1
+
+#define	FORCE_SILENCE_RX_COUNT		0
+#define	FORCE_MONITOR_RX_COUNT		1
+
+#define	FORCE_SILENCE_TX_TIMEOUT	0
+#define	FORCE_MONITOR_TX_TIMEOUT	1
+
+#define POLL_TABLE_NUM			5
+#define POLL_OPERATE_INIT		0
+#define POLL_OPERATE_NUM		1
+
 /* Configuration structures */
 struct eng_config {
         int force_monitor_rxb;
@@ -168,5 +176,26 @@ const struct eng_config engdata = {
 
 #define econf   (&engdata)
 #define csched  (engdata.sched)
+
+/* Architecture definitions */
+#define AARCH_OS_32                     0
+#define AARCH_OS_64                     1
+
+/* driver config */
+#define	FORCE_BUS_ENCPT_OFF		0
+#define	FORCE_BUS_ENCPT_FIX_ON		1
+#define	FORCE_BUS_ENCPT_FAB_ON		2
+#define FORCE_BUS_ENCPT_NUL_KEY		0x00 //for NOTE!
+#define FORCE_BUS_ENCPT_FIX_KEY		0x95 //for selected, for test in the lab.
+
+#define	FORCE_RXTX_WB_OFF 		0
+#define	FORCE_RXTX_WB_ON  		1 //'wb'
+#define DM9051_SKB_PROTECT		  //tX 'wb' do skb protect
+
+#define	FORCE_TX_CONTI_OFF		0
+#define	FORCE_TX_CONTI_ON		1
+
+#define	DEFAULT_CHECKSUM_OFF		0
+#define	DEFAULT_CHECKSUM_ON		1
 
 #endif /* _DM9051_H_ */

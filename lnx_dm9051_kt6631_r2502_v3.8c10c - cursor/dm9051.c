@@ -45,6 +45,12 @@ enum
 	MODE_NUM = 3
 };
 
+enum
+{
+	BURST_MODE_ALIGN = 0,
+	BURST_MODE_FULL = 1,
+};
+
 /* Driver configuration structure */
 struct driver_config
 {
@@ -56,6 +62,7 @@ struct driver_config
 		char *test_info;
 		u8 encpt_mode; /* encpt_mode */
 		u8 encpt_pad;  /* encpt_setted_key */
+		int rxtx_mode;
 		int tx_mode;
 		int checksuming;
 		struct
@@ -77,28 +84,28 @@ const struct driver_config confdata = {
 			.test_info = "Test in rpi5 bcm2712",
 			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
 			.encpt_pad = 0x00, /* or FORCE_BUS_ENCPT_NUL_KEY */
+			.rxtx_mode = FORCE_RXTX_WB_ON; 
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
-			.align = {
-				.burst_mode = BURST_ALIGNMENT_CONF,
-				.tx_blk = 32,
-				.rx_blk = 64},
+			.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
 		},
 		{
 			.test_info = "Test in rpi4 bcm2711",
 			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
 			.encpt_pad = 0x00, /* or FORCE_BUS_ENCPT_NUL_KEY */
+			.rxtx_mode = FORCE_RXTX_WB_ON; 
 			.tx_mode = FORCE_TX_CONTI_ON,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
-			.align = {.burst_mode = BURST_FULL_CONF, .tx_blk = 0, .rx_blk = 0},
+			.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 		},
 		{
 			.test_info = "Test in processor Cortex-A",
 			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
 			.encpt_pad = 0x00, /* or FORCE_BUS_ENCPT_NUL_KEY */
+			.rxtx_mode = FORCE_RXTX_WB_OFF; 
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_ON,
-			.align = {.burst_mode = BURST_ALIGNMENT_CONF, .tx_blk = 32, .rx_blk = 64},
+			.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
 		}},
 };
 
@@ -1041,7 +1048,7 @@ static int dm9051_core_reset(struct board_info *db)
 	if (ret)
 		return ret;
 
-	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, MBNDRY_BYTE); /* MemBound */
+	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (mconf->rxtx_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
 	if (ret)
 		return ret;
 	// Spenser
@@ -1620,7 +1627,7 @@ void monitor_rxc(struct board_info *db, int scanrr)
 		if (mconf->align.burst_mode)
 			printk("___[%s][rx/tx Burst mode] nRxc %d\n",
 				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "TX continue" : "TX normal mode",
-				   db->bc.nRxcF); // if .BURST_FULL_CONF
+				   db->bc.nRxcF);
 		else
 #if AARCH_OS_BITS
 			printk("___[%s][Alignment RX %lu, Alignment TX %lu] nRxc %d\n",
@@ -1752,7 +1759,7 @@ int rx_head_break(struct board_info *db)
 static int dm9051_loop_rx(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
-	int ret, rxlen;
+	int ret, rxlen, padlen;
 	unsigned int rxbyte;
 	struct sk_buff *skb;
 	u8 *rdptr;
@@ -1828,18 +1835,18 @@ static int dm9051_loop_rx(struct board_info *db)
 #endif
 
 		rxlen = le16_to_cpu(db->rxhdr.rxlen);
-
-		skb = dev_alloc_skb(rxlen);
+		padlen = (mconf->rxtx_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
+		skb = dev_alloc_skb(padlen);
 		if (!skb)
 		{
-			ret = dm9051_dumpblk(db, DM_SPI_MRCMD, rxlen);
+			ret = dm9051_dumpblk(db, DM_SPI_MRCMD, padlen);
 			if (ret)
 				return ret;
 			break; //.return scanrr;
 		}
 
 		rdptr = skb_put(skb, rxlen - 4);
-		ret = dm9051_read_mem_cache(db, DM_SPI_MRCMD, rdptr, rxlen);
+		ret = dm9051_read_mem_cache(db, DM_SPI_MRCMD, rdptr, padlen);
 		if (ret)
 		{
 			db->bc.rx_err_counter++;
@@ -1865,44 +1872,46 @@ static int dm9051_loop_rx(struct board_info *db)
  *   0 - succeed
  *  -ETIMEDOUT - timeout error
  */
-static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int len)
+static int dm9051_conti_tx(struct board_info *db, u8 *buff, unsigned int len)
 {
 	int ret;
 
-	if (mconf->tx_mode == FORCE_TX_CONTI_ON)
-	{
-		const unsigned int tx_xxhead = 4;
-		unsigned int tx_xxbst = ((len + 3) / 4) * 4;
-		u8 th[4];
-		dm9051_create_tx_head(th, len);
+	const unsigned int tx_xxhead = 4;
+	unsigned int tx_xxbst = ((len + 3) / 4) * 4;
+	u8 th[4];
+	dm9051_create_tx_head(th, len);
 
-		if (!tx_free_poll_timeout(db, tx_xxhead + tx_xxbst, 1, econf->tx_timeout_us))
-		{					// 2100 <- 20
-			return -ENOMEM; //-ETIMEDOUT or
-		}
-
-		ret = dm9051_write_mem(db, DM_SPI_MWCMD, th, 4);
-		if (ret)
-			return ret;
-
-		ret = dm9051_write_mem_cache(db, buff, tx_xxbst); //'tx_xxbst', DM_SPI_MWCMD
-		if (ret)
-			return ret;
+	if (!tx_free_poll_timeout(db, tx_xxhead + tx_xxbst, 1, econf->tx_timeout_us))
+	{					// 2100 <- 20
+		return -ENOMEM; //-ETIMEDOUT or
 	}
-	else
-	{
-		ret = dm9051_nsr_poll(db);
-		if (ret)
-			return ret;
 
-		ret = dm9051_write_mem_cache(db, buff, len); //'!wb'
-		if (ret)
-			return ret;
+	ret = dm9051_write_mem(db, DM_SPI_MWCMD, th, 4);
+	if (ret)
+		return ret;
 
-		ret = dm9051_set_regs(db, DM9051_TXPLL, &len, 2);
-		if (ret < 0)
-			return ret;
-	}
+	ret = dm9051_write_mem_cache(db, buff, tx_xxbst); //'tx_xxbst', DM_SPI_MWCMD
+	if (ret)
+		return ret;
+
+	return dm9051_set_reg(db, DM9051_TCR, TCR_TXREQ);
+}
+
+static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int buff_len, unsigned int len)
+{
+	int ret;
+
+	ret = dm9051_nsr_poll(db);
+	if (ret)
+		return ret;
+
+	ret = dm9051_write_mem_cache(db, buff, buff_len); //'!wb'
+	if (ret)
+		return ret;
+
+	ret = dm9051_set_regs(db, DM9051_TXPLL, &len, 2);
+	if (ret < 0)
+		return ret;
 
 	return dm9051_set_reg(db, DM9051_TCR, TCR_TXREQ);
 }
@@ -1911,27 +1920,52 @@ static int dm9051_loop_tx(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
 	int ntx = 0;
-	int ret;
 
 	while (!skb_queue_empty(&db->txq))
 	{
-		struct sk_buff *skb;
-		unsigned int len;
-
-		skb = skb_dequeue(&db->txq);
+		struct sk_buff *skb = skb_dequeue(&db->txq);
 		if (skb)
 		{
-			ntx++;
-			ret = dm9051_single_tx(db, skb->data, skb->len);
-			len = skb->len;
-			dev_kfree_skb(skb);
-			if (ret < 0)
+			int ret;
+			unsigned int len = skb->len;
+
+			if (mconf->tx_mode == FORCE_TX_CONTI_ON)
 			{
-				db->bc.tx_err_counter++;
-				return 0;
+				ret = dm9051_conti_tx(db, skb->data, skb->len); //'double_wb'
 			}
-			ndev->stats.tx_bytes += len;
-			ndev->stats.tx_packets++;
+			else
+			{
+				unsigned int pad = 0; //'~wb'
+				if (mconf->rxtx_mode && (skb->len & 1))
+				{
+					pad = 1;
+					/* protection */
+				#ifdef DM9051_SKB_PROTECT
+					struct sk_buff *skb2;
+
+					skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
+					if (!skb2)
+						printk("[WB_SUPPORT] which is len %d, memory leak!\n", skb->len);
+					dev_kfree_skb(skb);
+					skb = skb2;
+				#endif
+				}
+
+				if (skb)
+					ret = dm9051_single_tx(db, skb->data, len + pad, len); //'skb->len'
+			}
+
+			if (skb) {
+				ntx++;
+				dev_kfree_skb(skb);
+				if (ret < 0)
+				{
+					db->bc.tx_err_counter++;
+					return 0;
+				}
+				ndev->stats.tx_bytes += len;
+				ndev->stats.tx_packets++;
+			}
 		}
 
 		if (netif_queue_stopped(ndev) &&
