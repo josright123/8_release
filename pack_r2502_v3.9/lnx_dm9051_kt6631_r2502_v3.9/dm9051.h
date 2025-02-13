@@ -185,6 +185,15 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
         return netdev_priv(ndev);
 }
 
+static inline bus_work(struct board_info *db, u8 *buff, unsigned int crlen)
+{
+	unsigned int j;
+	for (j = 0; j < crlen; j++)
+	{
+		buff[j] ^= db->rctl.encpt_setted_key;
+	}
+}
+
 const static char *linux_name[] = {
         "rsrv",
         "rsrv",
@@ -252,16 +261,17 @@ const struct eng_config engdata = {
 #define AARCH_OS_64                     1
 
 /* driver config */
-#define	FORCE_BUS_ENCPT_OFF		0
-#define	FORCE_BUS_ENCPT_FIX_ON		1
-#define	FORCE_BUS_ENCPT_FAB_ON		2
-#define FORCE_BUS_ENCPT_NUL_KEY		0x00 //for NOTE!
-#define FORCE_BUS_ENCPT_FIX_KEY		0x95 //for selected, for test in the lab.
-
 #define	FORCE_TX_CONTI_OFF		0
 #define	FORCE_TX_CONTI_ON		1
 
 #define	DEFAULT_CHECKSUM_OFF		0
 #define	DEFAULT_CHECKSUM_ON		1
+
+#define	FORCE_BUS_ENCPT_OFF		0
+#define	FORCE_BUS_ENCPT_CUST_ON		1
+
+#define ENCPT_MODE                      FORCE_BUS_ENCPT_OFF
+#define FORCE_BUS_ENCPT_FIX_KEY		0x95 //for fix selected     
+#define MI_FIX                          1
 
 #endif /* _DM9051_H_ */

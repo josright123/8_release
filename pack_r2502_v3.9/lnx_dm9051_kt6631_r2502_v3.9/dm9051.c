@@ -62,8 +62,6 @@ struct driver_config
 	struct mod_config
 	{
 		char *test_info;
-		u8 encpt_mode; /* encpt_mode */
-		u8 encpt_pad;  /* encpt_setted_key */
 		int skb_wb_mode;
 		int tx_mode;
 		int checksuming;
@@ -78,14 +76,14 @@ struct driver_config
 
 /* Default driver configuration */
 const struct driver_config confdata = {
-	.release_version = "lnx_dm9051_kt6631_r2502_v3.9",
+	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
 	.interrupt = MODE_INTERRUPT, /* MODE_INTERRUPT or MODE_INTERRUPT_CLKOUT */
 	.mid = MODE_B,
 	.mod = {
 		{
 			.test_info = "Test in rpi5 bcm2712",
-			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
-			.encpt_pad = 0x00,
+			//.encpt_mode = FORCE_BUS_ENCPT_CUST_ON,
+			//.encpt_pad = 0x00,
 			.skb_wb_mode = SKB_WB_ON,
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
@@ -93,8 +91,8 @@ const struct driver_config confdata = {
 		},
 		{
 			.test_info = "Test in rpi4 bcm2711",
-			.encpt_mode = FORCE_BUS_ENCPT_FAB_ON,
-			.encpt_pad = 0x00,
+			//.encpt_mode = FORCE_BUS_ENCPT_CUST_ON,
+			//.encpt_pad = 0x00,
 			.skb_wb_mode = SKB_WB_ON,
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
@@ -102,8 +100,8 @@ const struct driver_config confdata = {
 		},
 		{
 			.test_info = "Test in processor Cortex-A",
-			.encpt_mode = FORCE_BUS_ENCPT_OFF,
-			.encpt_pad = 0x00,
+			//.encpt_mode = FORCE_BUS_ENCPT_OFF,
+			//.encpt_pad = 0x00,
 			.skb_wb_mode = SKB_WB_OFF,
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
@@ -357,17 +355,22 @@ static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void 
 	return ret;
 }
 
+#define DM9051_BUS_WORK(exp, yhndlr) 	\
+	do                                  \
+	{                                   \
+		if ((exp))                      \
+		{                               \
+			yhndlr;                     \
+		}                               \
+	} while (0)
+
 static int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen)
 {
-	if (db->rctl.encpt_setted_key &&
-		mconf->encpt_mode != FORCE_BUS_ENCPT_OFF)
-	{
-		unsigned int j;
-		for (j = 0; j < crlen; j++)
-		{
-			buff[j] ^= db->rctl.encpt_setted_key;
-		}
-	}
+	// if (db->rctl.encpt_setted_key &&
+		// mconf->encpt_mode != FORCE_BUS_ENCPT_OFF)
+	// {
+	// }
+	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.encpt_setted_key, bus_work(db,buff,crlen));
 
 	return dm9051_write_mem(db, DM_SPI_MWCMD, buff, crlen); //'!wb'
 }
@@ -447,15 +450,11 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 {
 	int ret = dm9051_read_mem(db, reg, buff, crlen);
 
-	if (ret == 0 && db->rctl.encpt_setted_key &&
-		mconf->encpt_mode != FORCE_BUS_ENCPT_OFF)
-	{
-		size_t j;
-		for (j = 0; j < crlen; j++)
-		{
-			buff[j] ^= db->rctl.encpt_setted_key;
-		}
-	}
+	// if (ret == 0 && db->rctl.encpt_setted_key &&
+		// mconf->encpt_mode != FORCE_BUS_ENCPT_OFF)
+	// {
+	// }
+	DM9051_BUS_WORK(ENCPT_MODE && ret == 0 && db->rctl.encpt_setted_key, bus_work(db,buff,crlen));
 	return ret;
 }
 
@@ -728,41 +727,6 @@ static int dm9051_phywrite(void *context, unsigned int reg, unsigned int val)
 }
 
 // dm9051_phyread.EXTEND
-static int dm9051_phyread_log_bmsr(struct board_info *db, char *head, int addr,
-								   unsigned int reg, unsigned int *val)
-{
-	int ret = dm9051_phyread(db, reg, val);
-	if (ret)
-		return ret;
-
-	/* check log */
-	do
-	{
-		static unsigned int bmsr = 0xffff;
-		if (*val != bmsr)
-		{
-			bmsr = *val;
-		}
-		else
-		{
-			if (!(*val & BIT(6)))
-				printk("%s_read.bmsr.eq, phyaddr %d [BMSR] %04x\n", head, addr, *val);
-
-			if (*val == 0xffff)
-			{
-				unsigned int vval;
-				ret = dm9051_phyread(db, 2, &vval);
-				if (ret)
-					return ret;
-				printk("%s_read.PHYID1[_check_], phyaddr %d phyreg(PHYID1) %04x\n", head, addr, vval);
-			}
-		}
-	} while (0);
-
-	return ret;
-}
-
-// dm9051_phyread.EXTEND
 static int dm9051_phyread_log_reset(struct board_info *db,
 									unsigned int reg)
 {
@@ -824,23 +788,107 @@ static int dm9051_phyread_log_dscsr(struct board_info *db,
 	return ret;
 }
 
+// dm9051_phyread.EXTEND
+static int dm9051_phyread_log_bmsr(struct board_info *db, char *head, int addr,
+								   unsigned int reg, unsigned int *val)
+{
+	int ret = dm9051_phyread(db, reg, val);
+	if (ret)
+		return ret;
+
+	/* check log */
+	do
+	{
+		static unsigned int bmsr = 0xffff;
+		if (*val != bmsr)
+		{
+			bmsr = *val;
+		}
+		else
+		{
+			if (!(*val & BIT(6)))
+				printk("%s_read.bmsr.eq, phyaddr %d [BMSR] %04x\n", head, addr, *val);
+
+			if (*val == 0xffff)
+			{
+				unsigned int vval;
+				ret = dm9051_phyread(db, 2, &vval);
+				if (ret)
+					return ret;
+				printk("%s_read.PHYID1[_check_], phyaddr %d phyreg(PHYID1) %04x\n", head, addr, vval);
+			}
+		}
+	} while (0);
+
+	return ret;
+}
+
+/*static int dm9051_mdio_read_delay(struct board_info *db, int addr, int regnum, unsigned int *val)
+{
+	int ret;
+
+	mutex_lock(&db->spi_lockm);
+
+	if (regnum == 1)
+		ret = dm9051_phyread_log_bmsr(db, "_mdio", addr, regnum, val);
+	else
+		ret = dm9051_phyread(db, regnum, val);
+
+	mutex_unlock(&db->spi_lockm);
+
+	if (ret)
+		return ret;
+	return *val;
+}
+
+static int dm9051_mdio_write_delay(struct board_info *db, int addr, int regnum, unsigned int val)
+{
+	int ret;
+
+	mutex_lock(&db->spi_lockm);
+
+	// [dbg] mdio.wr BMCR
+	if (regnum == 0)
+	{
+		if (val & 0x800)
+			printk("_[mii_bus] mdio write : power down (warn)\n");
+	}
+	ret = dm9051_phywrite(db, regnum, val);
+
+	mutex_unlock(&db->spi_lockm);
+
+	return ret;
+}*/
+
 static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 {
 	struct board_info *db = bus->priv;
-	unsigned int val = 0xffff;
-	int ret;
+	unsigned int val;
 
 	if (addr == DM9051_PHY_ADDR)
 	{
+		//=return dm9051_mdio_read_delay(db, addr, regnum, &val);
+		int ret;
+
+		#if MI_FIX
+		mutex_lock(&db->spi_lockm);
+		#endif
+
 		if (regnum == 1)
 			ret = dm9051_phyread_log_bmsr(db, "_mdio", addr, regnum, &val);
 		else
 			ret = dm9051_phyread(db, regnum, &val);
+
+		#if MI_FIX
+		mutex_unlock(&db->spi_lockm);
+		#endif
+
 		if (ret)
 			return ret;
+		return val;
 	}
 
-	return val;
+	return 0xffff;
 }
 
 static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
@@ -849,13 +897,26 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 
 	if (addr == DM9051_PHY_ADDR)
 	{
+		//=return dm9051_mdio_write_delay(db, addr, regnum, val);
+		int ret;
+
+		#if MI_FIX
+		mutex_lock(&db->spi_lockm);
+		#endif
+
 		/* [dbg] mdio.wr BMCR */
 		if (regnum == 0)
 		{
 			if (val & 0x800)
 				printk("_[mii_bus] mdio write : power down (warn)\n");
 		}
-		return dm9051_phywrite(db, regnum, val);
+		ret = dm9051_phywrite(db, regnum, val);
+
+		#if MI_FIX
+		mutex_unlock(&db->spi_lockm);
+		#endif
+
+		return ret;
 	}
 
 	return -ENODEV;
@@ -897,7 +958,7 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 
 /* Function write:
  */
-static void dm9051_write_crypt_word(struct board_info *db, u8 crypt_word)
+/*static void dm9051_write_bus_word(struct board_info *db, u8 crypt_word)
 {
 	int ret;
 	unsigned int crypt_1, crypt_2;
@@ -917,11 +978,11 @@ static void dm9051_write_crypt_word(struct board_info *db, u8 crypt_word)
 	if (ret)
 		return;
 	printk("[dm9051a_add_cryp-key] 0x%02x\n", crypt_word);
-}
+}*/
 
 /* Function read:
  */
-static u8 dm9051_read_crypt_word(struct board_info *db)
+static u8 dm9051_read_bus_word(struct board_info *db)
 {
 	int ret;
 	unsigned int crypt_1, crypt_2, key;
@@ -947,15 +1008,7 @@ static u8 dm9051_read_crypt_word(struct board_info *db)
 
 static int dm9051_setup_crypt(struct board_info *db)
 {
-	if (mconf->encpt_mode == FORCE_BUS_ENCPT_FIX_ON)
-	{
-		dm9051_write_crypt_word(db, db->rctl.encpt_setted_key);
-		db->rctl.encpt_setted_key = dm9051_read_crypt_word(db); // read to be sure!
-	}
-	else if (mconf->encpt_mode == FORCE_BUS_ENCPT_FAB_ON)
-	{
-		db->rctl.encpt_setted_key = dm9051_read_crypt_word(db);
-	}
+	db->rctl.encpt_setted_key = dm9051_read_bus_word(db);
 
 	return 0;
 }
@@ -1002,6 +1055,8 @@ static int dm9051_core_reset(struct board_info *db)
 	dm9051_setup_crypt(db);
 	if (ret)
 		return ret;
+
+	dev_info(dev, "Rst Bus Fix on: %u\n", db->rctl.encpt_setted_key);
 
 	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (mconf->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
 	if (ret)
@@ -1207,11 +1262,20 @@ static int dm9051_map_chipid(struct board_info *db)
 		return -ENODEV;
 	}
 
+	/* first */
+	dm9051_setup_crypt(db);
+	if (ret)
+		return ret;
+
 	dev_info(dev, "chip %04x found\n", wid);
 	dev_info(dev, "[TX mode]= %s mode\n",
 			 (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");
-	dev_info(dev, "[Encrypt mode]= %s\n",
-			 (mconf->encpt_mode != FORCE_BUS_ENCPT_OFF) ? "on" : "off"); // xxx
+	//#if _ENCPT_MODE == FORCE_BUS_ENCPT_OFF
+	//dev_info(dev, "[Encrypt mode]= %s\n", "off");
+	//#else
+	//dev_info(dev, "[Encrypt mode]= %s\n", "on");
+	//#endif
+	dev_info(dev, "Init Bus Fix on: %u\n", db->rctl.encpt_setted_key);
 	dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
 	dev_info(dev, "DRVR= %s, %s\n",
 			 econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
@@ -2177,6 +2241,7 @@ static void dm9051_operation_clear(struct board_info *db)
 	trap_clr(db);
 	db->bc.nRxcF = 0;
 	db->bc.ndelayF = POLL_OPERATE_INIT;
+	db->rctl.encpt_setted_key = FORCE_BUS_ENCPT_FIX_KEY;
 }
 
 static int dm9051_mdio_register(struct board_info *db)
