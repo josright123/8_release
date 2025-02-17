@@ -97,8 +97,8 @@
 #define RSR_AE			BIT(2)
 #define RSR_CE			BIT(1)
 #define RSR_FOE			BIT(0)
-#define	RSR_ERR_BITS		(RSR_RF | RSR_LCS | RSR_RWTO | RSR_PLE | \
-				 RSR_AE | RSR_CE | RSR_FOE)
+#define	RSR_ERR_BITS		(RSR_RF | RSR_LCS | RSR_RWTO | \
+				 RSR_AE | RSR_CE | RSR_FOE) /* | RSR_PLE */
  //0x0A 
 #define FCR_TXPEN		BIT(5)
 #define FCR_BKPA		BIT(4)
