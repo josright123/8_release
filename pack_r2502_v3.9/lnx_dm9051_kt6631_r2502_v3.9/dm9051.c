@@ -1056,7 +1056,7 @@ static int dm9051_core_reset(struct board_info *db)
 	if (ret)
 		return ret;
 
-	dev_info(dev, "Rst Bus Fix on: %u\n", db->rctl.encpt_setted_key);
+	//dev_info(dev, "Rst Bus Fix on: %u\n", db->rctl.encpt_setted_key);
 
 	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (mconf->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
 	if (ret)
@@ -1262,24 +1262,7 @@ static int dm9051_map_chipid(struct board_info *db)
 		return -ENODEV;
 	}
 
-	/* first */
-	dm9051_setup_crypt(db);
-	if (ret)
-		return ret;
-
 	dev_info(dev, "chip %04x found\n", wid);
-	dev_info(dev, "[TX mode]= %s mode\n",
-			 (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");
-	//#if _ENCPT_MODE == FORCE_BUS_ENCPT_OFF
-	//dev_info(dev, "[Encrypt mode]= %s\n", "off");
-	//#else
-	//dev_info(dev, "[Encrypt mode]= %s\n", "on");
-	//#endif
-	dev_info(dev, "Init Bus Fix on: %u\n", db->rctl.encpt_setted_key);
-	dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
-	dev_info(dev, "DRVR= %s, %s\n",
-			 econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
-			 econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
 	return 0;
 }
 
@@ -1535,6 +1518,8 @@ static int dm9051_all_restart(struct board_info *db)
 	ret = dm9051_core_reset(db);
 	if (ret)
 		return ret;
+
+	dev_info(dev, "Rst Bus Fix on: %u\n", db->rctl.encpt_setted_key);
 
 	// printk("dm9.Set dm9051_irq_flag() %d, _TRIGGER_LOW %d, _TRIGGER_HIGH %d (restart)\n",
 	//	   dm9051_irq_flag(db), IRQF_TRIGGER_LOW, IRQF_TRIGGER_HIGH);
@@ -2387,6 +2372,18 @@ static int dm9051_probe(struct spi_device *spi)
 	ret = dm9051_map_chipid(db);
 	if (ret)
 		return ret;
+
+	dm9051_setup_crypt(db); /* first */
+	if (ret)
+		return ret;
+
+	dev_info(dev, "Init Bus Fix on: %u\n", db->rctl.encpt_setted_key);
+	dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
+	dev_info(dev, "[TX mode]= %s mode\n",
+			 (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");
+	dev_info(dev, "DRVR= %s, %s\n",
+			 econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
+			 econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
 
 	ret = dm9051_map_etherdev_par(ndev, db);
 	if (ret < 0)
