@@ -734,10 +734,10 @@ static int dm9051_phyread_log_reset(struct board_info *db,
 	int ret = dm9051_phyread(db, reg, &val);
 	if (ret)
 	{
-		printk("_reset [dm9051_core_reset] dm9051_phyread(%u), ret = %d (ERROR)\n", reg, ret);
+		printk("_reset [_core_reset] dm9051_phyread(%u), ret = %d (ERROR)\n", reg, ret);
 		return ret;
 	}
-	printk("_reset [dm9051_core_reset] dm9051_phyread(%u), %04x\n", reg, val);
+	printk("_reset [_core_reset] dm9051_phyread(%u), %04x\n", reg, val);
 	return ret;
 }
 
@@ -749,21 +749,21 @@ static int dm9051_phyread_log_dscsr(struct board_info *db,
 	int ret = dm9051_phyread(db, reg, &val);
 	if (ret)
 	{
-		printk("_reset [dm9051_core_reset] dm9051_phyread(dscsr), ret = %d (ERROR)\n", ret);
+		printk("_reset [_core_reset] dm9051_phyread(dscsr), ret = %d (ERROR)\n", ret);
 		return ret;
 	}
-	printk("_reset [dm9051_core_reset] dm9051_phyread(dscsr), %04x\n", val);
+	printk("_reset [_core_reset] dm9051_phyread(dscsr), %04x\n", val);
 
 	if ((val & 0x01f0) == 0x0010)
 	{
-		printk("_reset [dm9051_core_reset] PHY addr DOES 1\n");
+		printk("_reset [_core_reset] PHY addr DOES 1\n");
 	}
 	else
 	{
-		printk("_reset [dm9051_core_reset] PHY addr NOT 1 ?\n");
+		printk("_reset [_core_reset] PHY addr NOT 1 ?\n");
 
 		/* write */
-		printk("_reset [dm9051_core_reset] PHY addr SETTO 1\n");
+		printk("_reset [_core_reset] PHY addr SETTO 1\n");
 		ret = dm9051_phywrite(db, reg, 0xf210); // register 17
 		if (ret)
 			return ret;
@@ -771,17 +771,17 @@ static int dm9051_phyread_log_dscsr(struct board_info *db,
 		ret = dm9051_phyread(db, reg, &val);
 		if (ret)
 		{
-			printk("_reset [dm9051_core_reset] dm9051_phyread-2(dscsr), ret = %d (ERROR)\n", ret);
+			printk("_reset [_core_reset] dm9051_phyread-2(dscsr), ret = %d (ERROR)\n", ret);
 			return ret;
 		}
-		printk("_reset [dm9051_core_reset] dm9051_phyread-2(dscsr), %04x\n", val);
+		printk("_reset [_core_reset] dm9051_phyread-2(dscsr), %04x\n", val);
 		if ((val & 0x01f0) == 0x0010)
 		{
-			printk("_reset [dm9051_core_reset] PHY addr DOES 1 [workaround fixed]\n");
+			printk("_reset [_core_reset] PHY addr DOES 1 [workaround fixed]\n");
 		}
 		else
 		{
-			printk("_reset [dm9051_core_reset] PHY addr NOT 1 ? [second time]\n");
+			printk("_reset [_core_reset] PHY addr NOT 1 ? [second time]\n");
 		}
 	}
 
@@ -982,36 +982,36 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 
 /* Function read:
  */
-static u8 dm9051_read_bus_word(struct board_info *db)
+static int dm9051_setup_bus_work(struct board_info *db)
 {
 	int ret;
 	unsigned int crypt_1, crypt_2, key;
 	struct device *dev = &db->spidev->dev;
+	db->rctl.encpt_setted_key = 0;
 	ret = dm9051_get_reg(db, DM9051_PIDL, &crypt_1);
 	if (ret)
-		return 0;
+		return ret;
 	ret = dm9051_get_reg(db, DM9051_PIDH, &crypt_2);
 	if (ret)
-		return 0;
+		return ret;
 	ret = dm9051_set_reg(db, 0x49, crypt_1);
 	if (ret)
-		return 0;
+		return ret;
 	ret = dm9051_set_reg(db, 0x49, crypt_2);
 	if (ret)
-		return 0;
+		return ret;
 	ret = dm9051_get_reg(db, 0x49, &key);
 	if (ret)
-		return 0;
+		return ret;
 	dev_info(dev, "[Encrypt mode]= on, key 0x%02x\n", key & 0xff);
-	return (u8)(key & 0xff);
-}
-
-static int dm9051_setup_crypt(struct board_info *db)
-{
-	db->rctl.encpt_setted_key = dm9051_read_bus_word(db);
-
+	db->rctl.encpt_setted_key = (u8)(key & 0xff);
 	return 0;
 }
+
+//static int dm9051_read_bus_word(struct board_info *db)
+//{
+//	return dm9051_read_bus_word(db);
+//}
 
 static int dm9051_core_reset(struct board_info *db)
 {
@@ -1052,7 +1052,7 @@ static int dm9051_core_reset(struct board_info *db)
 		//	return ret;
 	} while (0);
 
-	dm9051_setup_crypt(db);
+	ret = dm9051_setup_bus_work(db);
 	if (ret)
 		return ret;
 
@@ -1079,7 +1079,7 @@ static int dm9051_core_reset(struct board_info *db)
 	 */
 	if (cint == MODE_INTERRUPT_CLKOUT)
 	{
-		printk("_reset [dm9051_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
+		printk("_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		if (ret)
 			return ret;
@@ -1611,7 +1611,7 @@ void monitor_rxb0(unsigned int rxbyte)
 		{
 			rxbz_counter = 0;
 			memset(inval_rxb, 0, sizeof(inval_rxb));
-			printk("_[Less constrain of old SCAN_BL trap's, NOT dm9051_all_restart] only monitored.\n");
+			printk("_[Less constrain of old SCAN_BL trap's, NOT _all_restart] only monitored.\n");
 		}
 	}
 }
@@ -1682,7 +1682,7 @@ int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 			memset(inval_rxb, 0, sizeof(inval_rxb));
 			ret = dm9051_all_restart(db); //...
 			if (!ret)
-				printk("_[dm9051_all_restart] work around done\n");
+				printk("_[_all_restart] work around done\n");
 			return 1;
 		}
 	} while (0);
@@ -2039,6 +2039,7 @@ static int dm9051_open(struct net_device *ndev)
 
 	ndev->irq = spi->irq; /* by dts */
 
+//before [spi_lockm]
 	/* interrupt work */
 	if (cint)
 	{
@@ -2052,6 +2053,7 @@ static int dm9051_open(struct net_device *ndev)
 		}
 	}
 
+//use [spi_lockm]
 	ret = dm9051_all_start(db);
 	if (ret)
 	{
@@ -2373,7 +2375,7 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	dm9051_setup_crypt(db); /* first */
+	ret = dm9051_setup_bus_work(db); /* first */
 	if (ret)
 		return ret;
 
