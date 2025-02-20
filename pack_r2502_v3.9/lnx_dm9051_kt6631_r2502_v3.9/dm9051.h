@@ -190,7 +190,7 @@ static inline void bus_work(struct board_info *db, u8 *buff, unsigned int crlen)
 	unsigned int j;
 	for (j = 0; j < crlen; j++)
 	{
-		buff[j] ^= db->rctl.encpt_setted_key;
+		buff[j] ^= db->rctl.bus_word;
 	}
 }
 

@@ -145,7 +145,7 @@ struct rx_ctl_mach
  * struct dm9051_rxctrl - dm9051 driver rx control
  * @hash_table: Multicast hash-table data
  * @rcr_all: KS_RXCR1 register setting
- * @encpt_setted_key: Encryption key from fixed code or efuse
+ * @bus_word: Encryption key from fixed code or efuse
  *
  * The settings needs to control the receive filtering
  * such as the multicast hash-filter and the receive register settings
@@ -154,7 +154,7 @@ struct dm9051_rxctrl
 {
 	u16 hash_table[4];
 	u8 rcr_all;
-	u8 encpt_setted_key;
+	u8 bus_word;
 };
 
 /**
@@ -366,12 +366,7 @@ static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void 
 
 static int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen)
 {
-	// if (db->rctl.encpt_setted_key &&
-		// mconf->encpt_mode != FORCE_BUS_ENCPT_OFF)
-	// {
-	// }
-	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.encpt_setted_key, bus_work(db,buff,crlen));
-
+	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db,buff,crlen));
 	return dm9051_write_mem(db, DM_SPI_MWCMD, buff, crlen); //'!wb'
 }
 
@@ -449,12 +444,7 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 								 size_t crlen)
 {
 	int ret = dm9051_read_mem(db, reg, buff, crlen);
-
-	// if (ret == 0 && db->rctl.encpt_setted_key &&
-		// mconf->encpt_mode != FORCE_BUS_ENCPT_OFF)
-	// {
-	// }
-	DM9051_BUS_WORK(ENCPT_MODE && ret == 0 && db->rctl.encpt_setted_key, bus_work(db,buff,crlen));
+	DM9051_BUS_WORK(ENCPT_MODE && ret == 0 && db->rctl.bus_word, bus_work(db,buff,crlen));
 	return ret;
 }
 
@@ -956,30 +946,6 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 	return 0;
 }
 
-/* Function write:
- */
-/*static void dm9051_write_bus_word(struct board_info *db, u8 crypt_word)
-{
-	int ret;
-	unsigned int crypt_1, crypt_2;
-	ret = dm9051_get_reg(db, DM9051_PIDL, &crypt_1);
-	if (ret)
-		return;
-	ret = dm9051_get_reg(db, DM9051_PIDH, &crypt_2);
-	if (ret)
-		return;
-	ret = dm9051_set_reg(db, 0x49, crypt_1);
-	if (ret)
-		return;
-	ret = dm9051_set_reg(db, 0x49, crypt_2);
-	if (ret)
-		return;
-	ret = dm9051_set_reg(db, 0x49, crypt_word);
-	if (ret)
-		return;
-	printk("[dm9051a_add_cryp-key] 0x%02x\n", crypt_word);
-}*/
-
 /* Function read:
  */
 static int dm9051_setup_bus_work(struct board_info *db)
@@ -987,7 +953,7 @@ static int dm9051_setup_bus_work(struct board_info *db)
 	int ret;
 	unsigned int crypt_1, crypt_2, key;
 	struct device *dev = &db->spidev->dev;
-	db->rctl.encpt_setted_key = 0;
+	db->rctl.bus_word = 0;
 	ret = dm9051_get_reg(db, DM9051_PIDL, &crypt_1);
 	if (ret)
 		return ret;
@@ -1004,14 +970,9 @@ static int dm9051_setup_bus_work(struct board_info *db)
 	if (ret)
 		return ret;
 	dev_info(dev, "[Encrypt mode]= on, key 0x%02x\n", key & 0xff);
-	db->rctl.encpt_setted_key = (u8)(key & 0xff);
+	db->rctl.bus_word = (u8)(key & 0xff);
 	return 0;
 }
-
-//static int dm9051_read_bus_word(struct board_info *db)
-//{
-//	return dm9051_read_bus_word(db);
-//}
 
 static int dm9051_core_reset(struct board_info *db)
 {
@@ -1056,7 +1017,7 @@ static int dm9051_core_reset(struct board_info *db)
 	if (ret)
 		return ret;
 
-	//dev_info(dev, "Rst Bus Fix on: %u\n", db->rctl.encpt_setted_key);
+	//dev_info(dev, "Rst Bus Fix on: %u\n", db->rctl.bus_word);
 
 	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (mconf->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
 	if (ret)
@@ -1519,8 +1480,7 @@ static int dm9051_all_restart(struct board_info *db)
 	if (ret)
 		return ret;
 
-	dev_info(dev, "Rst Bus Fix on: %u\n", db->rctl.encpt_setted_key);
-
+	//dev_info(dev, "Rst Bus Fix on: %u\n", db->rctl.bus_word);
 	// printk("dm9.Set dm9051_irq_flag() %d, _TRIGGER_LOW %d, _TRIGGER_HIGH %d (restart)\n",
 	//	   dm9051_irq_flag(db), IRQF_TRIGGER_LOW, IRQF_TRIGGER_HIGH);
 	printk("dm9.Set dm9051_irq_flag() %d (restart)\n",
@@ -2228,7 +2188,7 @@ static void dm9051_operation_clear(struct board_info *db)
 	trap_clr(db);
 	db->bc.nRxcF = 0;
 	db->bc.ndelayF = POLL_OPERATE_INIT;
-	db->rctl.encpt_setted_key = FORCE_BUS_ENCPT_FIX_KEY;
+	db->rctl.bus_word = FORCE_BUS_ENCPT_FIX_KEY;
 }
 
 static int dm9051_mdio_register(struct board_info *db)
@@ -2379,7 +2339,7 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	dev_info(dev, "Init Bus Fix on: %u\n", db->rctl.encpt_setted_key);
+	dev_info(dev, "Init Bus Fix on: %u\n", db->rctl.bus_word);
 	dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
 	dev_info(dev, "[TX mode]= %s mode\n",
 			 (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");
