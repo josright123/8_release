@@ -163,10 +163,10 @@ struct dm9051_rxctrl
  * @status: status bits for the received packet
  * @rxlen: packet length
  *
- * The Rx packed, entered into the FIFO memory, start with these
+ * The Rx packet pack, entered into the FIFO memory, start with these
  * four bytes which is the Rx header, followed by the ethernet
  * packet data and ends with an appended 4-byte CRC data.
- * Both Rx packet and CRC data are for check purpose and finally
+ * Both Rx header and CRC data are for check purpose and finally
  * are dropped by this driver
  */
 struct dm9051_rxhdr
