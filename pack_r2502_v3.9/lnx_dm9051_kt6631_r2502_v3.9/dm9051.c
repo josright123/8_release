@@ -1017,8 +1017,6 @@ static int dm9051_core_reset(struct board_info *db)
 	if (ret)
 		return ret;
 
-	//dev_info(dev, "Rst Bus Fix on: %u\n", db->rctl.bus_word);
-
 	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (mconf->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
 	if (ret)
 		return ret;
@@ -1480,7 +1478,6 @@ static int dm9051_all_restart(struct board_info *db)
 	if (ret)
 		return ret;
 
-	//dev_info(dev, "Rst Bus Fix on: %u\n", db->rctl.bus_word);
 	// printk("dm9.Set dm9051_irq_flag() %d, _TRIGGER_LOW %d, _TRIGGER_HIGH %d (restart)\n",
 	//	   dm9051_irq_flag(db), IRQF_TRIGGER_LOW, IRQF_TRIGGER_HIGH);
 	printk("dm9.Set dm9051_irq_flag() %d (restart)\n",
