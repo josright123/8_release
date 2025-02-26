@@ -1011,6 +1011,13 @@ static int dm9051_core_reset(struct board_info *db)
 		// ret = dm9051_phywrite(db, 0, 0x3300);
 		// if (ret)
 		//	return ret;
+
+		/* Jabber function disabled refer to bench test
+		 * meeting advice 20250226
+		 */
+		ret = dm9051_phywrite(db, 18, 0x7000);
+		if (ret)
+			return ret;
 	} while (0);
 
 	ret = dm9051_setup_bus_work(db);
