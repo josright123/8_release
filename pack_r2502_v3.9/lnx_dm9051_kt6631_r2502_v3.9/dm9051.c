@@ -77,13 +77,11 @@ struct driver_config
 /* Default driver configuration */
 const struct driver_config confdata = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-	.interrupt = MODE_INTERRUPT, /* MODE_INTERRUPT or MODE_INTERRUPT_CLKOUT */
+	.interrupt = MODE_POLL, /* MODE_INTERRUPT or MODE_INTERRUPT_CLKOUT */
 	.mid = MODE_B,
 	.mod = {
 		{
 			.test_info = "Test in rpi5 bcm2712",
-			//.encpt_mode = FORCE_BUS_ENCPT_CUST_ON,
-			//.encpt_pad = 0x00,
 			.skb_wb_mode = SKB_WB_ON,
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
@@ -91,8 +89,6 @@ const struct driver_config confdata = {
 		},
 		{
 			.test_info = "Test in rpi4 bcm2711",
-			//.encpt_mode = FORCE_BUS_ENCPT_CUST_ON,
-			//.encpt_pad = 0x00,
 			.skb_wb_mode = SKB_WB_ON,
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
@@ -100,8 +96,6 @@ const struct driver_config confdata = {
 		},
 		{
 			.test_info = "Test in processor Cortex-A",
-			//.encpt_mode = FORCE_BUS_ENCPT_OFF,
-			//.encpt_pad = 0x00,
 			.skb_wb_mode = SKB_WB_OFF,
 			.tx_mode = FORCE_TX_CONTI_OFF,
 			.checksuming = DEFAULT_CHECKSUM_OFF,
@@ -222,6 +216,15 @@ struct board_info
 	u8 imr_all;
 	u8 lcr_all;
 };
+
+static inline void bus_work(struct board_info *db, u8 *buff, unsigned int crlen)
+{
+	unsigned int j;
+	for (j = 0; j < crlen; j++)
+	{
+		buff[j] ^= db->rctl.bus_word;
+	}
+}
 
 static int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
 {
@@ -952,7 +955,7 @@ static int dm9051_setup_bus_work(struct board_info *db)
 {
 	int ret;
 	unsigned int crypt_1, crypt_2, key;
-	struct device *dev = &db->spidev->dev;
+
 	db->rctl.bus_word = 0;
 	ret = dm9051_get_reg(db, DM9051_PIDL, &crypt_1);
 	if (ret)
@@ -969,7 +972,7 @@ static int dm9051_setup_bus_work(struct board_info *db)
 	ret = dm9051_get_reg(db, 0x49, &key);
 	if (ret)
 		return ret;
-	dev_info(dev, "[Encrypt mode]= on, key 0x%02x\n", key & 0xff);
+	//dev_info(&db->spidev->dev, "[bus word]= on, word 0x%02x\n", key & 0xff);
 	db->rctl.bus_word = (u8)(key & 0xff);
 	return 0;
 }
@@ -2343,7 +2346,7 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	dev_info(dev, "Init Bus Fix on: %u\n", db->rctl.bus_word);
+	//dev_info(dev, "Init Bus word on: %u\n", db->rctl.bus_word);
 	dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
 	dev_info(dev, "[TX mode]= %s mode\n",
 			 (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");

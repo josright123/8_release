@@ -185,15 +185,6 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
         return netdev_priv(ndev);
 }
 
-static inline void bus_work(struct board_info *db, u8 *buff, unsigned int crlen)
-{
-	unsigned int j;
-	for (j = 0; j < crlen; j++)
-	{
-		buff[j] ^= db->rctl.bus_word;
-	}
-}
-
 const static char *linux_name[] = {
         "rsrv",
         "rsrv",
