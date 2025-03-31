@@ -57,6 +57,16 @@
  * Encrypt Protection Driver version: 
  */
 
+//inline 
+void bus_work(u8 bus_word, u8 *buff, unsigned int crlen)
+{
+	unsigned int j;
+	for (j = 0; j < crlen; j++)
+	{
+		buff[j] ^= bus_word;
+	}
+}
+
 /*
  * ptp 1588 chip control: 
  */

@@ -220,15 +220,6 @@ struct board_info
 };
 #endif
 
-static inline void bus_work(struct board_info *db, u8 *buff, unsigned int crlen)
-{
-	unsigned int j;
-	for (j = 0; j < crlen; j++)
-	{
-		buff[j] ^= db->rctl.bus_word;
-	}
-}
-
 static int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
 {
 	int ret;
@@ -372,7 +363,7 @@ static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void 
 
 static int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen)
 {
-	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db,buff,crlen));
+	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
 	return dm9051_write_mem(db, DM_SPI_MWCMD, buff, crlen); //'!wb'
 }
 
@@ -450,7 +441,7 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 								 size_t crlen)
 {
 	int ret = dm9051_read_mem(db, reg, buff, crlen);
-	DM9051_BUS_WORK(ENCPT_MODE && ret == 0 && db->rctl.bus_word, bus_work(db,buff,crlen));
+	DM9051_BUS_WORK(ENCPT_MODE && ret == 0 && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
 	return ret;
 }
 

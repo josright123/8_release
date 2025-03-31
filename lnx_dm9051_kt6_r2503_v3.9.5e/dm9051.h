@@ -174,9 +174,6 @@
 #define DM9051_KERNEL_6_1	7
 #define DM9051_KERNEL_6_6	8
 
-#define	AARCH_OS_32             0
-#define	AARCH_OS_64             1
-
 #define LXR_REF_CONF		DM9051_KERNEL_6_6
 
 /* Helper functions */
@@ -262,11 +259,6 @@ const struct eng_config engdata = {
 #define	DEFAULT_CHECKSUM_OFF		0
 #define	DEFAULT_CHECKSUM_ON		1
 
-#define	FORCE_BUS_ENCPT_OFF		0
-#define	FORCE_BUS_ENCPT_CUST_ON		1
-
-#define ENCPT_MODE                      FORCE_BUS_ENCPT_OFF
-#define FORCE_BUS_ENCPT_FIX_KEY		0x95 //for fix selected     
 #define MI_FIX                          1
 
 #endif /* _DM9051_H_ */
