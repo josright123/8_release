@@ -78,8 +78,8 @@ struct driver_config
 /* Default driver configuration */
 const struct driver_config confdata = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-	.interrupt = MODE_POLL, /* MODE_INTERRUPT or MODE_INTERRUPT_CLKOUT */
-	.mid = MODE_B,
+	.interrupt = MODE_INTERRUPT, /* MODE_INTERRUPT or MODE_INTERRUPT_CLKOUT */
+	.mid = MODE_A,
 	.mod = {
 		{
 			.test_info = "Test in rpi5 bcm2712",
