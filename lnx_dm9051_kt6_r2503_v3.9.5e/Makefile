@@ -10,8 +10,10 @@
 #ifneq ($(KERNELRELEASE),)
 
 #(call from kernel build system)
-obj-m	:=	dm9051.o
-
+obj-m	:=	dm9051a.o
+dm9051a-objs := dm9051.o dm9051_plug.o
+#dm9051a-objs := dm9051.o dm9051_ptp.o dm9051_proc.o
+#dm9051a-objs := dm9051.o dm9051_ptp.o dm9051_proc.o dm9051_adv.o
 #else
 # MODULE_INSTALDIR ?= /lib/modules/$(shell uname -r)/kernel/drivers/net/usb
 #endif
@@ -24,28 +26,32 @@ PWD		:=	$(shell pwd)
 
 default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD)
+	chmod 644 dm9051a.ko
+
+save:
+	cp dm9051a.ko dm9051a_has_tested.ko
 
 clean:
-	rm -rf *.ko *.o *~ core .depend .*.cmd *.mod.c .tmp_versions .*.o.d *.symvers *.order *.bak *.mod
+	rm -rf *.o *~ core .depend .*.cmd *.mod.c .tmp_versions .*.o.d *.symvers *.order *.bak *.mod
 
 install:
-	sudo insmod dm9051.ko
+	sudo insmod dm9051a.ko
 
 remove:
 	sudo ifconfig eth1 down
-	sudo rmmod dm9051
+	sudo rmmod dm9051a
 
 first:
 	sudo ifconfig eth0 down
-	sudo insmod dm9051.ko
+	sudo insmod dm9051a.ko
 	sudo ifconfig eth1
 
 second:
 	sudo ifconfig eth0 down
 	sudo ifconfig eth1 down
-	sudo rmmod dm9051
-	sudo insmod dm9051.ko
-	modinfo dm9051
+	sudo rmmod dm9051a
+	sudo insmod dm9051a.ko
+	modinfo dm9051a
 	sudo ifconfig eth1
 
 reinstall:
@@ -55,8 +61,8 @@ tst1:
 	# install -c -m 0644 dm9051.ko $(MODULE_INSTALDIR)
 	# depmod -a -e
 	sudo ifconfig eth1 down
-	sudo rmmod dm9051
-	sudo insmod dm9051.ko
+	sudo rmmod dm9051a
+	sudo insmod dm9051a.ko
 	sudo ifconfig eth1
 	
 eth:

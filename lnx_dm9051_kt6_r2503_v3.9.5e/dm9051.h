@@ -185,6 +185,7 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
         return netdev_priv(ndev);
 }
 
+#if 0
 const static char *linux_name[] = {
         "rsrv",
         "rsrv",
@@ -207,6 +208,7 @@ const static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
         "tx_bytes",
         "fifo_rst",
 };
+#endif
 
 /* Feature control flags */
 #define FORCE_SILENCE_RXB               0
@@ -234,6 +236,7 @@ struct eng_config {
         u64 tx_timeout_us;
 };
 
+#if 0
 const struct eng_config engdata = {
 	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
 	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
@@ -243,6 +246,7 @@ const struct eng_config engdata = {
 		.nTargetMaxNum = POLL_OPERATE_NUM},
 	.tx_timeout_us = 2100,
 };
+#endif
 
 #define econf   (&engdata)
 #define csched  (engdata.sched)

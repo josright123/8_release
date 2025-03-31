@@ -18,8 +18,9 @@
 #include <linux/spi/spi.h>
 #include <linux/types.h>
 #include <linux/of.h>
-
+#define MAIN_DATA
 #include "dm9051.h"
+#include "dm9051_plug.h"
 
 #define KERNEL_BUILD_CONF	DM9051_KERNEL_6_6
 #define AARCH_OS_BITS		AARCH_OS_64
@@ -112,6 +113,7 @@ const struct driver_config confdata = {
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
 
+#if 1 //sticked fixed here is better!
 /**
  * struct rx_ctl_mach - rx activities record
  * @status_err_counter: rx status error counter
@@ -216,6 +218,7 @@ struct board_info
 	u8 imr_all;
 	u8 lcr_all;
 };
+#endif
 
 static inline void bus_work(struct board_info *db, u8 *buff, unsigned int crlen)
 {
@@ -237,7 +240,7 @@ static int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int 
 	return ret;
 }
 
-static int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val)
+int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val)
 {
 	int ret;
 
