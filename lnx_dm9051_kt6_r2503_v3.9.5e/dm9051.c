@@ -208,6 +208,7 @@ struct board_info
 	struct work_struct tx_work;
 #if 1
 	struct delayed_work irq_workp;
+	struct delayed_work irq_servicep;
 #endif
 	struct ethtool_pauseparam pause;
 	struct mutex spi_lockm;
@@ -1890,6 +1891,7 @@ static int dm9051_loop_tx(struct board_info *db)
 	return ntx;
 }
 
+#if 1
 static irqreturn_t dm9051_rx_threaded_irq(int irq, void *pw)
 {
 	struct board_info *db = pw;
@@ -1924,6 +1926,25 @@ out_unlock:
 
 	return IRQ_HANDLED;
 }
+
+static irqreturn_t dm9051_rx_irq_delay(int irq, void *pw)
+{
+	struct board_info *db = pw;
+#if 1
+	schedule_delayed_work(&db->irq_servicep, 0); //dm9051_rx_irq_service() //dm9051_rx_threaded_irq(0, db); // 0 is no-used.
+#else
+	schedule_delayed_work(&db->irq_workp, 0); //dm9051_irq_delayp
+#endif	
+	return IRQ_HANDLED;
+}
+
+static void dm9051_rx_irq_service(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
+	dm9051_rx_threaded_irq(0, db); // 0 is no-used. //rx_service(db); //
+}
+#endif
 
 static void dm9051_tx_delay(struct work_struct *work)
 {
@@ -1983,6 +2004,39 @@ static void dm9051_irq_delayp(struct work_struct *work)
 		schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
 }
 
+// static void rx_service(struct board_info *db)
+// {
+// 	int result, result_tx;
+
+// 	mutex_lock(&db->spi_lockm);
+
+// 	result = dm9051_disable_interrupt(db);
+// 	if (result)
+// 		goto out_unlock;
+
+// 	result = dm9051_clear_interrupt(db);
+// 	if (result)
+// 		goto out_unlock;
+
+// 	do
+// 	{
+// 		result = dm9051_loop_rx(db); /* threaded irq rx */
+// 		if (result < 0)
+// 			goto out_unlock;
+// 		result_tx = dm9051_loop_tx(db); /* more tx better performance */
+// 		if (result_tx < 0)
+// 			goto out_unlock;
+// 	} while (result > 0);
+
+// 	dm9051_enable_interrupt(db);
+
+// 	/* To exit and has mutex unlock while rx or tx error
+// 	 */
+// out_unlock:
+// 	mutex_unlock(&db->spi_lockm);
+
+// }
+
 /* Open network device
  * Called when the network device is marked active, such as a user executing
  * 'ifconfig up' on the device
@@ -2004,9 +2058,12 @@ static int dm9051_open(struct net_device *ndev)
 	/* interrupt work */
 	if (cint)
 	{
-		ret = request_threaded_irq(spi->irq, NULL, dm9051_rx_threaded_irq,
-								   dm9051_irq_flag(db) | IRQF_ONESHOT,
-								   ndev->name, db);
+		// ret = request_threaded_irq(spi->irq, NULL, dm9051_rx_threaded_irq,
+		// 						   dm9051_irq_flag(db) | IRQF_ONESHOT,
+		// 						   ndev->name, db);
+		ret = request_irq(spi->irq, dm9051_rx_irq_delay, //dm9051_rx_threaded_irq, //
+									dm9051_irq_flag(db) | IRQF_ONESHOT,
+									ndev->name, db);
 		if (ret < 0)
 		{
 			netdev_err(ndev, "failed to get irq\n");
@@ -2060,6 +2117,8 @@ static int dm9051_stop(struct net_device *ndev)
 	/* schedule delay work */
 	if (!cint)
 		cancel_delayed_work_sync(&db->irq_workp);
+	if (cint)
+		cancel_delayed_work_sync(&db->irq_servicep);
 
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
@@ -2291,6 +2350,8 @@ static int dm9051_probe(struct spi_device *spi)
 	if (!cint)
 		/* schedule delay work */
 		INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp);
+	if (cint)
+		INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_service);
 
 	ret = dm9051_map_init(spi, db);
 	if (ret)
