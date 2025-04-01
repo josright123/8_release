@@ -72,41 +72,6 @@ void SHOW_POLL_MODE(int cint, struct spi_device *spi)
 	}
 }
 
-// static void rx_service(struct board_info *db)
-// {
-// 	int result, result_tx;
-
-// 	mutex_lock(&db->spi_lockm);
-
-// 	result = dm9051_disable_interrupt(db);
-// 	if (result)
-// 		goto out_unlock;
-
-// 	result = dm9051_clear_interrupt(db);
-// 	if (result)
-// 		goto out_unlock;
-
-// 	do
-// 	{
-// 		result = dm9051_loop_rx(db); /* threaded rx */
-// 		if (result < 0)
-// 			goto out_unlock;
-// 		result_tx = dm9051_loop_tx(db); /* more tx better performance */
-// 		if (result_tx < 0)
-// 			goto out_unlock;
-// 	} while (result > 0);
-
-// 	dm9051_enable_interrupt(db);
-
-// 	/* To exit and has mutex unlock while rx or tx error
-// 	 */
-// out_unlock:
-// 	mutex_unlock(&db->spi_lockm);
-
-// }
-
-irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
-
 static int dm9051_irq_flag(struct board_info *db)
 {
 	struct spi_device *spi = db->spidev;
@@ -140,14 +105,14 @@ static irqreturn_t dm9051_rx_irq_delay(int voidirq, void *pw)
 	schedule_delayed_work(&db->irq_servicep, 0);
 	return IRQ_HANDLED;
 }
-#endif
+#endif //INT_TWO_STEP
 
 void INIT_RX_DELAY_SETUP(int cint, struct board_info *db)
 {
 	#ifdef INT_TWO_STEP
 	if (cint)
 		INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_service);
-	#endif
+	#endif //INT_TWO_STEP
 }
 
 int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev)
@@ -165,7 +130,7 @@ int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev)
 		ret = request_irq(ndev->irq, dm9051_rx_irq_delay,
 									dm9051_irq_flag(db) | IRQF_ONESHOT,
 									ndev->name, db);
-	#endif
+	#endif //INT_TWO_STEP
 	return ret;
 }
 
@@ -182,6 +147,96 @@ void END_RX_REQUEST_FREE(int cint, struct net_device *ndev)
 /*
  * Conti: 
  */
+
+/* transmit a packet,
+ * return value,
+ *   0 - succeed
+ *  -ETIMEDOUT - timeout error
+ */
+static void dm9051_create_tx_head(u8 *th, unsigned int len)
+{
+	th[0] = len & 0xff;
+	; //;;todo
+	th[1] = (len >> 8) & 0xff;
+	th[2] = 0x00;
+	th[3] = 0x80;
+}
+
+/* Get space of 3b max
+ */
+static unsigned int get_tx_free(struct board_info *db)
+{
+	int ret;
+	unsigned int rb;
+
+	ret = regmap_read(db->regmap_dm, DM9051_TXFSSR, &rb); // quick direct
+	if (ret < 0)
+	{
+		netif_err(db, drv, db->ndev, "%s: error %d read reg %02x\n",
+				  __func__, ret, DM9051_TXFSSR);
+		return 0; // size now 'zero'
+	}
+
+	return (rb & 0xff) * 64;
+}
+
+static unsigned int tx_free_poll_timeout(struct board_info *db, unsigned int tx_tot,
+										 u32 sleep_us, u64 timeout_us)
+{
+	unsigned int tx_free;
+	for (;;)
+	{
+		tx_free = get_tx_free(db);
+		if (tx_free >= tx_tot)
+			return tx_tot;
+		if (!sleep_us)
+			break;
+		if (timeout_us < sleep_us)
+			break;
+		timeout_us -= sleep_us;
+		udelay(sleep_us);
+	}
+	printk("dm9051 tx -ENOMEM, req_size %u, free_size %u\n", tx_tot, tx_free);
+	return 0;
+}
+
+int TX_SET_CONTI(struct board_info *db)
+{
+	/* or, be OK to put in dm9051_set_rcr()
+		 */
+	dm9051_set_reg(db, DM9051_ATCR, ATCR_TX_MODE2); /* tx continue on */
+	return dm9051_set_reg(db, DM9051_RCR, db->rctl.rcr_all | RCR_DIS_WATCHDOG_TIMER);
+}
+
+/* transmit a packet,
+ * return value,
+ *   0 - succeed
+ *  -ETIMEDOUT - timeout error
+ */
+int TX_OPS_CONTI(struct board_info *db, u8 *buff, unsigned int len)
+{
+	int ret;
+
+	const unsigned int tx_xxhead = 4;
+	unsigned int tx_xxbst = ((len + 3) / 4) * 4;
+	u8 th[4];
+	dm9051_create_tx_head(th, len);
+
+	if (!tx_free_poll_timeout(db, tx_xxhead + tx_xxbst, 1, econf->tx_timeout_us))
+	{					// 2100 <- 20
+		return -ENOMEM; //-ETIMEDOUT or
+	}
+
+	ret = dm9051_write_mem(db, DM_SPI_MWCMD, th, 4);
+	if (ret)
+		return ret;
+
+	ret = dm9051_write_mem_cache(db, buff, tx_xxbst); //'tx_xxbst'
+	if (ret)
+		return ret;
+
+	return dm9051_set_reg(db, DM9051_TCR, TCR_TXREQ);
+}
 
 /*
  * ptp 1588 chip control: 

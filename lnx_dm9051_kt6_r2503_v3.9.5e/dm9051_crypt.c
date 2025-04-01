@@ -55,6 +55,7 @@ static int dm9051_setup_bus_work(struct board_info *db)
 	int ret;
 	unsigned int crypt_1, crypt_2, key;
 
+	//db->rctl.bus_word = FORCE_BUS_ENCPT_FIX_KEY;
 	db->rctl.bus_word = 0;
 	ret = dm9051_get_reg(db, DM9051_PIDL, &crypt_1);
 	if (ret)

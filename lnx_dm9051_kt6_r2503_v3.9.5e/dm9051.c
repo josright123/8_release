@@ -223,12 +223,12 @@ struct board_info
 	struct regmap *regmap_dmbulk;
 	struct work_struct rxctrl_work;
 	struct work_struct tx_work;
-#if 1
+
 	struct delayed_work irq_workp;
 	#ifdef INT_TWO_STEP
 	struct delayed_work irq_servicep;
-	#endif
-#endif
+	#endif //INT_TWO_STEP
+
 	struct ethtool_pauseparam pause;
 	struct mutex spi_lockm;
 	struct mutex reg_mutex;
@@ -275,6 +275,16 @@ static void SHOW_OPTION_MODE(struct spi_device *spi)
 	dev_info(dev, "DRVR= %s, %s\n",
 			 econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
 			 econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
+}
+
+static void SHOW_MONITOR_RXC(struct board_info *db)
+{
+	if (mconf->align.burst_mode == BURST_MODE_FULL)
+		printk("___[rx/tx %s mode] nRxc %d\n",
+			   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",
+			   db->bc.nRxcF);
+	else if (mconf->align.burst_mode == BURST_MODE_ALIGN)
+		PRINT_ALIGN_INFO(db->bc.nRxcF);
 }
 
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
@@ -366,8 +376,8 @@ static int dm9051_get_regs(struct board_info *db, unsigned int reg, void *val,
 	return ret;
 }
 
-static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
-							size_t len)
+int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
+			size_t len)
 {
 	int ret;
 
@@ -404,7 +414,7 @@ static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void 
 	return ret;
 }
 
-static int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen)
+int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen)
 {
 	BUS_OPS(db, buff, crlen);
 	return dm9051_write_mem(db, DM_SPI_MWCMD, buff, crlen); //'!wb'
@@ -484,58 +494,6 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 	return ret;
 }
 
-/* transmit a packet,
- * return value,
- *   0 - succeed
- *  -ETIMEDOUT - timeout error
- */
-void dm9051_create_tx_head(u8 *th, unsigned int len)
-{
-	th[0] = len & 0xff;
-	; //;;todo
-	th[1] = (len >> 8) & 0xff;
-	th[2] = 0x00;
-	th[3] = 0x80;
-}
-
-/* Get space of 3b max
- */
-static unsigned int get_tx_free(struct board_info *db)
-{
-	int ret;
-	unsigned int rb;
-
-	ret = regmap_read(db->regmap_dm, DM9051_TXFSSR, &rb); // quick direct
-	if (ret < 0)
-	{
-		netif_err(db, drv, db->ndev, "%s: error %d read reg %02x\n",
-				  __func__, ret, DM9051_TXFSSR);
-		return 0; // size now 'zero'
-	}
-
-	return (rb & 0xff) * 64;
-}
-
-static unsigned int tx_free_poll_timeout(struct board_info *db, unsigned int tx_tot,
-										 u32 sleep_us, u64 timeout_us)
-{
-	unsigned int tx_free;
-	for (;;)
-	{
-		tx_free = get_tx_free(db);
-		if (tx_free >= tx_tot)
-			return tx_tot;
-		if (!sleep_us)
-			break;
-		if (timeout_us < sleep_us)
-			break;
-		timeout_us -= sleep_us;
-		udelay(sleep_us);
-	}
-	printk("dm9051 tx -ENOMEM, req_size %u, free_size %u\n", tx_tot, tx_free);
-	return 0;
-}
-
 /* waiting tx-end rather than tx-req
  * got faster
  */
@@ -591,12 +549,7 @@ static int dm9051_set_fcr(struct board_info *db)
 static int dm9051_set_rcr(struct board_info *db)
 {
 	if (mconf->tx_mode == FORCE_TX_CONTI_ON)
-	{
-		/* or, be OK to put in dm9051_set_rcr()
-		 */
-		dm9051_set_reg(db, DM9051_ATCR, ATCR_TX_MODE2); /* tx continue on */
-		return dm9051_set_reg(db, DM9051_RCR, db->rctl.rcr_all | RCR_DIS_WATCHDOG_TIMER);
-	}
+		return TX_SET_CONTI(db);
 	return dm9051_set_reg(db, DM9051_RCR, db->rctl.rcr_all);
 }
 
@@ -1010,9 +963,9 @@ static int dm9051_core_reset(struct board_info *db)
 		/* Jabber function disabled refer to bench test
 		 * meeting advice 20250226
 		 */
-		ret = dm9051_phywrite(db, 18, 0x7000);
-		if (ret)
-			return ret;
+		//ret = dm9051_phywrite(db, 18, 0x7000);
+		//if (ret)
+		//	return ret;
 	} while (0);
 
 	ret = BUS_SETUP(db); //reserved customization
@@ -1575,12 +1528,7 @@ void monitor_rxc(struct board_info *db, int scanrr)
 	if (econf->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
 	{
 		db->bc.nRxcF += scanrr;
-		if (mconf->align.burst_mode == BURST_MODE_FULL)
-			printk("___[rx/tx %s mode] nRxc %d\n",
-				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",
-				   db->bc.nRxcF);
-		else if (mconf->align.burst_mode == BURST_MODE_ALIGN)
-			PRINT_ALIGN_INFO(db->bc.nRxcF);
+		SHOW_MONITOR_RXC(db);
 	}
 }
 
@@ -1758,12 +1706,13 @@ static int dm9051_loop_rx(struct board_info *db)
 	return scanrr;
 }
 
+#if 0
 /* transmit a packet,
  * return value,
  *   0 - succeed
  *  -ETIMEDOUT - timeout error
  */
-static int dm9051_conti_tx(struct board_info *db, u8 *buff, unsigned int len)
+int TX_OPS_CONTI0(struct board_info *db, u8 *buff, unsigned int len)
 {
 	int ret;
 
@@ -1787,6 +1736,7 @@ static int dm9051_conti_tx(struct board_info *db, u8 *buff, unsigned int len)
 
 	return dm9051_set_reg(db, DM9051_TCR, TCR_TXREQ);
 }
+#endif
 
 static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int buff_len, unsigned int len)
 {
@@ -1835,7 +1785,7 @@ static int dm9051_loop_tx(struct board_info *db)
 
 			if (mconf->tx_mode == FORCE_TX_CONTI_ON)
 			{
-				ret = dm9051_conti_tx(db, skb->data, skb->len); //'double_wb'
+				ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
 			}
 			else
 			{
@@ -2043,7 +1993,7 @@ static int dm9051_stop(struct net_device *ndev)
 	#ifdef INT_TWO_STEP
 	if (dm9051_cmode_int)
 		cancel_delayed_work_sync(&db->irq_servicep);
-	#endif
+	#endif //INT_TWO_STEP
 
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
@@ -2169,7 +2119,6 @@ static void dm9051_operation_clear(struct board_info *db)
 	trap_clr(db);
 	db->bc.nRxcF = 0;
 	db->bc.ndelayF = POLL_OPERATE_INIT;
-	db->rctl.bus_word = FORCE_BUS_ENCPT_FIX_KEY;
 }
 
 static int dm9051_mdio_register(struct board_info *db)

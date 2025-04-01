@@ -121,6 +121,9 @@ void END_RX_REQUEST_FREE(int cint, struct net_device *ndev);
  * Conti: 
  */
 
+int TX_SET_CONTI(struct board_info *db);
+int TX_OPS_CONTI(struct board_info *db, u8 *buff, unsigned int len);
+
 /*
  * Encrypt Protection Driver version: 
  */

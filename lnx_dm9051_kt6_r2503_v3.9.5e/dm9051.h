@@ -354,12 +354,12 @@ struct board_info
 	struct regmap *regmap_dmbulk;
 	struct work_struct rxctrl_work;
 	struct work_struct tx_work;
-#if 1
+
 	struct delayed_work irq_workp;
 	#ifdef INT_TWO_STEP
 	struct delayed_work irq_servicep;
-	#endif
-#endif
+	#endif //INT_TWO_STEP
+
 	struct ethtool_pauseparam pause;
 	struct mutex spi_lockm;
 	struct mutex reg_mutex;
@@ -370,5 +370,10 @@ struct board_info
 	u8 lcr_all;
 };
 #endif
+
+int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
+			size_t len);
+int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);
+irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 
 #endif /* _DM9051_H_ */
