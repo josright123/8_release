@@ -54,6 +54,18 @@
  * MAIN Data: 
  */
 
+enum
+{
+	SKB_WB_OFF = 0,
+	SKB_WB_ON = 1, //'wb'
+};
+
+enum
+{
+	BURST_MODE_ALIGN = 0,
+	BURST_MODE_FULL = 1,
+};
+
 #ifdef MAIN_DATA
 const struct eng_config engdata = {
 	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
@@ -89,6 +101,13 @@ const static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
 #else
 extern const struct eng_config engdata;
 #endif
+
+#define econf   (&engdata)
+#define csched  (engdata.sched)
+
+/*
+ * SPI sync: 
+ */
 
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb); //used in the plug section
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section

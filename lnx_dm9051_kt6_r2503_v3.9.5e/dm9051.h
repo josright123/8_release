@@ -234,19 +234,16 @@ struct eng_config {
 };
 
 #if 0
-const struct eng_config engdata = {
-	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
-	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
-	.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
-	.sched = {
-		.delayF = {0, 1, 0, 0, 1}, 
-		.nTargetMaxNum = POLL_OPERATE_NUM},
-	.tx_timeout_us = 2100,
-};
+//const struct eng_config engdata = {
+//	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
+//	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
+//	.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
+//	.sched = {
+//		.delayF = {0, 1, 0, 0, 1}, 
+//		.nTargetMaxNum = POLL_OPERATE_NUM},
+//	.tx_timeout_us = 2100,
+//};
 #endif
-
-#define econf   (&engdata)
-#define csched  (engdata.sched)
 
 /* Architecture definitions */
 #define AARCH_OS_32                     0

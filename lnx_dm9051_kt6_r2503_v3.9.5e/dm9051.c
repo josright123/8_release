@@ -27,19 +27,7 @@
 
 /* Operating modes */
 
-#define DM9051_SKB_PROTECT		  //tX 'wb' do skb protect
-
-enum
-{
-	SKB_WB_OFF = 0,
-	SKB_WB_ON = 1, //'wb'
-};
-
-enum
-{
-	BURST_MODE_ALIGN = 0,
-	BURST_MODE_FULL = 1,
-};
+#define DM9051_SKB_PROTECT	//tX 'wb' do skb protect
 
 /* Driver configuration structure */
 
