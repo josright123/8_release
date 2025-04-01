@@ -50,6 +50,11 @@
 #define DMPLUG_PTP //(ptp 1588)
 #endif
 
+//#define PLUG_INT_2STEP
+#ifdef PLUG_INT_2STEP
+#define INT_TWO_STEP
+#endif
+
 /*
  * MAIN Data: 
  */
@@ -115,11 +120,6 @@ int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); /
 /*
  * Interrupt: 
  */
-
-#define PLUG_CINT2
-#ifdef PLUG_CINT2
-#define INT_TWO_STEP
-#endif
 
 enum
 {
