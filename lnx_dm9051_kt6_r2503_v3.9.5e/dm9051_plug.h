@@ -38,6 +38,10 @@
 #ifdef PLUG_MODEN
 #define DMPLUG_INT //(INT 39)
 #define DMPLUG_CONTI //(conti)
+#endif
+
+//#define PLUG_CUSTOMIZE_CRYP
+#ifdef PLUG_CUSTOMIZE_CRYP
 #define DMPLUG_CRYPT //(crypt)
 #endif
 
@@ -86,6 +90,9 @@ const static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
 extern const struct eng_config engdata;
 #endif
 
+int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb); //used in the plug section
+int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
+
 /*
  * Interrupt: 
  */
@@ -124,8 +131,15 @@ void END_RX_REQUEST_FREE(int cint, struct net_device *ndev);
 #define ENCPT_MODE                      FORCE_BUS_ENCPT_OFF
 #define FORCE_BUS_ENCPT_FIX_KEY		0x95 //for fix selected     
 
-//inline 
-void bus_work(u8 bus_word, u8 *buff, unsigned int crlen);
+//inline
+#ifdef DMPLUG_CRYPT
+static void bus_work(u8 bus_word, u8 *buff, unsigned int crlen);
+int BUS_SETUP(struct board_info *db);
+void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
+#else
+#define BUS_SETUP(db)	0		//empty(NoError)
+#define BUS_OPS(db, buff, crlen)	//empty
+#endif
 
 /*
  * ptp 1588: 

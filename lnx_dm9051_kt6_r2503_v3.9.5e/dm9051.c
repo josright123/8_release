@@ -106,6 +106,30 @@ const struct driver_config confdata = {
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
 
+#if AARCH_OS_BITS
+#define PRINT_REG_BLKRX_INFO(pstr, ret, reg, BLKLEN) \
+			netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %lu\n", \
+				   __func__, ret, pstr, reg, BLKLEN)
+#else
+#define PRINT_REG_BLKRX_INFO(pstr, ret, reg, BLKLEN) \
+			netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
+				   __func__, ret, pstr, reg, BLKLEN)
+#endif
+
+#if AARCH_OS_BITS
+#define PRINT_ALIGN_INFO(n) \
+			printk("___[%s][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
+				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "TX continue" : "TX normal mode", \
+				   mconf->align.rx_blk, \
+				   mconf->align.tx_blk, n)
+#else
+#define PRINT_ALIGN_INFO(n) \
+			printk("___[%s][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
+				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "TX continue" : "TX normal mode", \
+				   mconf->align.rx_blk, \
+				   mconf->align.tx_blk, n)
+#endif
+
 #if 0 //sticked fixed here is better!
 /**
  * struct rx_ctl_mach - rx activities record
@@ -216,7 +240,7 @@ struct board_info
 };
 #endif
 
-static int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
+int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
 {
 	int ret;
 
@@ -325,12 +349,7 @@ static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void 
 			len -= BLKTX;
 			if (ret < 0)
 			{
-#if AARCH_OS_BITS
-				netif_err(db, drv, db->ndev, "%s: error %d noinc writing regs %02x len %lu\n",
-#else
-				netif_err(db, drv, db->ndev, "%s: error %d noinc writing regs %02x len %u\n",
-#endif
-						  __func__, ret, reg, BLKTX);
+				PRINT_REG_BLKRX_INFO("writing", ret, reg, BLKTX);
 				return ret;
 			}
 		}
@@ -348,18 +367,9 @@ static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void 
 	return ret;
 }
 
-#define DM9051_BUS_WORK(exp, yhndlr) 	\
-	do                                  \
-	{                                   \
-		if ((exp))                      \
-		{                               \
-			yhndlr;                     \
-		}                               \
-	} while (0)
-
 static int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen)
 {
-	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
+	BUS_OPS(db, buff, crlen); //DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
 	return dm9051_write_mem(db, DM_SPI_MWCMD, buff, crlen); //'!wb'
 }
 
@@ -403,12 +413,7 @@ static int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 			ret = regmap_noinc_read(db->regmap_dm, reg, p, BLKRX);
 			if (ret < 0)
 			{
-#if AARCH_OS_BITS
-				netif_err(db, drv, db->ndev, "%s: error %d noinc reading regs %02x len %lu\n",
-#else
-				netif_err(db, drv, db->ndev, "%s: error %d noinc reading regs %02x len %u\n",
-#endif
-						  __func__, ret, reg, BLKRX);
+				PRINT_REG_BLKRX_INFO("reading", ret, reg, BLKRX);
 				return ret;
 			}
 			p += BLKRX;
@@ -437,7 +442,8 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 								 size_t crlen)
 {
 	int ret = dm9051_read_mem(db, reg, buff, crlen);
-	DM9051_BUS_WORK(ENCPT_MODE && ret == 0 && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
+	if (ret == 0)
+		BUS_OPS(db, buff, crlen); //DM9051_BUS_WORK(ENCPT_MODE && ret == 0 && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
 	return ret;
 }
 
@@ -925,31 +931,6 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 
 /* Function read:
  */
-static int dm9051_setup_bus_work(struct board_info *db)
-{
-	int ret;
-	unsigned int crypt_1, crypt_2, key;
-
-	db->rctl.bus_word = 0;
-	ret = dm9051_get_reg(db, DM9051_PIDL, &crypt_1);
-	if (ret)
-		return ret;
-	ret = dm9051_get_reg(db, DM9051_PIDH, &crypt_2);
-	if (ret)
-		return ret;
-	ret = dm9051_set_reg(db, 0x49, crypt_1);
-	if (ret)
-		return ret;
-	ret = dm9051_set_reg(db, 0x49, crypt_2);
-	if (ret)
-		return ret;
-	ret = dm9051_get_reg(db, 0x49, &key);
-	if (ret)
-		return ret;
-	//dev_info(&db->spidev->dev, "[bus word]= on, word 0x%02x\n", key & 0xff);
-	db->rctl.bus_word = (u8)(key & 0xff);
-	return 0;
-}
 
 static int dm9051_core_reset(struct board_info *db)
 {
@@ -997,7 +978,7 @@ static int dm9051_core_reset(struct board_info *db)
 			return ret;
 	} while (0);
 
-	ret = dm9051_setup_bus_work(db);
+	ret = BUS_SETUP(db); //reserved customization
 	if (ret)
 		return ret;
 
@@ -1462,11 +1443,6 @@ static int dm9051_all_restart(struct board_info *db)
 	if (ret)
 		return ret;
 
-	// printk("dm9.Set dm9051_irq_flag() %d, _TRIGGER_LOW %d, _TRIGGER_HIGH %d (restart)\n",
-	//	   dm9051_irq_flag(db), IRQF_TRIGGER_LOW, IRQF_TRIGGER_HIGH);
-//	printk("dm9.Set dm9051_irq_flag() %d (restart)\n",
-//		   dm9051_irq_flag(db));
-
 	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_intcr_value(db));
 	if (ret)
 		return ret;
@@ -1562,22 +1538,12 @@ void monitor_rxc(struct board_info *db, int scanrr)
 	if (econf->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
 	{ // tx_mode
 		db->bc.nRxcF += scanrr;
-		if (mconf->align.burst_mode)
+		if (mconf->align.burst_mode == BURST_MODE_FULL)
 			printk("___[%s][rx/tx Burst mode] nRxc %d\n",
 				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "TX continue" : "TX normal mode",
 				   db->bc.nRxcF);
-		else
-#if AARCH_OS_BITS
-			printk("___[%s][Alignment RX %lu, Alignment TX %lu] nRxc %d\n",
-				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "TX continue" : "TX normal mode",
-				   mconf->align.rx_blk,
-				   mconf->align.tx_blk, db->bc.nRxcF);
-#else
-			printk("___[%s][Alignment RX %u, Alignment RX %u] nRxc %d\n",
-				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "TX continue" : "TX normal mode",
-				   mconf->align.rx_blk,
-				   mconf->align.tx_blk, db->bc.nRxcF);
-#endif
+		else if (mconf->align.burst_mode == BURST_MODE_ALIGN)
+			PRINT_ALIGN_INFO(db->bc.nRxcF);
 	}
 }
 
@@ -2297,7 +2263,7 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	ret = dm9051_setup_bus_work(db); /* first */
+	ret = BUS_SETUP(db); /* first, reserved customization */
 	if (ret)
 		return ret;
 
