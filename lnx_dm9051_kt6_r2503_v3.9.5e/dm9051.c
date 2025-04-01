@@ -28,13 +28,6 @@
 /* Operating modes */
 enum
 {
-	MODE_POLL = 0,
-	MODE_INTERRUPT = 1,
-	MODE_INTERRUPT_CLKOUT = 2, /* need pi3/pi5 test and verify more */
-};
-
-enum
-{
 	MODE_A = 0,
 	MODE_B = 1,
 	MODE_C = 2,
@@ -107,7 +100,7 @@ const struct driver_config confdata = {
 /* Configuration access macros */
 #define mconf (&confdata.mod[confdata.mid])
 #define kconf (&confdata)
-#define cint (confdata.interrupt)
+#define dm9051_cmode_int (confdata.interrupt)
 
 /* Helper macros */
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
@@ -1025,7 +1018,7 @@ static int dm9051_core_reset(struct board_info *db)
 	/* Diagnostic contribute: In dm9051_enable_interrupt()
 	 * (or located in the core reset subroutine is better!!)
 	 */
-	if (cint == MODE_INTERRUPT_CLKOUT)
+	if (dm9051_cmode_int == MODE_INTERRUPT_CLKOUT)
 	{
 		printk("_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
@@ -1933,7 +1926,7 @@ static void dm9051_irq_delayp(struct work_struct *work)
 		db->bc.ndelayF = POLL_OPERATE_INIT;
 
 	/* redundent, but for safe */
-	if (!cint)
+	if (!dm9051_cmode_int)
 		schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
 }
 
@@ -1990,7 +1983,7 @@ static int dm9051_open(struct net_device *ndev)
 
 //before [spi_lockm]
 	/* interrupt work */
-	ret = INIT_RX_REQUEST_SETUP(cint, ndev);
+	ret = INIT_RX_REQUEST_SETUP(dm9051_cmode_int, ndev);
 	if (ret < 0)
 	{
 		netdev_err(ndev, "failed to get irq\n");
@@ -2002,7 +1995,7 @@ static int dm9051_open(struct net_device *ndev)
 	if (ret)
 	{
 		phy_stop(db->phydev);
-		if (cint)
+		if (dm9051_cmode_int)
 			free_irq(spi->irq, db);
 		return ret;
 	}
@@ -2021,7 +2014,7 @@ static int dm9051_open(struct net_device *ndev)
 	netif_wake_queue(ndev);
 
 	/* schedule delay work */
-	if (!cint)
+	if (!dm9051_cmode_int)
 		schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
 	return 0;
 }
@@ -2041,9 +2034,9 @@ static int dm9051_stop(struct net_device *ndev)
 		return ret;
 
 	/* schedule delay work */
-	if (!cint)
+	if (!dm9051_cmode_int)
 		cancel_delayed_work_sync(&db->irq_workp);
-	if (cint)
+	if (dm9051_cmode_int)
 		cancel_delayed_work_sync(&db->irq_servicep);
 
 	flush_work(&db->tx_work);
@@ -2052,7 +2045,7 @@ static int dm9051_stop(struct net_device *ndev)
 	phy_stop(db->phydev);
 
 	/* when (threadedcfg.interrupt_supp == THREADED_INT) */
-	if (cint)
+	if (dm9051_cmode_int)
 	{
 		free_irq(db->spidev->irq, db);
 		printk("_stop [free irq %d]\n", db->spidev->irq);
@@ -2273,10 +2266,10 @@ static int dm9051_probe(struct spi_device *spi)
 	INIT_WORK(&db->rxctrl_work, dm9051_rxctl_delay);
 	INIT_WORK(&db->tx_work, dm9051_tx_delay);
 
-	if (!cint)
+	if (!dm9051_cmode_int)
 		/* schedule delay work */
 		INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp);
-	INIT_RX_DELAY_SETUP(cint, db);
+	INIT_RX_DELAY_SETUP(dm9051_cmode_int, db);
 
 	ret = dm9051_map_init(spi, db);
 	if (ret)
@@ -2291,25 +2284,8 @@ static int dm9051_probe(struct spi_device *spi)
 		unsigned int speed;
 		of_property_read_u32(spi->dev.of_node, "spi-max-frequency", &speed);
 		dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
-
-		if (cint)
-		{
-			unsigned int intdata[2];
-			of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-			dev_info(dev, "Operation: Interrupt mode/ %s\n", (cint == MODE_INTERRUPT_CLKOUT) ? "CLKOUT" : "REG39H");
-			dev_info(dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
-			dev_info(dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
-		}
-		else
-		{
-			int i;
-			dev_info(dev, "Operation: Polling mode\n"); //~intpin
-			dev_info(dev, "Operation: Polling operate count %d\n", csched.nTargetMaxNum);
-			for (i = 0; i < csched.nTargetMaxNum; i++)
-			{
-				dev_info(dev, "Operation: Polling operate delayF[%d]= %lu\n", i, csched.delayF[i]);
-			}
-		}
+		SHOW_INT_MODE(dm9051_cmode_int, spi);
+		SHOW_POLL_MODE(dm9051_cmode_int, spi);
 	} while (0);
 	printk("\n");
 	dev_info(dev, "Davicom: %s", mconf->test_info);

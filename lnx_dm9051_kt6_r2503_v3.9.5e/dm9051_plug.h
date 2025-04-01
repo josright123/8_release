@@ -80,11 +80,23 @@ const static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
         "tx_bytes",
         "fifo_rst",
 };
+#else
+extern const struct eng_config engdata;
 #endif
 
 /*
  * Interrupt: 
  */
+
+enum
+{
+	MODE_POLL = 0,
+	MODE_INTERRUPT = 1,
+	MODE_INTERRUPT_CLKOUT = 2, /* need pi3/pi5 test and verify more */
+};
+
+void SHOW_POLL_MODE(int cint, struct spi_device *spi);
+void SHOW_INT_MODE(int cint, struct spi_device *spi);
 
 unsigned int dm9051_intcr_value(struct board_info *db);
 void INIT_RX_DELAY_SETUP(int cint, struct board_info *db);

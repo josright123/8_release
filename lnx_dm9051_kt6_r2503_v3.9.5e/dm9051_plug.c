@@ -49,6 +49,32 @@
  * Interrupt: 
  */
 
+void SHOW_INT_MODE(int cint, struct spi_device *spi)
+{
+	if (cint)
+	{
+		unsigned int intdata[2];
+		of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
+		dev_info(&spi->dev, "Operation: Interrupt mode/ %s\n", (cint == MODE_INTERRUPT_CLKOUT) ? "CLKOUT" : "REG39H");
+		dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
+		dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
+	}
+}
+
+void SHOW_POLL_MODE(int cint, struct spi_device *spi)
+{
+	if (!cint)
+	{
+		int i;
+		dev_info(&spi->dev, "Operation: Polling mode\n"); //~intpin
+		dev_info(&spi->dev, "Operation: Polling operate count %d\n", csched.nTargetMaxNum);
+		for (i = 0; i < csched.nTargetMaxNum; i++)
+		{
+			dev_info(&spi->dev, "Operation: Polling operate delayF[%d]= %lu\n", i, csched.delayF[i]);
+		}
+	}
+}
+
 // static void rx_service(struct board_info *db)
 // {
 // 	int result, result_tx;
