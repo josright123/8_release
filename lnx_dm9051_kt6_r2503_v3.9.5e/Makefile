@@ -13,6 +13,7 @@
 obj-m	:=	dm9051a.o
 dm9051a-objs := dm9051.o dm9051_plug.o
 #dm9051a-objs := dm9051.o dm9051_ptp.o dm9051_proc.o
+#dm9051a-objs := dm9051.o dm9051_plug.o dm9051_crypt.o
 #dm9051a-objs := dm9051.o dm9051_ptp.o dm9051_proc.o dm9051_adv.o
 #else
 # MODULE_INSTALDIR ?= /lib/modules/$(shell uname -r)/kernel/drivers/net/usb

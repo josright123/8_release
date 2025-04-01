@@ -133,7 +133,6 @@ void END_RX_REQUEST_FREE(int cint, struct net_device *ndev);
 
 //inline
 #ifdef DMPLUG_CRYPT
-static void bus_work(u8 bus_word, u8 *buff, unsigned int crlen);
 int BUS_SETUP(struct board_info *db);
 void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
 #else

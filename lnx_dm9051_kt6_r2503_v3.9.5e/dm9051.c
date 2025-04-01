@@ -369,7 +369,7 @@ static int dm9051_write_mem(struct board_info *db, unsigned int reg, const void 
 
 static int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen)
 {
-	BUS_OPS(db, buff, crlen); //DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
+	BUS_OPS(db, buff, crlen);
 	return dm9051_write_mem(db, DM_SPI_MWCMD, buff, crlen); //'!wb'
 }
 
@@ -443,7 +443,7 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 {
 	int ret = dm9051_read_mem(db, reg, buff, crlen);
 	if (ret == 0)
-		BUS_OPS(db, buff, crlen); //DM9051_BUS_WORK(ENCPT_MODE && ret == 0 && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
+		BUS_OPS(db, buff, crlen);
 	return ret;
 }
 
@@ -1536,11 +1536,11 @@ void monitor_rxb0(unsigned int rxbyte)
 void monitor_rxc(struct board_info *db, int scanrr)
 {
 	if (econf->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
-	{ // tx_mode
+	{
 		db->bc.nRxcF += scanrr;
 		if (mconf->align.burst_mode == BURST_MODE_FULL)
-			printk("___[%s][rx/tx Burst mode] nRxc %d\n",
-				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "TX continue" : "TX normal mode",
+			printk("___[rx/tx %s mode] nRxc %d\n",
+				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",
 				   db->bc.nRxcF);
 		else if (mconf->align.burst_mode == BURST_MODE_ALIGN)
 			PRINT_ALIGN_INFO(db->bc.nRxcF);
@@ -2267,7 +2267,6 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	//dev_info(dev, "Init Bus word on: %u\n", db->rctl.bus_word);
 	dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
 	dev_info(dev, "[TX mode]= %s mode\n",
 			 (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");

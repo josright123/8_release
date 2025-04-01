@@ -38,9 +38,6 @@
 #ifdef DMPLUG_CONTI
 #warning "DMPLUG: dm9051 plug-in tx-conti"
 #endif
-#ifdef DMPLUG_CRYPT
-#warning "DMPLUG: dm9051 plug-in encrypt bus work"
-#endif
 #ifdef DMPLUG_PTP
 #warning "DMPLUG: dm9051 plug-in ptp 1588"
 #endif
@@ -185,67 +182,6 @@ void END_RX_REQUEST_FREE(int cint, struct net_device *ndev)
 /*
  * Conti: 
  */
-
-/*
- * Encrypt Protection Driver version: 
- */
-
-#ifdef DMPLUG_CRYPT
-#define DM9051_BUS_WORK(exp, yhndlr) 	\
-	do                                  \
-	{                                   \
-		if ((exp))                      \
-		{                               \
-			yhndlr;                     \
-		}                               \
-	} while (0)
-
-static int dm9051_setup_bus_work(struct board_info *db)
-{
-	int ret;
-	unsigned int crypt_1, crypt_2, key;
-
-	db->rctl.bus_word = 0;
-	ret = dm9051_get_reg(db, DM9051_PIDL, &crypt_1);
-	if (ret)
-		return ret;
-	ret = dm9051_get_reg(db, DM9051_PIDH, &crypt_2);
-	if (ret)
-		return ret;
-	ret = dm9051_set_reg(db, 0x49, crypt_1);
-	if (ret)
-		return ret;
-	ret = dm9051_set_reg(db, 0x49, crypt_2);
-	if (ret)
-		return ret;
-	ret = dm9051_get_reg(db, 0x49, &key);
-	if (ret)
-		return ret;
-	//dev_info(&db->spidev->dev, "[bus word]= on, word 0x%02x\n", key & 0xff);
-	db->rctl.bus_word = (u8)(key & 0xff);
-	return 0;
-}
-
-int BUS_SETUP(struct board_info *db)
-{
-	return dm9051_setup_bus_work(db);
-}
-
-//inline 
-static void bus_work(u8 bus_word, u8 *buff, unsigned int crlen)
-{
-	unsigned int j;
-	for (j = 0; j < crlen; j++)
-	{
-		buff[j] ^= bus_word;
-	}
-}
-
-void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen)
-{
-	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen)
-}
-#endif
 
 /*
  * ptp 1588 chip control: 
@@ -905,6 +841,10 @@ void dm9051_ptp_stop(struct board_info *db)
 	}
 }
 #endif
+
+/*
+ * Info: 
+ */
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, Plug-in"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
 MODULE_LICENSE("GPL");
