@@ -1861,30 +1861,6 @@ out_unlock:
 }
 #endif
 
-/* [DM_TIMER_EXPIRE2] poll extream.fast */
-/* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
- * This is by CPU scheduling-poll, so is software driven!
- */
-#define DM_TIMER_EXPIRE1 1
-#define DM_TIMER_EXPIRE2 0
-#define DM_TIMER_EXPIRE3 0
-
-/* schedule delay work */
-static void dm9051_irq_delayp(struct work_struct *work)
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
-
-	dm9051_rx_threaded_plat(0, db); // 0 is no-used.
-
-	if (db->bc.ndelayF >= csched.nTargetMaxNum)
-		db->bc.ndelayF = POLL_OPERATE_INIT;
-
-	/* redundent, but for safe */
-	if (!dm9051_cmode_int)
-		schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
-}
-
 static void dm9051_tx_delay(struct work_struct *work)
 {
 	struct board_info *db = container_of(work, struct board_info, tx_work);
@@ -1968,8 +1944,8 @@ static int dm9051_open(struct net_device *ndev)
 	netif_wake_queue(ndev);
 
 	/* schedule delay work */
-	if (!dm9051_cmode_int)
-		schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
+	INIT_RX_POLL_SCHED_DELAY(!dm9051_cmode_int, db);
+
 	return 0;
 }
 
@@ -2217,9 +2193,7 @@ static int dm9051_probe(struct spi_device *spi)
 	INIT_WORK(&db->rxctrl_work, dm9051_rxctl_delay);
 	INIT_WORK(&db->tx_work, dm9051_tx_delay);
 
-	if (!dm9051_cmode_int)
-		/* schedule delay work */
-		INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp);
+	INIT_RX_POLL_DELAY_SETUP(!dm9051_cmode_int, db);
 	INIT_RX_DELAY_SETUP(dm9051_cmode_int, db);
 
 	ret = dm9051_map_init(spi, db);

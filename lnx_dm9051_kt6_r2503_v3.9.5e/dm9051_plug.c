@@ -144,6 +144,46 @@ void END_RX_REQUEST_FREE(int cint, struct net_device *ndev)
 	}
 }
 
+/* !Interrupt: Poll */
+
+/* [DM_TIMER_EXPIRE2] poll extream.fast */
+/* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
+ * This is by CPU scheduling-poll, so is software driven!
+ */
+#define DM_TIMER_EXPIRE1 1
+#define DM_TIMER_EXPIRE2 0
+#define DM_TIMER_EXPIRE3 0
+
+/* schedule delay work */
+static void dm9051_irq_delayp(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
+
+	dm9051_rx_threaded_plat(0, db); // 0 is no-used.
+
+	if (db->bc.ndelayF >= csched.nTargetMaxNum)
+		db->bc.ndelayF = POLL_OPERATE_INIT;
+
+	/* redundent, but for safe */
+	//if (!dm9051_cmode_int)
+	
+		schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
+}
+
+void INIT_RX_POLL_DELAY_SETUP(int cpoll, struct board_info *db)
+{
+	if (cpoll)
+		/* schedule delay work */
+		INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp);
+}
+
+void INIT_RX_POLL_SCHED_DELAY(int cpoll, struct board_info *db)
+{
+	if (cpoll)
+		schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
+}
+
 /*
  * Conti: 
  */
