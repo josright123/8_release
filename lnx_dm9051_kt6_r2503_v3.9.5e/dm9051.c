@@ -26,15 +26,9 @@
 #define AARCH_OS_BITS		AARCH_OS_64
 
 /* Operating modes */
-enum
-{
-	MODE_A = 0,
-	MODE_B = 1,
-	MODE_C = 2,
-	MODE_NUM = 3
-};
 
 #define DM9051_SKB_PROTECT		  //tX 'wb' do skb protect
+
 enum
 {
 	SKB_WB_OFF = 0,
@@ -48,64 +42,84 @@ enum
 };
 
 /* Driver configuration structure */
+
 struct driver_config
 {
 	const char *release_version;
 	int interrupt;
-	int mid;
-	struct mod_config
+};
+
+struct mod_config
+{
+	char *test_info;
+	int skb_wb_mode;
+	int tx_mode;
+	int checksuming;
+	struct align_config
 	{
-		char *test_info;
-		int skb_wb_mode;
-		int tx_mode;
-		int checksuming;
-		struct align_config
-		{
-			int burst_mode;
-			size_t tx_blk;
-			size_t rx_blk;
-		} align;
-	} mod[MODE_NUM];
+		int burst_mode;
+		size_t tx_blk;
+		size_t rx_blk;
+	} align;
 };
 
 /* Default driver configuration */
 const struct driver_config confdata = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-	.interrupt = MODE_INTERRUPT, /* MODE_INTERRUPT or MODE_INTERRUPT_CLKOUT */
-	.mid = MODE_A,
-	.mod = {
-		{
-			.test_info = "Test in rpi5 bcm2712",
-			.skb_wb_mode = SKB_WB_ON,
-			.tx_mode = FORCE_TX_CONTI_OFF,
-			.checksuming = DEFAULT_CHECKSUM_OFF,
-			.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
-		},
-		{
-			.test_info = "Test in rpi4 bcm2711",
-			.skb_wb_mode = SKB_WB_ON,
-			.tx_mode = FORCE_TX_CONTI_OFF,
-			.checksuming = DEFAULT_CHECKSUM_OFF,
-			.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
-		},
-		{
-			.test_info = "Test in processor Cortex-A",
-			.skb_wb_mode = SKB_WB_OFF,
-			.tx_mode = FORCE_TX_CONTI_OFF,
-			.checksuming = DEFAULT_CHECKSUM_OFF,
-			.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
-		}},
+	.interrupt = MODE_INTERRUPT,
+	 /* MODE_POLL, 
+	  * MODE_INTERRUPT or 
+	  * MODE_INTERRUPT_CLKOUT */
 };
 
-/* Configuration access macros */
-#define mconf (&confdata.mod[confdata.mid])
-#define kconf (&confdata)
-#define dm9051_cmode_int (confdata.interrupt)
+enum
+{
+	SPI_SYNC_ALIGN_MODE = 0,
+	SPI_SYNC_BURST_MODE = 1,
+	SPI_SYNC_MISC_MODE = 2,
+	MODE_NUM = 3
+};
+
+const struct mod_config driver_align_mode = {
+	.test_info = "Test in rpi5 bcm2712",
+	.skb_wb_mode = SKB_WB_ON,
+	.tx_mode = FORCE_TX_CONTI_OFF,
+	.checksuming = DEFAULT_CHECKSUM_OFF,
+	.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
+};
+
+const struct mod_config driver_burst_mode = {
+	.test_info = "Test in rpi4 bcm2711",
+	.skb_wb_mode = SKB_WB_ON,
+	.tx_mode = FORCE_TX_CONTI_OFF,
+	.checksuming = DEFAULT_CHECKSUM_OFF,
+	.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
+};
+
+const struct mod_config driver_misc_mode = {
+	.test_info = "Test in processor Cortex-A",
+	.skb_wb_mode = SKB_WB_OFF,
+	.tx_mode = FORCE_TX_CONTI_OFF,
+	.checksuming = DEFAULT_CHECKSUM_OFF,
+	.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
+};
+
+/* Configuration access & Mode access */
+const struct driver_config *drvdata = &confdata;
+const struct mod_config *dm9051_modedata = &driver_align_mode;
+
+#define dm9051_cmode_int (drvdata->interrupt)
+//#define dm9051_driver_int (drvdata->interrupt)
+//#define dm9051_intrconfig (drvdata->interrupt)
+
+#define mconf (dm9051_modedata) //(drvdata->mod[MODE_ALIGN]) //#define MODE_SELECT MODE_ALIGN //(confdata.mod[MODE_SELECT]) //(confdata.mod[confdata.mid])
+#define dm9051_mode_info (dm9051_modedata->test_info)
 
 /* Helper macros */
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
 
+/* Log macros */
 #if AARCH_OS_BITS
 #define PRINT_REG_BLKRX_INFO(pstr, ret, reg, BLKLEN) \
 			netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %lu\n", \
@@ -258,7 +272,7 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi, int cint)
 		SHOW_POLL_MODE(cint, spi);
 	} while (0);
 	printk("\n");
-	dev_info(dev, "Davicom: %s", mconf->test_info);
+	dev_info(dev, "Davicom: %s", dm9051_mode_info); //mconf->test_info
 	dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]);
 	dev_info(dev, "SPI_XFER_MEM= %s\n", mconf->align.burst_mode ? "burst mode" : "alignment mode");
 	dev_info(dev, "Alignment TX: %lu\n", mconf->align.tx_blk);
@@ -2201,7 +2215,7 @@ static int dm9051_probe(struct spi_device *spi)
 		return ret;
 
 	printk("\n");
-	dev_info(dev, "Davicom: %s", kconf->release_version);
+	dev_info(dev, "Davicom: %s", drvdata->release_version);
 
 	SHOW_CONFIG_MODE(spi, dm9051_cmode_int);
 
