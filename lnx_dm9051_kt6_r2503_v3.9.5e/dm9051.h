@@ -261,4 +261,112 @@ const struct eng_config engdata = {
 
 #define MI_FIX                          1
 
+#if 1 //sticked fixed here is better!
+/**
+ * struct rx_ctl_mach - rx activities record
+ * @status_err_counter: rx status error counter
+ * @large_err_counter: rx get large packet length error counter
+ * @rx_err_counter: receive packet error counter
+ * @tx_err_counter: transmit packet error counter
+ * @fifo_rst_counter: reset operation counter
+ *
+ * To keep track for the driver operation statistics
+ */
+struct rx_ctl_mach
+{
+	u16 status_err_counter;
+	u16 large_err_counter;
+	u16 rx_err_counter;
+	u16 tx_err_counter;
+	u16 fifo_rst_counter;
+
+	u16 evaluate_rxb_counter;
+	int nRxcF;
+	u16 ndelayF;
+};
+
+/**
+ * struct dm9051_rxctrl - dm9051 driver rx control
+ * @hash_table: Multicast hash-table data
+ * @rcr_all: KS_RXCR1 register setting
+ * @bus_word: Encryption key from fixed code or efuse
+ *
+ * The settings needs to control the receive filtering
+ * such as the multicast hash-filter and the receive register settings
+ */
+struct dm9051_rxctrl
+{
+	u16 hash_table[4];
+	u8 rcr_all;
+	u8 bus_word;
+};
+
+/**
+ * struct dm9051_rxhdr - rx packet data header
+ * @headbyte: lead byte equal to 0x01 notifies a valid packet
+ * @status: status bits for the received packet
+ * @rxlen: packet length
+ *
+ * The Rx packet pack, entered into the FIFO memory, start with these
+ * four bytes which is the Rx header, followed by the ethernet
+ * packet data and ends with an appended 4-byte CRC data.
+ * Both Rx header and CRC data are for check purpose and finally
+ * are dropped by this driver
+ */
+struct dm9051_rxhdr
+{
+	u8 headbyte;
+	u8 status;
+	__le16 rxlen;
+};
+
+/**
+ * struct board_info - maintain the saved data
+ * @msg_enable: message level value
+ * @spidev: spi device structure
+ * @ndev: net device structure
+ * @mdiobus: mii bus structure
+ * @phydev: phy device structure
+ * @txq: tx queue structure
+ * @regmap_dm: regmap for register read/write
+ * @regmap_dmbulk: extra regmap for bulk read/write
+ * @rxctrl_work: Work queue for updating RX mode and multicast lists
+ * @tx_work: Work queue for tx packets
+ * @irq_workp: Work queue for polling mode
+ * @pause: ethtool pause parameter structure
+ * @spi_lockm: between threads lock structure
+ * @reg_mutex: regmap access lock structure
+ * @bc: rx control statistics structure
+ * @rxhdr: rx header structure
+ * @rctl: rx control setting structure
+ * @imr_all: to store operating imr value for register DM9051_IMR
+ * @lcr_all: to store operating rcr value for register DM9051_LMCR
+ */
+struct board_info
+{
+	u32 msg_enable;
+	struct spi_device *spidev;
+	struct net_device *ndev;
+	struct mii_bus *mdiobus;
+	struct phy_device *phydev;
+	struct sk_buff_head txq;
+	struct regmap *regmap_dm;
+	struct regmap *regmap_dmbulk;
+	struct work_struct rxctrl_work;
+	struct work_struct tx_work;
+#if 1
+	struct delayed_work irq_workp;
+	struct delayed_work irq_servicep;
+#endif
+	struct ethtool_pauseparam pause;
+	struct mutex spi_lockm;
+	struct mutex reg_mutex;
+	struct rx_ctl_mach bc;
+	struct dm9051_rxhdr rxhdr;
+	struct dm9051_rxctrl rctl;
+	u8 imr_all;
+	u8 lcr_all;
+};
+#endif
+
 #endif /* _DM9051_H_ */

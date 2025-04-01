@@ -86,6 +86,10 @@ const static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
  * Interrupt: 
  */
 
+unsigned int dm9051_intcr_value(struct board_info *db);
+void INIT_RX_DELAY_SETUP(int cint, struct board_info *db);
+int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev);
+
 /*
  * Conti: 
  */

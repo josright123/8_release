@@ -113,7 +113,7 @@ const struct driver_config confdata = {
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
 
-#if 1 //sticked fixed here is better!
+#if 0 //sticked fixed here is better!
 /**
  * struct rx_ctl_mach - rx activities record
  * @status_err_counter: rx status error counter
@@ -536,22 +536,6 @@ static int dm9051_ncr_poll(struct board_info *db)
 	if (ret == -ETIMEDOUT)
 		netdev_err(db->ndev, "timeout in checking for ncr reset\n");
 	return ret;
-}
-
-static int dm9051_irq_flag(struct board_info *db)
-{
-	struct spi_device *spi = db->spidev;
-	int irq_type = irq_get_trigger_type(spi->irq);
-
-	if (irq_type)
-		return irq_type;
-
-	return IRQF_TRIGGER_LOW;
-}
-
-static unsigned int dm9051_intcr_value(struct board_info *db)
-{
-	return (dm9051_irq_flag(db) == IRQF_TRIGGER_LOW) ? INTCR_POL_LOW : INTCR_POL_HIGH;
 }
 
 static int dm9051_set_fcr(struct board_info *db)
@@ -1485,8 +1469,8 @@ static int dm9051_all_restart(struct board_info *db)
 
 	// printk("dm9.Set dm9051_irq_flag() %d, _TRIGGER_LOW %d, _TRIGGER_HIGH %d (restart)\n",
 	//	   dm9051_irq_flag(db), IRQF_TRIGGER_LOW, IRQF_TRIGGER_HIGH);
-	printk("dm9.Set dm9051_irq_flag() %d (restart)\n",
-		   dm9051_irq_flag(db));
+//	printk("dm9.Set dm9051_irq_flag() %d (restart)\n",
+//		   dm9051_irq_flag(db));
 
 	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_intcr_value(db));
 	if (ret)
@@ -1892,7 +1876,8 @@ static int dm9051_loop_tx(struct board_info *db)
 }
 
 #if 1
-static irqreturn_t dm9051_rx_threaded_irq(int irq, void *pw)
+//static 
+irqreturn_t dm9051_rx_threaded_plat(int irq, void *pw)
 {
 	struct board_info *db = pw;
 	int result, result_tx;
@@ -1926,25 +1911,31 @@ out_unlock:
 
 	return IRQ_HANDLED;
 }
+#endif
 
-static irqreturn_t dm9051_rx_irq_delay(int irq, void *pw)
-{
-	struct board_info *db = pw;
-#if 1
-	schedule_delayed_work(&db->irq_servicep, 0); //dm9051_rx_irq_service() //dm9051_rx_threaded_irq(0, db); // 0 is no-used.
-#else
-	schedule_delayed_work(&db->irq_workp, 0); //dm9051_irq_delayp
-#endif	
-	return IRQ_HANDLED;
-}
+/* [DM_TIMER_EXPIRE2] poll extream.fast */
+/* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
+ * This is by CPU scheduling-poll, so is software driven!
+ */
+#define DM_TIMER_EXPIRE1 1
+#define DM_TIMER_EXPIRE2 0
+#define DM_TIMER_EXPIRE3 0
 
-static void dm9051_rx_irq_service(struct work_struct *work)
+/* schedule delay work */
+static void dm9051_irq_delayp(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
-	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
-	dm9051_rx_threaded_irq(0, db); // 0 is no-used. //rx_service(db); //
+	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
+
+	dm9051_rx_threaded_plat(0, db); // 0 is no-used.
+
+	if (db->bc.ndelayF >= csched.nTargetMaxNum)
+		db->bc.ndelayF = POLL_OPERATE_INIT;
+
+	/* redundent, but for safe */
+	if (!cint)
+		schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
 }
-#endif
 
 static void dm9051_tx_delay(struct work_struct *work)
 {
@@ -1980,63 +1971,6 @@ out_unlock:
 	mutex_unlock(&db->spi_lockm);
 }
 
-/* [DM_TIMER_EXPIRE2] poll extream.fast */
-/* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
- * This is by CPU scheduling-poll, so is software driven!
- */
-#define DM_TIMER_EXPIRE1 1
-#define DM_TIMER_EXPIRE2 0
-#define DM_TIMER_EXPIRE3 0
-
-/* schedule delay work */
-static void dm9051_irq_delayp(struct work_struct *work)
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
-
-	dm9051_rx_threaded_irq(0, db); // 0 is no-used.
-
-	if (db->bc.ndelayF >= csched.nTargetMaxNum)
-		db->bc.ndelayF = POLL_OPERATE_INIT;
-
-	/* redundent, but for safe */
-	if (!cint)
-		schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
-}
-
-// static void rx_service(struct board_info *db)
-// {
-// 	int result, result_tx;
-
-// 	mutex_lock(&db->spi_lockm);
-
-// 	result = dm9051_disable_interrupt(db);
-// 	if (result)
-// 		goto out_unlock;
-
-// 	result = dm9051_clear_interrupt(db);
-// 	if (result)
-// 		goto out_unlock;
-
-// 	do
-// 	{
-// 		result = dm9051_loop_rx(db); /* threaded irq rx */
-// 		if (result < 0)
-// 			goto out_unlock;
-// 		result_tx = dm9051_loop_tx(db); /* more tx better performance */
-// 		if (result_tx < 0)
-// 			goto out_unlock;
-// 	} while (result > 0);
-
-// 	dm9051_enable_interrupt(db);
-
-// 	/* To exit and has mutex unlock while rx or tx error
-// 	 */
-// out_unlock:
-// 	mutex_unlock(&db->spi_lockm);
-
-// }
-
 /* Open network device
  * Called when the network device is marked active, such as a user executing
  * 'ifconfig up' on the device
@@ -2056,19 +1990,11 @@ static int dm9051_open(struct net_device *ndev)
 
 //before [spi_lockm]
 	/* interrupt work */
-	if (cint)
+	ret = INIT_RX_REQUEST_SETUP(cint, ndev);
+	if (ret < 0)
 	{
-		// ret = request_threaded_irq(spi->irq, NULL, dm9051_rx_threaded_irq,
-		// 						   dm9051_irq_flag(db) | IRQF_ONESHOT,
-		// 						   ndev->name, db);
-		ret = request_irq(spi->irq, dm9051_rx_irq_delay, //dm9051_rx_threaded_irq, //
-									dm9051_irq_flag(db) | IRQF_ONESHOT,
-									ndev->name, db);
-		if (ret < 0)
-		{
-			netdev_err(ndev, "failed to get irq\n");
-			return ret;
-		}
+		netdev_err(ndev, "failed to get irq\n");
+		return ret;
 	}
 
 //use [spi_lockm]
@@ -2350,8 +2276,7 @@ static int dm9051_probe(struct spi_device *spi)
 	if (!cint)
 		/* schedule delay work */
 		INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp);
-	if (cint)
-		INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_service);
+	INIT_RX_DELAY_SETUP(cint, db);
 
 	ret = dm9051_map_init(spi, db);
 	if (ret)

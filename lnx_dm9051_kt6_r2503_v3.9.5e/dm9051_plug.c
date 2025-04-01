@@ -49,6 +49,97 @@
  * Interrupt: 
  */
 
+// static void rx_service(struct board_info *db)
+// {
+// 	int result, result_tx;
+
+// 	mutex_lock(&db->spi_lockm);
+
+// 	result = dm9051_disable_interrupt(db);
+// 	if (result)
+// 		goto out_unlock;
+
+// 	result = dm9051_clear_interrupt(db);
+// 	if (result)
+// 		goto out_unlock;
+
+// 	do
+// 	{
+// 		result = dm9051_loop_rx(db); /* threaded irq rx */
+// 		if (result < 0)
+// 			goto out_unlock;
+// 		result_tx = dm9051_loop_tx(db); /* more tx better performance */
+// 		if (result_tx < 0)
+// 			goto out_unlock;
+// 	} while (result > 0);
+
+// 	dm9051_enable_interrupt(db);
+
+// 	/* To exit and has mutex unlock while rx or tx error
+// 	 */
+// out_unlock:
+// 	mutex_unlock(&db->spi_lockm);
+
+// }
+
+irqreturn_t dm9051_rx_threaded_plat(int irq, void *pw);
+
+static int dm9051_irq_flag(struct board_info *db)
+{
+	struct spi_device *spi = db->spidev;
+	int irq_type = irq_get_trigger_type(spi->irq);
+
+	if (irq_type)
+		return irq_type;
+
+	return IRQF_TRIGGER_LOW;
+}
+
+//static 
+unsigned int dm9051_intcr_value(struct board_info *db)
+{
+	return (dm9051_irq_flag(db) == IRQF_TRIGGER_LOW) ? INTCR_POL_LOW : INTCR_POL_HIGH;
+}
+
+static void dm9051_rx_irq_service(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
+
+	dm9051_rx_threaded_plat(0, db); // 0 is no-used. //rx_service(db); //
+}
+
+void INIT_RX_DELAY_SETUP(int cint, struct board_info *db)
+{
+	if (cint)
+		INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_service);
+}
+
+static irqreturn_t dm9051_rx_irq_delay(int irq, void *pw)
+{
+	struct board_info *db = pw;
+
+	schedule_delayed_work(&db->irq_servicep, 0);
+	return IRQ_HANDLED;
+}
+
+int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev)
+{
+	struct board_info *db = to_dm9051_board(ndev);
+	int ret = 0;
+
+	if (cint)
+	{
+		// ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_threaded_plat,
+		// 						   dm9051_irq_flag(db) | IRQF_ONESHOT,
+		// 						   ndev->name, db);
+		ret = request_irq(ndev->irq, dm9051_rx_irq_delay,
+									dm9051_irq_flag(db) | IRQF_ONESHOT,
+									ndev->name, db);
+	}
+	return ret;
+}
+
 /*
  * Conti: 
  */
