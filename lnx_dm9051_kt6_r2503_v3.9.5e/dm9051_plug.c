@@ -842,9 +842,5 @@ void dm9051_ptp_stop(struct board_info *db)
 }
 #endif
 
-/*
- * Info: 
- */
-
 MODULE_DESCRIPTION("Davicom DM9051 driver, Plug-in"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
 MODULE_LICENSE("GPL");

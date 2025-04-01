@@ -240,6 +240,43 @@ struct board_info
 };
 #endif
 
+/*
+ * Info: 
+ */
+
+static void SHOW_CONFIG_MODE(struct spi_device *spi, int cint)
+{
+	struct device *dev = &spi->dev;
+
+	/* [dbg] spi.speed */
+	do
+	{
+		unsigned int speed;
+		of_property_read_u32(spi->dev.of_node, "spi-max-frequency", &speed);
+		dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
+		SHOW_INT_MODE(cint, spi);
+		SHOW_POLL_MODE(cint, spi);
+	} while (0);
+	printk("\n");
+	dev_info(dev, "Davicom: %s", mconf->test_info);
+	dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]);
+	dev_info(dev, "SPI_XFER_MEM= %s\n", mconf->align.burst_mode ? "burst mode" : "alignment mode");
+	dev_info(dev, "Alignment TX: %lu\n", mconf->align.tx_blk);
+	dev_info(dev, "Alignment RX: %lu\n", mconf->align.rx_blk);
+}
+
+static void SHOW_OPTION_MODE(struct spi_device *spi)
+{
+	struct device *dev = &spi->dev;
+
+	dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
+	dev_info(dev, "[TX mode]= %s mode\n",
+			 (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");
+	dev_info(dev, "DRVR= %s, %s\n",
+			 econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
+			 econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
+}
+
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
 {
 	int ret;
@@ -2243,21 +2280,7 @@ static int dm9051_probe(struct spi_device *spi)
 	printk("\n");
 	dev_info(dev, "Davicom: %s", kconf->release_version);
 
-	/* [dbg] spi.speed */
-	do
-	{
-		unsigned int speed;
-		of_property_read_u32(spi->dev.of_node, "spi-max-frequency", &speed);
-		dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
-		SHOW_INT_MODE(dm9051_cmode_int, spi);
-		SHOW_POLL_MODE(dm9051_cmode_int, spi);
-	} while (0);
-	printk("\n");
-	dev_info(dev, "Davicom: %s", mconf->test_info);
-	dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]);
-	dev_info(dev, "SPI_XFER_MEM= %s\n", mconf->align.burst_mode ? "burst mode" : "alignment mode");
-	dev_info(dev, "Alignment TX: %lu\n", mconf->align.tx_blk);
-	dev_info(dev, "Alignment RX: %lu\n", mconf->align.rx_blk);
+	SHOW_CONFIG_MODE(spi, dm9051_cmode_int);
 
 	ret = dm9051_map_chipid(db);
 	if (ret)
@@ -2267,12 +2290,7 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
-	dev_info(dev, "[TX mode]= %s mode\n",
-			 (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");
-	dev_info(dev, "DRVR= %s, %s\n",
-			 econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
-			 econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
+	SHOW_OPTION_MODE(spi);
 
 	ret = dm9051_map_etherdev_par(ndev, db);
 	if (ret < 0)
