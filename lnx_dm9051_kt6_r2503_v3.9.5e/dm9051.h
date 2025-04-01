@@ -259,6 +259,8 @@ struct eng_config {
 #define MI_FIX                          1
 
 #if 1 //sticked fixed here is better!
+#include "dm9051_plug.h" //for definition of 'INT_TWO_STEP'
+
 /**
  * struct rx_ctl_mach - rx activities record
  * @status_err_counter: rx status error counter

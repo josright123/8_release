@@ -34,7 +34,11 @@
 
 #ifdef DMPLUG_INT
 #warning "DMPLUG: dm9051 plug-in interrupt support"
+#ifdef INT_TWO_STEP
+#warning "INT: plug-in interrupt two_step"
 #endif
+#endif
+
 #ifdef DMPLUG_CONTI
 #warning "DMPLUG: dm9051 plug-in tx-conti"
 #endif
@@ -55,6 +59,9 @@ void SHOW_INT_MODE(int cint, struct spi_device *spi)
 		dev_info(&spi->dev, "Operation: Interrupt mode/ %s\n", (cint == MODE_INTERRUPT_CLKOUT) ? "CLKOUT" : "REG39H");
 		dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
 		dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
+		#ifdef INT_TWO_STEP
+		dev_info(&spi->dev, "Interrupt: Two_step\n");
+		#endif
 	}
 }
 

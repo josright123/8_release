@@ -116,7 +116,7 @@ int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); /
  * Interrupt: 
  */
 
-//#define PLUG_CINT2
+#define PLUG_CINT2
 #ifdef PLUG_CINT2
 #define INT_TWO_STEP
 #endif
