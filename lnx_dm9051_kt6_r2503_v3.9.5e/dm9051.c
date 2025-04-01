@@ -201,7 +201,9 @@ struct board_info
 	struct work_struct tx_work;
 #if 1
 	struct delayed_work irq_workp;
+	#ifdef INT_TWO_STEP
 	struct delayed_work irq_servicep;
+	#endif
 #endif
 	struct ethtool_pauseparam pause;
 	struct mutex spi_lockm;
@@ -2036,8 +2038,10 @@ static int dm9051_stop(struct net_device *ndev)
 	/* schedule delay work */
 	if (!dm9051_cmode_int)
 		cancel_delayed_work_sync(&db->irq_workp);
+	#ifdef INT_TWO_STEP
 	if (dm9051_cmode_int)
 		cancel_delayed_work_sync(&db->irq_servicep);
+	#endif
 
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);

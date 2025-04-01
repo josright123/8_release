@@ -127,18 +127,13 @@ unsigned int dm9051_intcr_value(struct board_info *db)
 	return (dm9051_irq_flag(db) == IRQF_TRIGGER_LOW) ? INTCR_POL_LOW : INTCR_POL_HIGH;
 }
 
+#ifdef INT_TWO_STEP
 static void dm9051_rx_irq_service(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
 
 	dm9051_rx_threaded_plat(0, db); // 0 is no-used. //rx_service(db); //
-}
-
-void INIT_RX_DELAY_SETUP(int cint, struct board_info *db)
-{
-	if (cint)
-		INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_service);
 }
 
 static irqreturn_t dm9051_rx_irq_delay(int irq, void *pw)
@@ -148,6 +143,15 @@ static irqreturn_t dm9051_rx_irq_delay(int irq, void *pw)
 	schedule_delayed_work(&db->irq_servicep, 0);
 	return IRQ_HANDLED;
 }
+#endif
+
+void INIT_RX_DELAY_SETUP(int cint, struct board_info *db)
+{
+	#ifdef INT_TWO_STEP
+	if (cint)
+		INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_service);
+	#endif
+}
 
 int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev)
 {
@@ -156,12 +160,15 @@ int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev)
 
 	if (cint)
 	{
-		// ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_threaded_plat,
-		// 						   dm9051_irq_flag(db) | IRQF_ONESHOT,
-		// 						   ndev->name, db);
+		#ifndef INT_TWO_STEP
+		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_threaded_plat,
+		 						   dm9051_irq_flag(db) | IRQF_ONESHOT,
+		 						   ndev->name, db);
+		#else
 		ret = request_irq(ndev->irq, dm9051_rx_irq_delay,
 									dm9051_irq_flag(db) | IRQF_ONESHOT,
 									ndev->name, db);
+		#endif
 	}
 	return ret;
 }

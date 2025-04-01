@@ -20,6 +20,8 @@
 /*#define DMPLUG_CRYPT */ //(crypt)
 /*#define DMPLUG_PTP */ //(ptp 1588)
 
+/*#define INT_TWO_STEP */ //(interrupt two_step)
+
 /* Macro for already known platforms
  */ 
 //#define PLUG_CFG_HLPR
@@ -87,6 +89,11 @@ extern const struct eng_config engdata;
 /*
  * Interrupt: 
  */
+
+//#define PLUG_CINT2
+#ifdef PLUG_CINT2
+#define INT_TWO_STEP
+#endif
 
 enum
 {

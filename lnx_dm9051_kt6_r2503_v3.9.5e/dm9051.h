@@ -356,7 +356,9 @@ struct board_info
 	struct work_struct tx_work;
 #if 1
 	struct delayed_work irq_workp;
+	#ifdef INT_TWO_STEP
 	struct delayed_work irq_servicep;
+	#endif
 #endif
 	struct ethtool_pauseparam pause;
 	struct mutex spi_lockm;
