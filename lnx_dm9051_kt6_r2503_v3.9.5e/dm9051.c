@@ -1872,7 +1872,7 @@ static int dm9051_loop_tx(struct board_info *db)
 
 #if 1
 //static 
-irqreturn_t dm9051_rx_threaded_plat(int irq, void *pw)
+irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 {
 	struct board_info *db = pw;
 	int result, result_tx;
@@ -1889,7 +1889,7 @@ irqreturn_t dm9051_rx_threaded_plat(int irq, void *pw)
 
 	do
 	{
-		result = dm9051_loop_rx(db); /* threaded irq rx */
+		result = dm9051_loop_rx(db); /* threaded rx */
 		if (result < 0)
 			goto out_unlock;
 		result_tx = dm9051_loop_tx(db); /* more tx better performance */
@@ -1988,7 +1988,7 @@ static int dm9051_open(struct net_device *ndev)
 	ret = INIT_RX_REQUEST_SETUP(dm9051_cmode_int, ndev);
 	if (ret < 0)
 	{
-		netdev_err(ndev, "failed to get irq\n");
+		netdev_err(ndev, "failed to rx request setup\n");
 		return ret;
 	}
 
@@ -1997,8 +1997,7 @@ static int dm9051_open(struct net_device *ndev)
 	if (ret)
 	{
 		phy_stop(db->phydev);
-		if (dm9051_cmode_int)
-			free_irq(spi->irq, db);
+		END_RX_REQUEST_FREE(dm9051_cmode_int, ndev);
 		return ret;
 	}
 
@@ -2049,11 +2048,7 @@ static int dm9051_stop(struct net_device *ndev)
 	phy_stop(db->phydev);
 
 	/* when (threadedcfg.interrupt_supp == THREADED_INT) */
-	if (dm9051_cmode_int)
-	{
-		free_irq(db->spidev->irq, db);
-		printk("_stop [free irq %d]\n", db->spidev->irq);
-	}
+	END_RX_REQUEST_FREE(dm9051_cmode_int, ndev);
 
 	netif_stop_queue(ndev);
 

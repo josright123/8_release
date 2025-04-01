@@ -91,7 +91,7 @@ void SHOW_POLL_MODE(int cint, struct spi_device *spi)
 
 // 	do
 // 	{
-// 		result = dm9051_loop_rx(db); /* threaded irq rx */
+// 		result = dm9051_loop_rx(db); /* threaded rx */
 // 		if (result < 0)
 // 			goto out_unlock;
 // 		result_tx = dm9051_loop_tx(db); /* more tx better performance */
@@ -108,7 +108,7 @@ void SHOW_POLL_MODE(int cint, struct spi_device *spi)
 
 // }
 
-irqreturn_t dm9051_rx_threaded_plat(int irq, void *pw);
+irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 
 static int dm9051_irq_flag(struct board_info *db)
 {
@@ -136,7 +136,7 @@ static void dm9051_rx_irq_service(struct work_struct *work)
 	dm9051_rx_threaded_plat(0, db); // 0 is no-used. //rx_service(db); //
 }
 
-static irqreturn_t dm9051_rx_irq_delay(int irq, void *pw)
+static irqreturn_t dm9051_rx_irq_delay(int voidirq, void *pw)
 {
 	struct board_info *db = pw;
 
@@ -158,19 +158,28 @@ int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	int ret = 0;
 
+	#ifndef INT_TWO_STEP
 	if (cint)
-	{
-		#ifndef INT_TWO_STEP
 		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_threaded_plat,
 		 						   dm9051_irq_flag(db) | IRQF_ONESHOT,
 		 						   ndev->name, db);
-		#else
+	#else
+	if (cint)
 		ret = request_irq(ndev->irq, dm9051_rx_irq_delay,
 									dm9051_irq_flag(db) | IRQF_ONESHOT,
 									ndev->name, db);
-		#endif
-	}
+	#endif
 	return ret;
+}
+
+void END_RX_REQUEST_FREE(int cint, struct net_device *ndev)
+{
+	if (cint)
+	{
+		struct board_info *db = to_dm9051_board(ndev);
+		free_irq(db->spidev->irq, db);
+		printk("_stop [free irq %d]\n", db->spidev->irq);
+	}
 }
 
 /*
