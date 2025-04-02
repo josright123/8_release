@@ -250,8 +250,8 @@ struct eng_config {
 #define AARCH_OS_64                     1
 
 /* driver config */
-#define	FORCE_TX_CONTI_OFF		0
-#define	FORCE_TX_CONTI_ON		1
+//#define	FORCE_TX_CONTI_OFF	0
+//#define	FORCE_TX_CONTI_ON	1
 
 #define	DEFAULT_CHECKSUM_OFF		0
 #define	DEFAULT_CHECKSUM_ON		1

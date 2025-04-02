@@ -31,19 +31,20 @@
 #warning "DMCONF: dm9051 config calc-helper-32-bit"
 #endif
 
+#ifdef DMPLUG_CONTI
+#warning "DMPLUG: dm9051 plug-in tx-conti"
+#endif
 
+#ifdef DMPLUG_PTP
+#warning "DMPLUG: dm9051 plug-in ptp 1588"
+#endif
+
+/* INT and INT two_step */
 #ifdef DMPLUG_INT
 #warning "DMPLUG: dm9051 plug-in interrupt support"
 #ifdef INT_TWO_STEP
 #warning "INT: plug-in interrupt two_step"
 #endif
-#endif
-
-#ifdef DMPLUG_CONTI
-#warning "DMPLUG: dm9051 plug-in tx-conti"
-#endif
-#ifdef DMPLUG_PTP
-#warning "DMPLUG: dm9051 plug-in ptp 1588"
 #endif
 
 /*
@@ -195,6 +196,7 @@ void INIT_RX_POLL_SCHED_DELAY(int cpoll, struct board_info *db)
  * Conti: 
  */
 
+#ifdef DMPLUG_CONTI
 /* transmit a packet,
  * return value,
  *   0 - succeed
@@ -284,6 +286,7 @@ int TX_OPS_CONTI(struct board_info *db, u8 *buff, unsigned int len)
 
 	return dm9051_set_reg(db, DM9051_TCR, TCR_TXREQ);
 }
+#endif
 
 /*
  * ptp 1588 chip control: 

@@ -41,7 +41,7 @@ struct mod_config
 {
 	char *test_info;
 	int skb_wb_mode;
-	int tx_mode;
+//	int tx_mode;
 	int checksuming;
 	struct align_config
 	{
@@ -71,7 +71,7 @@ enum
 const struct mod_config driver_align_mode = {
 	.test_info = "Test in rpi5 bcm2712",
 	.skb_wb_mode = SKB_WB_ON,
-	.tx_mode = FORCE_TX_CONTI_OFF,
+	//.tx_mode = FORCE_TX_CONTI_OFF,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
 	.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
 };
@@ -79,7 +79,7 @@ const struct mod_config driver_align_mode = {
 const struct mod_config driver_burst_mode = {
 	.test_info = "Test in rpi4 bcm2711",
 	.skb_wb_mode = SKB_WB_ON,
-	.tx_mode = FORCE_TX_CONTI_OFF,
+	//.tx_mode = FORCE_TX_CONTI_OFF,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
 	.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 };
@@ -87,7 +87,7 @@ const struct mod_config driver_burst_mode = {
 const struct mod_config driver_misc_mode = {
 	.test_info = "Test in processor Cortex-A",
 	.skb_wb_mode = SKB_WB_OFF,
-	.tx_mode = FORCE_TX_CONTI_OFF,
+	//.tx_mode = FORCE_TX_CONTI_OFF,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
 	.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 };
@@ -120,14 +120,14 @@ const struct mod_config *dm9051_modedata = &driver_align_mode;
 
 #if AARCH_OS_BITS
 #define PRINT_ALIGN_INFO(n) \
-			printk("___[%s][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
-				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "TX continue" : "TX normal mode", \
+			printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
+				   dmplug_int, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",*/ \
 				   mconf->align.rx_blk, \
 				   mconf->align.tx_blk, n)
 #else
 #define PRINT_ALIGN_INFO(n) \
-			printk("___[%s][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
-				   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "TX continue" : "TX normal mode", \
+			printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
+				   dmplug_int, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",*/ \
 				   mconf->align.rx_blk, \
 				   mconf->align.tx_blk, n)
 #endif
@@ -273,7 +273,7 @@ static void SHOW_OPTION_MODE(struct spi_device *spi)
 
 	dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
 	dev_info(dev, "[TX mode]= %s mode\n",
-			 (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal");
+			 dmplug_int /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal"*/);
 	dev_info(dev, "DRVR= %s, %s\n",
 			 econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
 			 econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
@@ -283,7 +283,7 @@ static void SHOW_MONITOR_RXC(struct board_info *db)
 {
 	if (mconf->align.burst_mode == BURST_MODE_FULL)
 		printk("___[rx/tx %s mode] nRxc %d\n",
-			   (mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",
+			   dmplug_int, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal"*/
 			   db->bc.nRxcF);
 	else if (mconf->align.burst_mode == BURST_MODE_ALIGN)
 		PRINT_ALIGN_INFO(db->bc.nRxcF);
@@ -499,6 +499,7 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 /* waiting tx-end rather than tx-req
  * got faster
  */
+#ifndef DMPLUG_CONTI
 static int dm9051_nsr_poll(struct board_info *db)
 {
 	unsigned int mval;
@@ -511,6 +512,7 @@ static int dm9051_nsr_poll(struct board_info *db)
 		netdev_err(db->ndev, "timeout in checking for tx end\n");
 	return ret;
 }
+#endif
 
 static int dm9051_epcr_poll(struct board_info *db)
 {
@@ -550,9 +552,12 @@ static int dm9051_set_fcr(struct board_info *db)
 
 static int dm9051_set_rcr(struct board_info *db)
 {
-	if (mconf->tx_mode == FORCE_TX_CONTI_ON)
+#ifdef DMPLUG_CONTI
+	//if (mconf->tx_mode == FORCE_TX_CONTI_ON)
 		return TX_SET_CONTI(db);
+#else
 	return dm9051_set_reg(db, DM9051_RCR, db->rctl.rcr_all);
+#endif
 }
 
 static int dm9051_set_recv(struct board_info *db)
@@ -1708,38 +1713,7 @@ static int dm9051_loop_rx(struct board_info *db)
 	return scanrr;
 }
 
-#if 0
-/* transmit a packet,
- * return value,
- *   0 - succeed
- *  -ETIMEDOUT - timeout error
- */
-int TX_OPS_CONTI0(struct board_info *db, u8 *buff, unsigned int len)
-{
-	int ret;
-
-	const unsigned int tx_xxhead = 4;
-	unsigned int tx_xxbst = ((len + 3) / 4) * 4;
-	u8 th[4];
-	dm9051_create_tx_head(th, len);
-
-	if (!tx_free_poll_timeout(db, tx_xxhead + tx_xxbst, 1, econf->tx_timeout_us))
-	{					// 2100 <- 20
-		return -ENOMEM; //-ETIMEDOUT or
-	}
-
-	ret = dm9051_write_mem(db, DM_SPI_MWCMD, th, 4);
-	if (ret)
-		return ret;
-
-	ret = dm9051_write_mem_cache(db, buff, tx_xxbst); //'tx_xxbst'
-	if (ret)
-		return ret;
-
-	return dm9051_set_reg(db, DM9051_TCR, TCR_TXREQ);
-}
-#endif
-
+#ifndef DMPLUG_CONTI
 static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int buff_len, unsigned int len)
 {
 	int ret;
@@ -1771,6 +1745,7 @@ struct sk_buff *dm9051_skb_protect(struct sk_buff *skb)
 	return skb2;
 }
 #endif
+#endif
 
 static int dm9051_loop_tx(struct board_info *db)
 {
@@ -1785,12 +1760,14 @@ static int dm9051_loop_tx(struct board_info *db)
 			int ret;
 			unsigned int len = skb->len;
 
-			if (mconf->tx_mode == FORCE_TX_CONTI_ON)
-			{
+#ifdef DMPLUG_CONTI
+			//if (mconf->tx_mode == FORCE_TX_CONTI_ON)
+			//{
 				ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
-			}
-			else
-			{
+			//}
+			//else
+#else
+			//{
 				unsigned int pad = 0; //'~wb'
 				if (mconf->skb_wb_mode && (skb->len & 1))
 				{
@@ -1802,7 +1779,8 @@ static int dm9051_loop_tx(struct board_info *db)
 
 				if (skb)
 					ret = dm9051_single_tx(db, skb->data, len + pad, len); //'skb->len'
-			}
+			//}
+#endif
 
 			if (skb) {
 				ntx++;

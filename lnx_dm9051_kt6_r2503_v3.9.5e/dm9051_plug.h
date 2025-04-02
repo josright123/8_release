@@ -34,9 +34,8 @@
 #define DMCONF_AARCH_64 //(64-bit OS)
 #endif
 
-#define PLUG_MODEN
+//#define PLUG_MODEN
 #ifdef PLUG_MODEN
-#define DMPLUG_INT //(INT 39)
 #define DMPLUG_CONTI //(conti)
 #endif
 
@@ -50,9 +49,20 @@
 #define DMPLUG_PTP //(ptp 1588)
 #endif
 
-//#define PLUG_INT_2STEP
+#define PLUG_ENABLE_INT
+#ifdef PLUG_ENABLE_INT
+#define DMPLUG_INT //(INT 39)
+#endif
+
+#define PLUG_INT_2STEP
 #ifdef PLUG_INT_2STEP
 #define INT_TWO_STEP
+#endif
+
+#ifdef DMPLUG_CONTI
+#define dmplug_int "continue"
+#else
+#define dmplug_int "normal"
 #endif
 
 /*
