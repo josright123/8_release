@@ -1,0 +1,20 @@
+(1)
+In dm9051.h:
+
+/* This version can support for Linux kernel 6.1 and 6.6
+ * Please select either one, by define your BOARD_CONF.
+ * Bellow is an example for Linux 6.1
+ */
+
+#define DM9051_KERNEL_6_1		7
+#define DM9051_KERNEL_6_6		8
+
+//#define BOARD_CONF            DM9051_KERNEL_6_1 (ever the poor performance for can ping)
+#define BOARD_CONF            	DM9051_KERNEL_6_6
+
+(2)
+In dm9051.c
+
+Process TX / RX,
+ work around to dm9051_write_mem/dm9051_read_mem for below issue:
+   "dw_axi_dmac_platform 1f0018000.dma: invalid buffer alignment.... "
