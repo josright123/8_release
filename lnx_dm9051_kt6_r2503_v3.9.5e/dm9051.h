@@ -246,8 +246,8 @@ struct eng_config {
 #endif
 
 /* Architecture definitions */
-#define AARCH_OS_32                     0
-#define AARCH_OS_64                     1
+//#define AARCH_OS_32                     0
+//#define AARCH_OS_64                     1
 
 /* driver config */
 //#define	FORCE_TX_CONTI_OFF	0
@@ -367,12 +367,21 @@ struct board_info
 	struct dm9051_rxctrl rctl;
 	u8 imr_all;
 	u8 lcr_all;
+
+	unsigned int csum_gen_val;
+	unsigned int csum_rcv_val;
 };
 #endif
 
 int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 			size_t len);
 int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);
+
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
+
+void dm9051_rx_irq_servicep(struct work_struct *work);
+/*static*/ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
+
+void dm9051_irq_delayp(struct work_struct *work);
 
 #endif /* _DM9051_H_ */

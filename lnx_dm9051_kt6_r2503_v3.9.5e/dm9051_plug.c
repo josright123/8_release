@@ -57,7 +57,7 @@ void SHOW_INT_MODE(int cint, struct spi_device *spi)
 	{
 		unsigned int intdata[2];
 		of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-		dev_info(&spi->dev, "Operation: Interrupt mode/ %s\n", (cint == MODE_INTERRUPT_CLKOUT) ? "CLKOUT" : "REG39H");
+//		dev_info(&spi->dev, "Operation: Interrupt mode/ %s\n", (cint == MODE_INTERRUPT_CLKOUT) ? "CLKOUT" : "REG39H");
 		dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
 		dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
 		#ifdef INT_TWO_STEP
@@ -97,48 +97,38 @@ unsigned int dm9051_intcr_value(struct board_info *db)
 	return (dm9051_irq_flag(db) == IRQF_TRIGGER_LOW) ? INTCR_POL_LOW : INTCR_POL_HIGH;
 }
 
-#ifdef INT_TWO_STEP
-static void dm9051_rx_irq_service(struct work_struct *work)
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
-
-	dm9051_rx_threaded_plat(0, db); // 0 is no-used. //rx_service(db); //
-}
-
-static irqreturn_t dm9051_rx_irq_delay(int voidirq, void *pw)
-{
-	struct board_info *db = pw;
-
-	schedule_delayed_work(&db->irq_servicep, 0);
-	return IRQ_HANDLED;
-}
-#endif //INT_TWO_STEP
-
 void INIT_RX_DELAY_SETUP(int cint, struct board_info *db)
 {
 	#ifdef INT_TWO_STEP
 	if (cint)
-		INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_service);
+		INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_servicep);
 	#endif //INT_TWO_STEP
 }
 
 int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev)
 {
-	struct board_info *db = to_dm9051_board(ndev);
 	int ret = 0;
 
-	#ifndef INT_TWO_STEP
-	if (cint)
-		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_threaded_plat,
-		 						   dm9051_irq_flag(db) | IRQF_ONESHOT,
-		 						   ndev->name, db);
-	#else
-	if (cint)
-		ret = request_irq(ndev->irq, dm9051_rx_irq_delay,
+	if (cint) {
+	#ifdef INT_TWO_STEP
+		struct board_info *db = to_dm9051_board(ndev);
+		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_int2_delay,
 									dm9051_irq_flag(db) | IRQF_ONESHOT,
 									ndev->name, db);
+		//ret = request_irq(ndev->irq, dm9051_rx_int2_delay,
+		//							dm9051_irq_flag(db) | IRQF_ONESHOT,
+		//							ndev->name, db);
+		if (ret < 0)
+			netdev_err(ndev, "failed to rx request irq setup\n");
+	#else //INT_TWO_STEP
+		struct board_info *db = to_dm9051_board(ndev);
+		ret = request_threaded_irq(ndev->irq, NULL, /*dm9051_rx_threaded_plat*/ /*dm9051_rx_int2_delay*/ dm9051_rx_threaded_plat,
+		 						   dm9051_irq_flag(db) | IRQF_ONESHOT,
+		 						   ndev->name, db);
+		if (ret < 0)
+			netdev_err(ndev, "failed to rx request threaded irq setup\n");
 	#endif //INT_TWO_STEP
+	}
 	return ret;
 }
 
@@ -150,33 +140,6 @@ void END_RX_REQUEST_FREE(int cint, struct net_device *ndev)
 		free_irq(db->spidev->irq, db);
 		printk("_stop [free irq %d]\n", db->spidev->irq);
 	}
-}
-
-/* !Interrupt: Poll */
-
-/* [DM_TIMER_EXPIRE2] poll extream.fast */
-/* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
- * This is by CPU scheduling-poll, so is software driven!
- */
-#define DM_TIMER_EXPIRE1 1
-#define DM_TIMER_EXPIRE2 0
-#define DM_TIMER_EXPIRE3 0
-
-/* schedule delay work */
-static void dm9051_irq_delayp(struct work_struct *work)
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
-
-	dm9051_rx_threaded_plat(0, db); // 0 is no-used.
-
-	if (db->bc.ndelayF >= csched.nTargetMaxNum)
-		db->bc.ndelayF = POLL_OPERATE_INIT;
-
-	/* redundent, but for safe */
-	//if (!dm9051_cmode_int)
-	
-		schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
 }
 
 void INIT_RX_POLL_DELAY_SETUP(int cpoll, struct board_info *db)

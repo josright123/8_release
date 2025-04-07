@@ -10,6 +10,7 @@
 #include <linux/irq.h>
 #include <linux/mii.h>
 #include <linux/module.h>
+#include <linux/utsname.h>
 #include <linux/netdevice.h>
 #include <linux/phy.h>
 #include <linux/regmap.h>
@@ -23,7 +24,7 @@
 #include "dm9051_plug.h"
 
 #define KERNEL_BUILD_CONF	DM9051_KERNEL_6_6
-#define AARCH_OS_BITS		AARCH_OS_64
+//#define AARCH_OS_BITS		AARCH_OS_64
 
 /* Operating modes */
 
@@ -108,7 +109,7 @@ const struct mod_config *dm9051_modedata = &driver_align_mode;
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
 
 /* Log macros */
-#if AARCH_OS_BITS
+#ifdef DMCONF_AARCH_64
 #define PRINT_REG_BLKRX_INFO(pstr, ret, reg, BLKLEN) \
 			netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %lu\n", \
 				   __func__, ret, pstr, reg, BLKLEN)
@@ -118,7 +119,7 @@ const struct mod_config *dm9051_modedata = &driver_align_mode;
 				   __func__, ret, pstr, reg, BLKLEN)
 #endif
 
-#if AARCH_OS_BITS
+#ifdef DMCONF_AARCH_64
 #define PRINT_ALIGN_INFO(n) \
 			printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
 				   dmplug_int, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",*/ \
@@ -239,6 +240,9 @@ struct board_info
 	struct dm9051_rxctrl rctl;
 	u8 imr_all;
 	u8 lcr_all;
+
+	unsigned int csum_gen_val;
+	unsigned int csum_rcv_val;
 };
 #endif
 
@@ -251,6 +255,7 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi, int cint)
 	struct device *dev = &spi->dev;
 
 	/* [dbg] spi.speed */
+	dev_info(dev, "Linux %s DM9051A\n", utsname()->release);
 	do
 	{
 		unsigned int speed;
@@ -262,21 +267,29 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi, int cint)
 	printk("\n");
 	dev_info(dev, "Davicom: %s", dm9051_mode_info); //mconf->test_info
 	dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]);
-	dev_info(dev, "SPI_XFER_MEM= %s\n", mconf->align.burst_mode ? "burst mode" : "alignment mode");
-	dev_info(dev, "Alignment TX: %lu\n", mconf->align.tx_blk);
-	dev_info(dev, "Alignment RX: %lu\n", mconf->align.rx_blk);
+	//dev_info(dev, "SPI_XFER_MEM= %s\n", mconf->align.burst_mode ? "burst mode" : "alignment mode");
+#ifdef DMCONF_AARCH_64
+	dev_info(dev, "TX: %s %lu\n", mconf->align.burst_mode ? "Burst blk" : "Alignment blk", mconf->align.tx_blk);
+	dev_info(dev, "RX: %s %lu\n", mconf->align.burst_mode ? "Burst blk" : "Alignment blk", mconf->align.tx_blk);
+#else
+	dev_info(dev, "TX: %s %u\n", mconf->align.burst_mode ? "Burst blk" : "Alignment blk", mconf->align.tx_blk);
+	dev_info(dev, "RX: %s %u\n", mconf->align.burst_mode ? "Burst blk" : "Alignment blk", mconf->align.tx_blk);
+#endif
 }
 
 static void SHOW_OPTION_MODE(struct spi_device *spi)
 {
 	struct device *dev = &spi->dev;
 
-	dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
-	dev_info(dev, "[TX mode]= %s mode\n",
-			 dmplug_int /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal"*/);
-	dev_info(dev, "DRVR= %s, %s\n",
-			 econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
-			 econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
+	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", econf->tx_timeout_us, dmplug_int,
+			econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
+			econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
+	//dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
+	//dev_info(dev, "[TX mode]= %s mode\n",
+			 //dmplug_int); /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal"*/
+	//dev_info(dev, "DRVR= %s, %s\n",
+			 //econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
+			 //econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
 }
 
 static void SHOW_MONITOR_RXC(struct board_info *db)
@@ -611,8 +624,10 @@ static int dm9051_eeprom_read(struct board_info *db, int offset, u8 *to)
 		return ret;
 
 	ret = dm9051_epcr_poll(db);
-	if (ret)
+	if (ret) {
+		printk("timeout of dm9051_eeprom_write %d %04x\n", offset, to[0] | to[1] << 8);
 		return ret;
+	}
 
 	ret = regmap_write(db->regmap_dm, DM9051_EPCR, 0);
 	if (ret)
@@ -638,8 +653,10 @@ static int dm9051_eeprom_write(struct board_info *db, int offset, u8 *data)
 		return ret;
 
 	ret = dm9051_epcr_poll(db);
-	if (ret)
+	if (ret) {
+		printk("timeout of dm9051_eeprom_write %d %04x\n", offset, data[0] | data[1] << 8);
 		return ret;
+	}
 
 	return regmap_write(db->regmap_dm, DM9051_EPCR, 0);
 }
@@ -658,8 +675,10 @@ static int dm9051_phyread(void *context, unsigned int reg, unsigned int *val)
 		return ret;
 
 	ret = dm9051_epcr_poll(db);
-	if (ret)
+	if (ret) {
+		printk("timeout of dm9051_phyread %d %04x\n", reg, *val);
 		return ret;
+	}
 
 	ret = regmap_write(db->regmap_dm, DM9051_EPCR, 0);
 	if (ret)
@@ -690,8 +709,10 @@ static int dm9051_phywrite(void *context, unsigned int reg, unsigned int val)
 		return ret;
 
 	ret = dm9051_epcr_poll(db);
-	if (ret)
+	if (ret) {
+		printk("timeout of dm9051_phywrite %d %04x\n", reg, val);
 		return ret;
+	}
 
 	return regmap_write(db->regmap_dm, DM9051_EPCR, 0);
 }
@@ -759,7 +780,7 @@ static int dm9051_phyread_log_dscsr(struct board_info *db,
 }
 
 // dm9051_phyread.EXTEND
-static int dm9051_phyread_log_bmsr(struct board_info *db, char *head, int addr,
+static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 								   unsigned int reg, unsigned int *val)
 {
 	int ret = dm9051_phyread(db, reg, val);
@@ -770,22 +791,80 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, char *head, int addr,
 	do
 	{
 		static unsigned int bmsr = 0xffff;
+		unsigned int vval;
 		if (*val != bmsr)
 		{
 			bmsr = *val;
 		}
 		else
 		{
-			if (!(*val & BIT(6)))
-				printk("%s_read.bmsr.eq, phyaddr %d [BMSR] %04x\n", head, addr, *val);
-
 			if (*val == 0xffff)
 			{
-				unsigned int vval;
 				ret = dm9051_phyread(db, 2, &vval);
 				if (ret)
 					return ret;
-				printk("%s_read.PHYID1[_check_], phyaddr %d phyreg(PHYID1) %04x\n", head, addr, vval);
+				printk("_mdio_read.PHYID1[_check_], phyaddr %d [PHYID1] %04x\n", addr, vval);
+				
+				if (vval != 0x0181) {
+					printk("_mdio_read.PHYID1[NOT 0x0181] fail!\n");
+
+					printk("PHY_Off/PHY_On\n");
+					ret = dm9051_set_reg(db, DM9051_GPCR, GPCR_GEP_CNTL);
+					if (ret)
+						return ret;
+					ret = dm9051_set_reg(db, DM9051_GPR, GPR_PHY_OFF);
+					if (ret)
+						return ret;
+					return dm9051_set_reg(db, DM9051_GPR, 0);
+				}
+			}
+			if (*val == 0)
+			{
+				ret = dm9051_phyread(db, 2, &vval);
+				if (ret)
+					return ret;
+				printk("_mdio_read.PHYID1[_check_], phyaddr %d [PHYID1] %04x\n", addr, vval);
+				
+				if (vval != 0x0181) {
+					printk("_mdio_read.PHYID1[NOT 0x0181] fail!\n");
+
+					printk("PHY_Off/PHY_On\n");
+					ret = dm9051_set_reg(db, DM9051_GPCR, GPCR_GEP_CNTL);
+					if (ret)
+						return ret;
+					ret = dm9051_set_reg(db, DM9051_GPR, GPR_PHY_OFF);
+					if (ret)
+						return ret;
+					return dm9051_set_reg(db, DM9051_GPR, 0);
+				}
+			}
+			if (!(*val & BIT(2))) {
+				static unsigned int n_automdix = 0;
+				static unsigned int mdi = 0x0830;
+
+				n_automdix++;
+				if (!(n_automdix % 5)) {
+					mdi ^= 0x0020;
+
+					printk("\n");
+					if (!(*val & BIT(6)))
+						printk("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", addr, *val);
+
+					ret = dm9051_phyread(db, 2, &vval);
+					if (ret)
+						return ret;
+					printk("_mdio_read.PHYID1[_check_], phyaddr %d [PHYID1] %04x\n", addr, vval);
+
+					ret = dm9051_phywrite(db, 20, mdi);
+					if (ret)
+						return ret;
+					printk("%u _dm9051_phywrite[_AutoMDIX_], phyreg %d [val] %04x\n", n_automdix, 20, mdi);
+
+					ret = dm9051_phyread(db, 20, &vval);
+					if (ret)
+						return ret;
+					printk("%u _mdio_read.[_AutoMDIX_], phyreg %d [val] %04x\n", n_automdix, addr, vval);
+				}
 			}
 		}
 	} while (0);
@@ -800,7 +879,7 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, char *head, int addr,
 	mutex_lock(&db->spi_lockm);
 
 	if (regnum == 1)
-		ret = dm9051_phyread_log_bmsr(db, "_mdio", addr, regnum, val);
+		ret = dm9051_phyread_log_bmsr(db, addr, regnum, val);
 	else
 		ret = dm9051_phyread(db, regnum, val);
 
@@ -845,7 +924,7 @@ static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 		#endif
 
 		if (regnum == 1)
-			ret = dm9051_phyread_log_bmsr(db, "_mdio", addr, regnum, &val);
+			ret = dm9051_phyread_log_bmsr(db, addr, regnum, &val);
 		else
 			ret = dm9051_phyread(db, regnum, &val);
 
@@ -871,14 +950,23 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 		int ret;
 
 		#if MI_FIX
+		static int mdio_write_count = 0;
+
+		if (regnum == 0x0d || regnum == 0x0e) //unknown of dm9051a
+			return 0;
+
+		if (mdio_write_count <= 15)
+			printk("_dm9051 [_write mdio] dm9051_phywrite(%d), %04x (wr count %2d)\n", regnum, val, mdio_write_count++);
 		mutex_lock(&db->spi_lockm);
 		#endif
 
 		/* [dbg] mdio.wr BMCR */
 		if (regnum == 0)
 		{
-			if (val & 0x800)
+			if (val & 0x800) {
+				printk("\n");
 				printk("_[mii_bus] mdio write : power down (warn)\n");
+			}
 		}
 		ret = dm9051_phywrite(db, regnum, val);
 
@@ -900,28 +988,37 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 
 	if ((features & NETIF_F_RXCSUM) && (features & NETIF_F_HW_CSUM))
 	{
-		printk("_ops [Enabling TX/RX checksum]\n");
-		dm9051_set_reg(db, 0x31, 0x7);
-		dm9051_set_reg(db, 0x32, 0x3);
+		printk("_ndo set and write [Enabling TX/RX checksum]\n");
+		db->csum_gen_val = 0x7; //dm9051_set_reg(db, 0x31, 0x7);
+		db->csum_rcv_val = 0x3; //dm9051_set_reg(db, 0x32, 0x3);
 	}
 	else if (features & NETIF_F_RXCSUM)
 	{
-		printk("_ops [Enabling RX checksum only]\n");
-		dm9051_set_reg(db, 0x31, 0x0);
-		dm9051_set_reg(db, 0x32, 0x3);
+		printk("_ndo set and write [Enabling RX checksum only]\n");
+		db->csum_gen_val = 0x0; //dm9051_set_reg(db, 0x31, 0x0);
+		db->csum_rcv_val = 0x3; //dm9051_set_reg(db, 0x32, 0x3);
 	}
 	else if (features & NETIF_F_HW_CSUM)
 	{
-		printk("_ops [Enabling TX checksum only]\n");
-		dm9051_set_reg(db, 0x31, 0x7);
-		dm9051_set_reg(db, 0x32, 0x0);
+		printk("_ndo set and write [Enabling TX checksum only]\n");
+		db->csum_gen_val = 0x7; //dm9051_set_reg(db, 0x31, 0x7);
+		db->csum_rcv_val = 0x0; //dm9051_set_reg(db, 0x32, 0x0);
 	}
 	else
 	{
-		printk("_ops [Disabling TX/RX checksum]\n");
-		dm9051_set_reg(db, 0x31, 0x0);
-		dm9051_set_reg(db, 0x32, 0x0);
+		printk("_ndo set and write [Disabling TX/RX checksum]\n");
+		db->csum_gen_val = 0x0; //dm9051_set_reg(db, 0x31, 0x0);
+		db->csum_rcv_val = 0x0; //dm9051_set_reg(db, 0x32, 0x0);
 	}
+
+#if MI_FIX
+	mutex_lock(&db->spi_lockm);
+#endif
+	dm9051_set_reg(db, 0x31, db->csum_gen_val);
+	dm9051_set_reg(db, 0x32, db->csum_rcv_val);
+#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+#endif
 
 	return 0;
 }
@@ -932,6 +1029,8 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 static int dm9051_core_reset(struct board_info *db)
 {
 	int ret;
+
+	printk("dm9051_core_reset\n");
 
 	db->bc.fifo_rst_counter++;
 
@@ -989,7 +1088,14 @@ static int dm9051_core_reset(struct board_info *db)
 		return ret;
 
 	// Checksum Offload
-	//.already. by. dm9051_ndo_set_features(db->ndev, db->ndev->features);
+	printk("dm9051_set [write TX/RX checksum] wr 0x31 0x%02x wr 0x32 0x%02x, in dm9051_core_reset\n",
+		db->csum_gen_val, db->csum_rcv_val);
+	ret = regmap_write(db->regmap_dm, 0x31, db->csum_gen_val);
+	if (ret)
+		return ret;
+	ret = regmap_write(db->regmap_dm, 0x32, db->csum_rcv_val);
+	if (ret)
+		return ret;
 
 	ret = regmap_write(db->regmap_dm, DM9051_LMCR, db->lcr_all); /* LEDMode1 */
 	if (ret)
@@ -1231,6 +1337,9 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 #else
 	eth_hw_addr_set(ndev, addr);
 #endif
+	dev_info(&db->spidev->dev, "Power-on chip MAC address.e: %02x:%02x:%02x:%02x:%02x:%02x\n",
+			 addr[0], addr[1], addr[2],
+			 addr[3], addr[4], addr[5]);
 	return 0;
 }
 
@@ -1275,7 +1384,13 @@ static int dm9051_get_eeprom(struct net_device *ndev,
 
 	for (i = 0; i < len; i += 2)
 	{
+#if MI_FIX //ee read
+		mutex_lock(&db->spi_lockm);
+#endif
 		ret = dm9051_eeprom_read(db, (offset + i) / 2, data + i);
+#if MI_FIX //ee read
+		mutex_unlock(&db->spi_lockm);
+#endif
 		if (ret)
 			break;
 	}
@@ -1296,12 +1411,18 @@ static int dm9051_set_eeprom(struct net_device *ndev,
 	if (ee->magic != DM_EEPROM_MAGIC)
 		return -EINVAL;
 
+#if MI_FIX //ee write
+	mutex_lock(&db->spi_lockm);
+#endif
 	for (i = 0; i < len; i += 2)
 	{
 		ret = dm9051_eeprom_write(db, (offset + i) / 2, data + i);
 		if (ret)
 			break;
 	}
+#if MI_FIX //ee write
+	mutex_unlock(&db->spi_lockm);
+#endif
 	return ret;
 }
 
@@ -1320,8 +1441,17 @@ static int dm9051_set_pauseparam(struct net_device *ndev,
 
 	db->pause = *pause;
 
-	if (pause->autoneg == AUTONEG_DISABLE)
-		return dm9051_update_fcr(db);
+	if (pause->autoneg == AUTONEG_DISABLE) {
+		int ret;
+#if MI_FIX //fcr
+		mutex_lock(&db->spi_lockm);
+#endif
+		ret = dm9051_update_fcr(db);
+#if MI_FIX //fcr
+		mutex_unlock(&db->spi_lockm);
+#endif
+		return ret;
+	}
 
 	phy_set_sym_pause(db->phydev, pause->rx_pause, pause->tx_pause,
 					  pause->autoneg);
@@ -1375,6 +1505,9 @@ static const struct ethtool_ops dm9051_ethtool_ops = {
 static int dm9051_all_start(struct board_info *db)
 {
 	int ret;
+	
+	printk("dm9051_all_start\n");
+
 
 	/* GPR power on of the internal phy
 	 */
@@ -1412,12 +1545,12 @@ static int dm9051_all_stop(struct board_info *db)
 	/* GPR power off of the internal phy,
 	 * The internal phy still could be accessed after this GPR power off control
 	 */
-	printk("_stop [dm9051_all_stop] set reg DM9051_GPCR, 0x%02x\n", (unsigned int)GPCR_GEP_CNTL);
+	//printk("_stop [dm9051_all_stop] set reg DM9051_GPCR, 0x%02x\n", (unsigned int)GPCR_GEP_CNTL);
 	ret = dm9051_set_reg(db, DM9051_GPCR, GPCR_GEP_CNTL);
 	if (ret)
 		return ret;
 
-	printk("_stop [dm9051_all_stop] set reg DM9051_GPR, 0x%02x\n", (unsigned int)GPR_PHY_OFF);
+	//printk("_stop [dm9051_all_stop] set reg DM9051_GPR, 0x%02x\n", (unsigned int)GPR_PHY_OFF);
 	ret = dm9051_set_reg(db, DM9051_GPR, GPR_PHY_OFF);
 	if (ret)
 		return ret;
@@ -1476,13 +1609,13 @@ static int dm9051_all_restart(struct board_info *db)
 		}                                    \
 	} while (0)
 
-int trap_clr(struct board_info *db)
+static int trap_clr(struct board_info *db)
 {
 	db->bc.evaluate_rxb_counter = 0;
 	return 0;
 }
 
-void monitor_rxb0(unsigned int rxbyte)
+static void monitor_rxb0(unsigned int rxbyte)
 {
 	if (econf->force_monitor_rxb)
 	{
@@ -1530,7 +1663,7 @@ void monitor_rxb0(unsigned int rxbyte)
 	}
 }
 
-void monitor_rxc(struct board_info *db, int scanrr)
+static void monitor_rxc(struct board_info *db, int scanrr)
 {
 	if (econf->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
 	{
@@ -1542,7 +1675,7 @@ void monitor_rxc(struct board_info *db, int scanrr)
 // check rxbs
 // return: 0 : Still not trap
 //         1 : Do reatart trap
-int trap_rxb(struct board_info *db, unsigned int *prxbyte)
+static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 {
 	if (SCAN_BH(*prxbyte) == 0)
 		return 0;
@@ -1588,7 +1721,7 @@ int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 	return 0;
 }
 
-int rx_break(unsigned int rxbyte, netdev_features_t features)
+static int rx_break(unsigned int rxbyte, netdev_features_t features)
 {
 	monitor_rxb0(rxbyte);
 	if (features & NETIF_F_RXCSUM)
@@ -1610,7 +1743,7 @@ int rx_break(unsigned int rxbyte, netdev_features_t features)
 		DM9051_RX_BREAK((SCAN_BH(rxbyte) == DM9051_PKT_RDY), return 0, return -EINVAL);
 }
 
-int rx_head_break(struct board_info *db)
+static int rx_head_break(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
 	int rxlen;
@@ -1734,7 +1867,7 @@ static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int buff_l
 }
 
 #ifdef DM9051_SKB_PROTECT
-struct sk_buff *dm9051_skb_protect(struct sk_buff *skb)
+struct sk_buff *dm9051_tx_skb_protect(struct sk_buff *skb)
 {
 	struct sk_buff *skb2;
 
@@ -1772,7 +1905,7 @@ static int dm9051_loop_tx(struct board_info *db)
 				if (mconf->skb_wb_mode && (skb->len & 1))
 				{
 					#ifdef DM9051_SKB_PROTECT
-					skb = dm9051_skb_protect(skb); /* protection */
+					skb = dm9051_tx_skb_protect(skb); /* protection */
 					#endif
 					pad = 1;
 				}
@@ -1803,43 +1936,167 @@ static int dm9051_loop_tx(struct board_info *db)
 	return ntx;
 }
 
-#if 1
-//static 
-irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
+/* Interrupt/poll: looping rx/tx */
+
+static int dm9051_delayp_loop_rxp(struct board_info *db)
 {
-	struct board_info *db = pw;
 	int result, result_tx;
-
-	mutex_lock(&db->spi_lockm);
-
-	result = dm9051_disable_interrupt(db);
-	if (result)
-		goto out_unlock;
-
-	result = dm9051_clear_interrupt(db);
-	if (result)
-		goto out_unlock;
 
 	do
 	{
 		result = dm9051_loop_rx(db); /* threaded rx */
 		if (result < 0)
-			goto out_unlock;
+			return result; //result; //goto out_unlock;
 		result_tx = dm9051_loop_tx(db); /* more tx better performance */
 		if (result_tx < 0)
-			goto out_unlock;
+			return result_tx; //result_tx; //goto out_unlock;
 	} while (result > 0);
 
+	return 0;
+}
+
+#if 1
+static int dm9051_rx_plat_disable(struct board_info *db)
+{
+	int result = dm9051_disable_interrupt(db);
+	if (result)
+		return result; //goto out_unlock;
+
+	result = dm9051_clear_interrupt(db);
+	if (result)
+		return result; //goto out_unlock;
+	return result;
+}
+
+static void dm9051_rx_plat_loop(struct board_info *db)
+{
+	int ret;
+
+	ret = dm9051_delayp_loop_rxp(db);
+	if (ret < 0)
+		return;
+
 	dm9051_enable_interrupt(db);
+}
+//static void dm9051_rx_plat_enable(struct board_info *db)
+//{
+//	dm9051_enable_interrupt(db);
+//}
+
+/* Interrupt: Interrupt work */
+
+static void dm9051_rx_int2_plat(int voidirq, void *pw)
+{
+	struct board_info *db = pw;
+	int result; //, result_tx;
+
+	mutex_lock(&db->spi_lockm);
+
+#if 1 //[REAL.]	//'MI_FIX'
+	result = dm9051_rx_plat_disable(db);
+	if (result)
+		goto out_unlock;
+
+	dm9051_rx_plat_loop(db);
+#else //[TEMP.]	
+	//result = dm9051_clear_interrupt(db);
+	//if (result)
+	//	goto out_unlock;
+#endif //[TEMP.]
 
 	/* To exit and has mutex unlock while rx or tx error
 	 */
 out_unlock:
 	mutex_unlock(&db->spi_lockm);
+	//return IRQ_HANDLED;
+}
 
+/* !Interrupt: Poll delay work */
+
+/* [DM_TIMER_EXPIRE2] poll extream.fast */
+/* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
+ * This is by CPU scheduling-poll, so is software driven!
+ */
+#define DM_TIMER_EXPIRE1 1
+#define DM_TIMER_EXPIRE2 0
+#define DM_TIMER_EXPIRE3 0
+
+/*static*/ void dm9051_irq_delayp(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
+
+	mutex_lock(&db->spi_lockm);
+
+	dm9051_delayp_loop_rxp(db);
+
+	mutex_unlock(&db->spi_lockm);
+
+	if (db->bc.ndelayF >= csched.nTargetMaxNum)
+		db->bc.ndelayF = POLL_OPERATE_INIT;
+
+	/* redundent, but for safe */
+	//if (!dm9051_cmode_int)
+	
+		schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
+}
+
+int thread_servicep_done = 1;
+int thread_servicep_re_enter = 0;
+
+#ifdef INT_TWO_STEP
+void dm9051_rx_irq_servicep(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
+
+	dm9051_rx_int2_plat(0, db); // 0 is no-used. //rx_service(db);
+	thread_servicep_done = 1;
+
+}
+
+irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw)
+{
+	struct board_info *db = pw;
+
+	if (!thread_servicep_re_enter)
+		printk("_.eval   [dm9051_rx_int2_delay] first-enter %d\n", thread_servicep_re_enter++);
+
+	if (thread_servicep_done) {
+		thread_servicep_done = 0;
+
+		#if 1
+		//dm9051_rx_int2_plat(voidirq, pw);
+		schedule_delayed_work(&db->irq_servicep, 0);
+		#endif
+	}
+	else {
+		if (thread_servicep_re_enter <= 10)
+			printk("_.eval   [dm9051_rx_int2_delay] re-enter %d\n", thread_servicep_re_enter++);
+	}
+	return IRQ_HANDLED;
+}
+#endif //INT_TWO_STEP
+
+//static 
+irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
+{
+	if (!thread_servicep_re_enter)
+		printk("_.eval   [dm9051_rx_threaded_plat] first-enter %d\n", thread_servicep_re_enter++);
+		
+	if (thread_servicep_done) {
+		thread_servicep_done = 0;
+
+		dm9051_rx_int2_plat(voidirq, pw);
+		thread_servicep_done = 1;
+	} else {
+		printk("_.eval   [dm9051_rx_threaded_plat] re-enter %d\n", thread_servicep_re_enter++);
+	}
 	return IRQ_HANDLED;
 }
 #endif
+
+/* schedule delay works */
 
 static void dm9051_tx_delay(struct work_struct *work)
 {
@@ -1884,6 +2141,8 @@ static int dm9051_open(struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	struct spi_device *spi = db->spidev;
 	int ret;
+	
+	printk("dm9051_open\n");
 
 	db->imr_all = IMR_PAR | IMR_PRM;
 	db->lcr_all = LMCR_MODE1;
@@ -1893,22 +2152,14 @@ static int dm9051_open(struct net_device *ndev)
 	ndev->irq = spi->irq; /* by dts */
 
 //before [spi_lockm]
-	/* interrupt work */
-	ret = INIT_RX_REQUEST_SETUP(dm9051_cmode_int, ndev);
-	if (ret < 0)
-	{
-		netdev_err(ndev, "failed to rx request setup\n");
-		return ret;
-	}
+
 
 //use [spi_lockm]
+	mutex_lock(&db->spi_lockm);
 	ret = dm9051_all_start(db);
+	mutex_unlock(&db->spi_lockm);
 	if (ret)
-	{
-		phy_stop(db->phydev);
-		END_RX_REQUEST_FREE(dm9051_cmode_int, ndev);
 		return ret;
-	}
 
 	phy_support_sym_pause(db->phydev);
 	phy_start(db->phydev);
@@ -1922,6 +2173,11 @@ static int dm9051_open(struct net_device *ndev)
 		db->pause.autoneg = AUTONEG_ENABLE;
 
 	netif_wake_queue(ndev);
+
+	/* interrupt work */
+	ret = INIT_RX_REQUEST_SETUP(dm9051_cmode_int, ndev);
+	if (ret < 0)
+		return ret;
 
 	/* schedule delay work */
 	INIT_RX_POLL_SCHED_DELAY(!dm9051_cmode_int, db);
@@ -2041,7 +2297,14 @@ static int dm9051_set_mac_address(struct net_device *ndev, void *p)
 		return ret;
 
 	eth_commit_mac_addr_change(ndev, p);
-	return dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, sizeof(ndev->dev_addr));
+#if MI_FIX //mac
+	mutex_lock(&db->spi_lockm);
+#endif
+	ret = dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, sizeof(ndev->dev_addr));
+#if MI_FIX //mac
+	mutex_unlock(&db->spi_lockm);
+#endif
+	return ret;
 }
 
 static struct net_device_stats *dm9051_get_stats(struct net_device *ndev)
@@ -2075,6 +2338,9 @@ static void dm9051_operation_clear(struct board_info *db)
 	trap_clr(db);
 	db->bc.nRxcF = 0;
 	db->bc.ndelayF = POLL_OPERATE_INIT;
+
+	db->csum_gen_val = 0; //disabling
+	db->csum_rcv_val = 0; //disabling
 }
 
 static int dm9051_mdio_register(struct board_info *db)
