@@ -121,8 +121,8 @@ void SHOW_INT_MODE(int cint, struct spi_device *spi);
 
 unsigned int dm9051_intcr_value(struct board_info *db);
 void INIT_RX_DELAY_SETUP(int cint, struct board_info *db);
-int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev);
-void END_RX_REQUEST_FREE(int cint, struct net_device *ndev);
+int INIT_REQUEST_IRQ(int cint, struct net_device *ndev);
+void END_FREE_IRQ(int cint, struct net_device *ndev);
 
 void INIT_RX_POLL_DELAY_SETUP(int cpoll, struct board_info *db);
 void INIT_RX_POLL_SCHED_DELAY(int cpoll, struct board_info *db);

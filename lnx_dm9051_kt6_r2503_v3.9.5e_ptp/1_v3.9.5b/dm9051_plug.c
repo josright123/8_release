@@ -18,32 +18,33 @@
 #include <linux/spi/spi.h>
 #include <linux/types.h>
 #include <linux/of.h>
+#include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
 #include "dm9051_plug.h"
 
 #ifdef DMCONF_AARCH_64
-#warning "DMCONF: dm9051 config 64-bit"
+#warning "dm9051 AARCH_64"
 #else
-#warning "DMCONF: dm9051 config 32-bit"
+#warning "dm9051 AARCH_32"
 #endif
 
 #ifdef DMCONF_DIV_HLPR_32
-#warning "DMCONF: dm9051 config calc-helper-32-bit"
+#warning "dm9051 DIV_HLPR_32"
 #endif
 
 #ifdef DMPLUG_CONTI
-#warning "DMPLUG: dm9051 plug-in tx-conti"
+#warning "dm9051 CONTI"
 #endif
 
 #ifdef DMPLUG_PTP
-#warning "DMPLUG: dm9051 plug-in ptp 1588"
+#warning "dm9051 PTP"
 #endif
 
 /* INT and INT two_step */
 #ifdef DMPLUG_INT
-#warning "DMPLUG: dm9051 plug-in interrupt support"
+#warning "dm9051 INT"
 #ifdef INT_TWO_STEP
-#warning "INT: plug-in interrupt two_step"
+#warning "INT: TWO_STEP"
 #endif
 #endif
 
@@ -105,7 +106,7 @@ void INIT_RX_DELAY_SETUP(int cint, struct board_info *db)
 	#endif //INT_TWO_STEP
 }
 
-int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev)
+int INIT_REQUEST_IRQ(int cint, struct net_device *ndev)
 {
 	int ret = 0;
 
@@ -132,7 +133,7 @@ int INIT_RX_REQUEST_SETUP(int cint, struct net_device *ndev)
 	return ret;
 }
 
-void END_RX_REQUEST_FREE(int cint, struct net_device *ndev)
+void END_FREE_IRQ(int cint, struct net_device *ndev)
 {
 	if (cint)
 	{
@@ -146,7 +147,7 @@ void INIT_RX_POLL_DELAY_SETUP(int cpoll, struct board_info *db)
 {
 	if (cpoll)
 		/* schedule delay work */
-		INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp);
+		INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp); //.dm9051_poll_delay_plat()
 }
 
 void INIT_RX_POLL_SCHED_DELAY(int cpoll, struct board_info *db)

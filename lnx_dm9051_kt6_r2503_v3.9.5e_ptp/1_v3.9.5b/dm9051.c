@@ -20,6 +20,7 @@
 #include <linux/types.h>
 #include <linux/of.h>
 #define MAIN_DATA
+#include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
 #include "dm9051_plug.h"
 #include "dm9051_ptpd.h"
@@ -1719,7 +1720,7 @@ static int rx_break(unsigned int rxbyte, netdev_features_t features)
 		DM9051_RX_BREAK((SCAN_BH(rxbyte) == DM9051_PKT_RDY), return 0, return -EINVAL);
 }
 
-static int rxhead_and_read_ptp_mem(struct board_info *db, u8 *rxTSbyte)
+static int rx_head_break(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
 	int rxlen;
@@ -1753,10 +1754,15 @@ static int rxhead_and_read_ptp_mem(struct board_info *db, u8 *rxTSbyte)
 		}
 		return 1;
 	}
+	return 0;
+}
 
+static int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
+{
 	//_15888_
 	if (db->ptp_on) {
 	if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+		struct net_device *ndev = db->ndev;
 		int ret;
 		//printk("Had RX Timestamp... rxstatus = 0x%x\n", db->rxhdr.status);
 		if(db->rxhdr.status & RSR_RXTS_LEN) {	// 8 bytes Timestamp
@@ -1775,7 +1781,6 @@ static int rxhead_and_read_ptp_mem(struct board_info *db, u8 *rxTSbyte)
 			}
 		}			
 	}}
-
 	return 0;
 }
 
@@ -1819,13 +1824,19 @@ static int dm9051_loop_rx(struct board_info *db)
 			return ret;
 
 		/* rx_head_takelen check */
-		if (rxhead_and_read_ptp_mem(db, rxTSbyte)) {
+		ret = rx_head_break(db);
+		if (ret) {
 			ret = dm9051_all_restart(db);
 			if (ret)
 				return ret;
 			printk("_[_all_restart] rxhead work around done\n");
 			return -EINVAL;
 		}
+
+		/* rx_tstamp */
+		ret = dm9051_read_ptp_tstamp_mem(db, rxTSbyte);
+		if (ret)
+			return ret;
 
 		rxlen = le16_to_cpu(db->rxhdr.rxlen);
 		padlen = (mconf->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
@@ -1966,9 +1977,47 @@ static int dm9051_loop_tx(struct board_info *db)
 	return ntx;
 }
 
-/* Interrupt/poll: looping rx/tx */
+/* schedule delay works */
 
-static int dm9051_delayp_loop_rxp(struct board_info *db)
+static void dm9051_rxctl_delay(struct work_struct *work)
+{
+	struct board_info *db = container_of(work, struct board_info, rxctrl_work);
+	struct net_device *ndev = db->ndev;
+	int result;
+
+	mutex_lock(&db->spi_lockm);
+
+	result = dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, sizeof(ndev->dev_addr));
+	if (result < 0)
+		goto out_unlock;
+
+	dm9051_set_recv(db);
+
+	/* To has mutex unlock and return from this function if regmap function fail
+	 */
+out_unlock:
+	mutex_unlock(&db->spi_lockm);
+}
+
+/* start_xmit schedule delay works */
+
+static void dm9051_tx_delay(struct work_struct *work)
+{
+	struct board_info *db = container_of(work, struct board_info, tx_work);
+	int result;
+
+	mutex_lock(&db->spi_lockm);
+
+	result = dm9051_loop_tx(db);
+	if (result < 0)
+		netdev_err(db->ndev, "transmit packet error\n");
+
+	mutex_unlock(&db->spi_lockm);
+}
+
+/* Interrupt/poll: looping_rx_tx */
+
+static int dm9051_delayp_loop_rxp(struct board_info *db) //.looping_rx_tx()
 {
 	int result, result_tx;
 
@@ -2002,7 +2051,7 @@ static void dm9051_rx_plat_loop(struct board_info *db)
 {
 	int ret;
 
-	ret = dm9051_delayp_loop_rxp(db);
+	ret = dm9051_delayp_loop_rxp(db); //.looping_rx_tx()
 	if (ret < 0)
 		return;
 
@@ -2015,7 +2064,7 @@ static void dm9051_rx_plat_loop(struct board_info *db)
 
 /* Interrupt: Interrupt work */
 
-static void dm9051_rx_int2_plat(int voidirq, void *pw)
+static void dm9051_rx_int2_plat(int voidirq, void *pw) //.dm9051_(macro)_rx_tx_plat()
 {
 	struct board_info *db = pw;
 	int result; //, result_tx;
@@ -2051,14 +2100,14 @@ out_unlock:
 #define DM_TIMER_EXPIRE2 0
 #define DM_TIMER_EXPIRE3 0
 
-/*static*/ void dm9051_irq_delayp(struct work_struct *work)
+void dm9051_irq_delayp(struct work_struct *work) //.dm9051_poll_delay_plat()
 {
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
 
 	mutex_lock(&db->spi_lockm);
 
-	dm9051_delayp_loop_rxp(db);
+	dm9051_delayp_loop_rxp(db); //.looping_rx_tx()
 
 	mutex_unlock(&db->spi_lockm);
 
@@ -2075,17 +2124,17 @@ int thread_servicep_done = 1;
 int thread_servicep_re_enter = 0;
 
 #ifdef INT_TWO_STEP
-void dm9051_rx_irq_servicep(struct work_struct *work)
+void dm9051_rx_irq_servicep(struct work_struct *work) //optional: INT: TWO_STEP SRVEICE
 {
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
 
-	dm9051_rx_int2_plat(0, db); // 0 is no-used. //rx_service(db);
+	dm9051_rx_int2_plat(0, db); // 0 is no-used //.dm9051_(macro)_rx_tx_plat()
 	thread_servicep_done = 1;
 
 }
 
-irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw)
+irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STEP
 {
 	struct board_info *db = pw;
 
@@ -2096,7 +2145,7 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw)
 		thread_servicep_done = 0;
 
 		#if 1
-		//dm9051_rx_int2_plat(voidirq, pw);
+		//dm9051_rx_int2_plat(voidirq, pw); //.dm9051_(macro)_rx_tx_plat()
 		schedule_delayed_work(&db->irq_servicep, 0);
 		#endif
 	}
@@ -2108,7 +2157,6 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw)
 }
 #endif //INT_TWO_STEP
 
-//static 
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 {
 	if (!thread_servicep_re_enter)
@@ -2117,7 +2165,7 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
 
-		dm9051_rx_int2_plat(voidirq, pw);
+		dm9051_rx_int2_plat(voidirq, pw); //.dm9051_(macro)_rx_tx_plat()
 		thread_servicep_done = 1;
 	} else {
 		printk("_.eval   [dm9051_rx_threaded_plat] re-enter %d\n", thread_servicep_re_enter++);
@@ -2125,42 +2173,6 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 	return IRQ_HANDLED;
 }
 #endif
-
-/* schedule delay works */
-
-static void dm9051_tx_delay(struct work_struct *work)
-{
-	struct board_info *db = container_of(work, struct board_info, tx_work);
-	int result;
-
-	mutex_lock(&db->spi_lockm);
-
-	result = dm9051_loop_tx(db);
-	if (result < 0)
-		netdev_err(db->ndev, "transmit packet error\n");
-
-	mutex_unlock(&db->spi_lockm);
-}
-
-static void dm9051_rxctl_delay(struct work_struct *work)
-{
-	struct board_info *db = container_of(work, struct board_info, rxctrl_work);
-	struct net_device *ndev = db->ndev;
-	int result;
-
-	mutex_lock(&db->spi_lockm);
-
-	result = dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, sizeof(ndev->dev_addr));
-	if (result < 0)
-		goto out_unlock;
-
-	dm9051_set_recv(db);
-
-	/* To has mutex unlock and return from this function if regmap function fail
-	 */
-out_unlock:
-	mutex_unlock(&db->spi_lockm);
-}
 
 /* Open network device
  * Called when the network device is marked active, such as a user executing
@@ -2209,11 +2221,11 @@ static int dm9051_open(struct net_device *ndev)
 	netif_wake_queue(ndev);
 
 	/* interrupt work */
-	ret = INIT_RX_REQUEST_SETUP(dm9051_cmode_int, ndev);
+	ret = INIT_REQUEST_IRQ(dm9051_cmode_int, ndev);
 	if (ret < 0)
 		return ret;
 
-	/* schedule delay work */
+	/* Or schedule delay work */
 	INIT_RX_POLL_SCHED_DELAY(!dm9051_cmode_int, db);
 
 	return 0;
@@ -2236,12 +2248,12 @@ static int dm9051_stop(struct net_device *ndev)
 		return ret;
 
 	/* schedule delay work */
-	if (!dm9051_cmode_int)
-		cancel_delayed_work_sync(&db->irq_workp);
 	#ifdef INT_TWO_STEP
 	if (dm9051_cmode_int)
 		cancel_delayed_work_sync(&db->irq_servicep);
 	#endif //INT_TWO_STEP
+	if (!dm9051_cmode_int)
+		cancel_delayed_work_sync(&db->irq_workp);
 
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
@@ -2251,7 +2263,7 @@ static int dm9051_stop(struct net_device *ndev)
 	mutex_unlock(&db->spi_lockm);
 
 	/* when (threadedcfg.interrupt_supp == THREADED_INT) */
-	END_RX_REQUEST_FREE(dm9051_cmode_int, ndev);
+	END_FREE_IRQ(dm9051_cmode_int, ndev);
 
 	netif_stop_queue(ndev);
 
@@ -2266,9 +2278,22 @@ static netdev_tx_t dm9051_start_xmit(struct sk_buff *skb, struct net_device *nde
 {
 	struct board_info *db = to_dm9051_board(ndev);
 
+#if 0
+	//printk("dm9051_start_xmit...\n");
+	db->ptp_tx_flags = skb_shinfo(skb)->tx_flags; ---------- in dm9051_single_tx()
+	if (db->ptp_tx_flags & SKBTX_HW_TSTAMP) ---------------- no need
+		db->ptp_tx_flags |= SKBTX_IN_PROGRESS; ------------- no need
+#endif
+
 	skb_queue_tail(&db->txq, skb);
 	if (skb_queue_len(&db->txq) > DM9051_TX_QUE_HI_WATER)
 		netif_stop_queue(ndev); /* enforce limit queue size */
+
+#if 0
+		//show_ptp_type(skb);	//Show PTP message type
+		skb_tx_timestamp(skb);	
+		//Spenser - Report software Timestamp ----- no need? v.s. skb_tstamp_tx(skb, &shhwtstamps);//Report HW Timestamp
+#endif
 
 	schedule_work(&db->tx_work);
 
@@ -2354,7 +2379,78 @@ static struct net_device_stats *dm9051_get_stats(struct net_device *ndev)
 	return &ndev->stats;
 }
 
-static const struct net_device_ops dm9051_netdev_ops = {
+/**
+ * dm9051_ptp_get_ts_config - get hardware time stamping config
+ * @netdev:
+ * @ifreq:
+ *
+ * Get the hwtstamp_config settings to return to the user. Rather than attempt
+ * to deconstruct the settings from the registers, just return a shadow copy
+ * of the last known settings.
+ **/
+
+int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr)
+{
+	struct board_info *db = netdev_priv(netdev);
+	struct hwtstamp_config *config = &db->tstamp_config;
+        
+	return copy_to_user(ifr->ifr_data, config, sizeof(*config)) ?
+		-EFAULT : 0;
+
+}
+
+/**
+ * dm9051_ptp_set_ts_config - set hardware time stamping config
+ * @netdev:
+ * @ifreq:
+ *
+ **/
+int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
+{
+	struct board_info *db = netdev_priv(netdev);
+	struct hwtstamp_config config;
+	int err;
+
+        //dm_printk("[in %s()]", __FUNCTION__);
+
+	if (copy_from_user(&config, ifr->ifr_data, sizeof(config)))
+		return -EFAULT;
+
+	err = dm9051_ptp_set_timestamp_mode(db, &config);
+	if (err)
+		return err;
+
+	/* save these settings for future reference */
+	memcpy(&db->tstamp_config, &config,
+	       sizeof(db->tstamp_config));
+
+	return copy_to_user(ifr->ifr_data, &config, sizeof(config)) ?
+		-EFAULT : 0;
+}
+
+/* netdev_ops tell support ptp */
+static int dm9051_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
+{
+	//struct board_info *db = to_dm9051_board(ndev);
+    //struct hwtstamp_config config;
+
+	switch(cmd) {
+		case SIOCGHWTSTAMP:
+			//printk("Process SIOCGHWTSTAMP\n");
+			//db->ptp_on = 1;
+			return dm9051_ptp_get_ts_config(ndev, rq);
+		case SIOCSHWTSTAMP:
+			//printk("Process SIOCSHWTSTAMP\n");
+			//db->ptp_on = 1;
+			return dm9051_ptp_set_ts_config(ndev, rq);
+		default:
+			printk("dm9051_netdev_ioctl cmd = 0x%X\n", cmd);
+			//db->ptp_on = 0;
+			return -EOPNOTSUPP;
+	}
+}
+
+const struct net_device_ops dm9051_netdev_ops = { //ignored
 	.ndo_open = dm9051_open,
 	.ndo_stop = dm9051_stop,
 	.ndo_start_xmit = dm9051_start_xmit,
@@ -2363,6 +2459,18 @@ static const struct net_device_ops dm9051_netdev_ops = {
 	.ndo_set_mac_address = dm9051_set_mac_address,
 	.ndo_set_features = dm9051_ndo_set_features,
 	.ndo_get_stats = dm9051_get_stats,
+};
+
+static const struct net_device_ops dm9051_ptp_netdev_ops = {
+	.ndo_open = dm9051_open,
+	.ndo_stop = dm9051_stop,
+	.ndo_start_xmit = dm9051_start_xmit,
+	.ndo_set_rx_mode = dm9051_set_rx_mode,
+	.ndo_validate_addr = eth_validate_addr,
+	.ndo_set_mac_address = dm9051_set_mac_address,
+	.ndo_set_features = dm9051_ndo_set_features,
+	.ndo_get_stats = dm9051_get_stats,
+	.ndo_eth_ioctl = dm9051_netdev_ioctl, //_15888_
 };
 
 static void dm9051_operation_clear(struct board_info *db)
@@ -2395,7 +2503,7 @@ static int dm9051_mdio_register(struct board_info *db)
 	db->mdiobus->read = dm9051_mdio_read;
 	db->mdiobus->write = dm9051_mdio_write;
 	db->mdiobus->name = "dm9051-mdiobus";
-	db->mdiobus->phy_mask = (u32)~BIT(1);
+	db->mdiobus->phy_mask = (u32)~BIT(1); //if ((bus->phy_mask & BIT(1)) == 0) accepted
 	db->mdiobus->parent = &spi->dev;
 	snprintf(db->mdiobus->id, MII_BUS_ID_SIZE,
 			 "dm9051-%s.%u", dev_name(&spi->dev), spi->chip_select);
@@ -2426,9 +2534,7 @@ dev_info(&db->spidev->dev, "link_change.mutex.in / evaluation\n");
 		}
 		dm9051_update_fcr(db);
 	}
-
-dev_info(&db->spidev->dev, "link_change.show - ptp_on: %d\n", db->ptp_on);
-dev_info(&db->spidev->dev, "link_change.mutex.out / evaluation\n");
+dev_info(&db->spidev->dev, "link_change.mutex.out / evaluation ptp_on: %d\n", db->ptp_on);
 }
 
 /* phy connect as poll mode
@@ -2464,17 +2570,23 @@ static int dm9051_probe(struct spi_device *spi)
 	db->msg_enable = 0;
 	db->spidev = spi;
 	db->ndev = ndev;
+	//.by ptp4l run command
+	//db->ptp_on = 1;		//Enable PTP must disable checksum_offload
 
-	ndev->netdev_ops = &dm9051_netdev_ops;
+	ndev->netdev_ops = &dm9051_ptp_netdev_ops;
 	ndev->ethtool_ops = &dm9051_ptpd_ethtool_ops;//&dm9051_ethtool_ops;
 
-	// Spenser - Setup for Checksum Offload
 	/* Set default features */
 	if (mconf->checksuming)
 	{
+		// Spenser - Setup for Checksum Offload
+	#ifdef DMPLUG_PTP
+		dev_info(&db->spidev->dev, "Enable PTP must disable checksum_offload\n");
+	#else
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
-		ndev->hw_features |= ndev->features;
+	#endif
 	}
+	ndev->hw_features |= ndev->features;
 
 	mutex_init(&db->spi_lockm);
 	mutex_init(&db->reg_mutex);
@@ -2525,6 +2637,11 @@ static int dm9051_probe(struct spi_device *spi)
 		phy_disconnect(db->phydev);
 		return dev_err_probe(dev, ret, "device register failed");
 	}
+
+	#ifdef DMPLUG_PTP
+	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
+	dm9051_ptp_init(db); //_15888_
+	#endif
 
 	return 0;
 }
