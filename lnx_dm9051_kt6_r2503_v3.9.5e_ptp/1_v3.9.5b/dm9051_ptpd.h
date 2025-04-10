@@ -6,14 +6,14 @@ int dm9051_ptp_set_timestamp_mode(struct board_info *db,
 					 struct hwtstamp_config *config);
 int dm9051_ptp_one_step(struct sk_buff *skb);
 int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db);
-/*static*/ extern const struct ethtool_ops dm9051_ptpd_ethtool_ops;
+//extern const struct ethtool_ops dm9051_ptpd_ethtool_ops;
 
 unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db);
 
 void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTSbyte);
 
-s64 dm9051_get_rate_reg(struct board_info *db);
+/*s64*/ u32 dm9051_get_rate_reg(struct board_info *db);
 
 int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm);
 int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta);

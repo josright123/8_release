@@ -57,7 +57,7 @@ struct mod_config
 /* Default driver configuration */
 const struct driver_config confdata = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-	.interrupt = MODE_INTERRUPT,
+	.interrupt = MODE_INTERRUPT, //MODE_INTERRUPT,
 	 /* MODE_POLL, 
 	  * MODE_INTERRUPT or 
 	  * MODE_INTERRUPT_CLKOUT */
@@ -983,6 +983,7 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 
 static int dm9051_core_reset(struct board_info *db)
 {
+	u32 rate_reg;
 	int ret;
 
 	printk("dm9051_core_reset\n");
@@ -1039,7 +1040,7 @@ static int dm9051_core_reset(struct board_info *db)
 	}
 
 	//_15888_
-	u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
+	/*u32*/ rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
 	printk("Pre-RateReg value = 0x%08X\n", rate_reg);
 	return ret; /* ~return dm9051_set_reg(db, DM9051_INTCR, dm9051_intcr_value(db)) */
 }
@@ -1248,7 +1249,11 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 		//		eth_hw_addr_set(ndev, addr);
 		// #endif
 
+//#if KERNEL_BUILD_CONF < DM9051_KERNEL_6_1
 		ether_addr_copy(addr, ndev->dev_addr);
+//#else
+		//eth_hw_addr_set(addr, //ndev);
+//#endif
 		addr[0] = 0x00;
 		addr[1] = 0x60;
 		addr[2] = 0x6e;
@@ -1431,26 +1436,7 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	data[6] = db->bc.fifo_rst_counter - 1; // Subtract Initial reset
 }
 
-/*static*/ const struct ethtool_ops dm9051_ethtool_ops = {
-	.get_drvinfo = dm9051_get_drvinfo,
-	.get_link_ksettings = phy_ethtool_get_link_ksettings,
-	.set_link_ksettings = phy_ethtool_set_link_ksettings,
-	.get_msglevel = dm9051_get_msglevel,
-	.set_msglevel = dm9051_set_msglevel,
-	.nway_reset = phy_ethtool_nway_reset,
-	.get_link = ethtool_op_get_link,
-	.get_eeprom_len = dm9051_get_eeprom_len,
-	.get_eeprom = dm9051_get_eeprom,
-	.set_eeprom = dm9051_set_eeprom,
-	.get_pauseparam = dm9051_get_pauseparam,
-	.set_pauseparam = dm9051_set_pauseparam,
-	.get_strings = dm9051_get_strings,
-	.get_sset_count = dm9051_get_sset_count,
-	.get_ethtool_stats = dm9051_get_ethtool_stats,
-};
-
-//_15888_
-/*static*/ const struct ethtool_ops dm9051_ptpd_ethtool_ops = {
+static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_ops dm9051_ptpd_ethtool_ops
 	.get_drvinfo = dm9051_get_drvinfo,
 	.get_link_ksettings = phy_ethtool_get_link_ksettings,
 	.set_link_ksettings = phy_ethtool_set_link_ksettings,
@@ -1467,7 +1453,9 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	.get_sset_count = dm9051_get_sset_count,
 	.get_ethtool_stats = dm9051_get_ethtool_stats,
 	//_15888_,
+#ifdef DMPLUG_PTP
 	.get_ts_info = dm9051_ts_info,
+#endif
 };
 
 static int dm9051_all_start(struct board_info *db)
@@ -2574,14 +2562,14 @@ static int dm9051_probe(struct spi_device *spi)
 	//db->ptp_on = 1;		//Enable PTP must disable checksum_offload
 
 	ndev->netdev_ops = &dm9051_ptp_netdev_ops;
-	ndev->ethtool_ops = &dm9051_ptpd_ethtool_ops;//&dm9051_ethtool_ops;
+	ndev->ethtool_ops = &dm9051_ethtool_ops;//&dm9051_ptpd_ethtool_ops;
 
 	/* Set default features */
 	if (mconf->checksuming)
 	{
 		// Spenser - Setup for Checksum Offload
 	#ifdef DMPLUG_PTP
-		dev_info(&db->spidev->dev, "Enable PTP must disable checksum_offload\n");
+		dev_info(&db->spidev->dev, "Enable PTP must coerce to disable checksum_offload\n");
 	#else
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 	#endif

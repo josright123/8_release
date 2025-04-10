@@ -22,8 +22,7 @@
 #include "dm9051_plug.h"
 #include "dm9051_ptpd.h"
 
-/* phyter seems to miss the mark by 16 ns */
-#define ADJTIME_FIX	16
+#ifdef DMPLUG_PTP
 
 static u8 get_ptp_message_type(struct sk_buff *skb) {
     struct udphdr *p_udp_hdr;
@@ -208,6 +207,7 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 {
 	int ret = 0;
 	u8 message_type;
+	static int sync5 = 5;
 
 	if (db->ptp_on) {
 		ret = dm9051_nsr_poll(db);	//TX completed
@@ -221,7 +221,10 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 		switch(message_type) {
 			case 0:	//Sync
 				//remark3-slave - none sync
-				printk("TX Sync Timestamp\n");
+				if (sync5) {
+					
+					printk("%d TX Sync Timestamp\n", sync5--);
+				}
 				/*Spenser - Don't report HW timestamp to skb if one-step,
 				 * otherwise master role will be not continue send Sync Message.
 				*/
@@ -408,7 +411,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTS
 	//printk("<== dm9051_ptp_rx_hwtstamp out\r\n");
 }
 
-s64 dm9051_get_rate_reg(struct board_info *db) {
+/*s64*/ u32 dm9051_get_rate_reg(struct board_info *db) {
 	u8 mRate[4];
 	u32 pre_rate;
 	//mutex_lock(&db->spi_lockm);
@@ -444,8 +447,118 @@ static struct ptp_clock_info ptp_dm9051a_info = {
 };
 
 
+#if 1
+static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
+{
+	struct board_info *db = container_of(ptp, struct board_info, ptp_caps);
+	s32 subrate;
+	s64 ppm;
+	int ret = 0;
 
+	/* Convert scaled_ppm to actual ppm value */
+	ppm = scaled_ppm;
+	ppm = div_s64(ppm, 65);  /* Scale factor for hardware */
 
+	/* Calculate subrate value with overflow protection */
+	if (ppm > 0) {
+		if (ppm > 32767)
+			ppm = 32767;
+		subrate = (s32)ppm;
+	} else {
+		if (ppm < -32768)
+			ppm = -32768;
+		subrate = (s32)ppm;
+	}
+
+	/* Protect register access with mutex */
+	mutex_lock(&db->spi_lockm);
+
+	/* Reset PTP clock control register */
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);
+
+	/* Set rate control and PTP rate bits */
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
+		       DM9051_CCR_RATE_CTL | DM9051_CCR_PTP_RATE);
+
+	/* Write subrate value to register */
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_RATE);
+
+	/* Store the rate for future reference */
+	db->pre_rate = scaled_ppm;
+
+	mutex_unlock(&db->spi_lockm);
+
+	return ret;
+}
+#endif
+
+#if 0
+int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
+{
+ 	struct board_info *db = container_of(ptp, struct board_info,
+					     ptp_caps);
+	u32 rate;
+	int neg_adj = 0;
+	u8 s_ppm[4];
+	u16 hi, lo;
+	int i;
+	s64 s64_adj;
+	s64 subrate;
+	s64 ppm; //= (scaled_ppm * 1000) / 65536;
+	
+	if (scaled_ppm < 0) {
+		ppm = ((s64)(-scaled_ppm) * 1000) / 65536;
+		ppm = -ppm;
+	} else {
+		ppm = ((s64) scaled_ppm * 1000) / 65536;
+	}
+
+	s64_adj =  (ppm * 171797) / 1000;		//base = 171.79
+
+	subrate = s64_adj - db->pre_rate;	
+	if (subrate < 0) {
+		subrate = -subrate;
+		if (subrate > 0xffffffff)
+			rate = 0xffffffff;
+		else
+			rate = (u32)subrate;
+		neg_adj = 1;
+	}else{
+		if (rate > 0xffffffff)
+			rate = 0xffffffff;
+		else
+			rate = (u32)subrate;
+		neg_adj = 0;
+	}
+	db->pre_rate = s64_adj;	//store value of rate register
+	
+	hi = (rate >> 16);
+	lo = rate & 0xffff;
+
+	s_ppm[0] = lo & 0xff;
+	s_ppm[1] = (lo >> 8) & 0xff;
+	s_ppm[2] = hi & 0xFF;
+	s_ppm[3] = (hi >> 8) & 0xff;
+
+	//mutex_lock(&db->spi_lockm);
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST); //R61 W80
+	
+	for (i = 0; i < 4; i++) {
+		dm9051_set_reg(db, DM9051_1588_TS, s_ppm[i]);
+	}
+	
+	if (neg_adj == 1) {
+		dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
+			       DM9051_CCR_RATE_CTL | DM9051_CCR_PTP_RATE);
+	}else{
+		dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_RATE);
+	}
+	//mutex_unlock(&db->spi_lockm);
+	return 0;
+}
+#endif
+
+#if 0
 int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 {
 	//remark2-slave
@@ -463,6 +576,7 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	int i;
 	//int neg_dir;
 	s64 s64_adj;
+	s64 subrate;
 	s64 ppm = (scaled_ppm * 1000) / 65536;
 	
 	//remark2-slave
@@ -487,7 +601,7 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	
 	//printk("Before Writing pre_rate = 0x%llX\n", db->pre_rate);
 	
-	s64 subrate = s64_adj - db->pre_rate;	
+	/*s64*/ subrate = s64_adj - db->pre_rate;	
 	if (subrate < 0) {
 		rate = (s32)-subrate;
 		neg_adj = 1;
@@ -536,6 +650,10 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	
 	return 0;
 }
+#endif
+
+/* phyter seems to miss the mark by 16 ns */
+#define ADJTIME_FIX	16
 
 int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 {
@@ -679,10 +797,10 @@ return 0;
 int ptp_9051_settime(struct ptp_clock_info *ptp,
 	const struct timespec64 *ts)
 {
-printk("...ptp_9051_settime\n");
 
 struct board_info *db = container_of(ptp, struct board_info,
 			 ptp_caps);
+printk("...ptp_9051_settime\n");
 			 
 dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)(ts->tv_nsec & 0xff));             // Write register 0x68
 dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_nsec >> 8) & 0xff));      // Write register 0x68
@@ -736,7 +854,7 @@ void dm9051_ptp_init(struct board_info *db)
 		db->ptp_clock = NULL;
 		dev_err(&db->spidev->dev, "ptp_clock_register failed\n");
 	}  else if (db->ptp_clock) {
-		printk("added PHC on %s\n",
+		printk("ptp_clock_register added PHC on %s\n",
 		       db->ndev->name);
 		
 	}
@@ -771,3 +889,4 @@ void dm9051_ptp_init(struct board_info *db)
 	dm9051_set_reg(db, DM9051_1588_1_STEP_CHK, 0x00);
 
 }
+#endif
