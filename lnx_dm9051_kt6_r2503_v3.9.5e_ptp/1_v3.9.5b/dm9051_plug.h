@@ -24,12 +24,12 @@
 
 /* Macro for already known platforms
  */ 
-#define PLUG_CFG_HLPR
+//#define PLUG_CFG_HLPR
 #ifdef PLUG_CFG_HLPR
 #define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
 #endif
 
-//#define PLUG_CFG64
+#define PLUG_CFG64
 #ifdef PLUG_CFG64
 #define DMCONF_AARCH_64 //(64-bit OS)
 #endif

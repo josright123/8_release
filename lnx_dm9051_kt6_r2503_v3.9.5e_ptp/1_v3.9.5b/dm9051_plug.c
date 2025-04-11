@@ -358,6 +358,7 @@ u8 get_ptp_message_type(struct sk_buff *skb) {
     p_udp_hdr = udp_hdr(skb);
     ptp_hdr = (u8 *)p_udp_hdr + sizeof(struct udphdr);
 
+	printk("ptp_hdr[0] is %02x\n", ptp_hdr[0]);
     return ptp_hdr[0];
 }
 

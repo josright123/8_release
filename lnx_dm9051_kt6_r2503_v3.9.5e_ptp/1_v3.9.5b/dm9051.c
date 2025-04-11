@@ -57,7 +57,7 @@ struct mod_config
 /* Default driver configuration */
 const struct driver_config confdata = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-	.interrupt = MODE_INTERRUPT, //MODE_INTERRUPT,
+	.interrupt = MODE_POLL, //MODE_POLL, //MODE_INTERRUPT, //MODE_INTERRUPT,
 	 /* MODE_POLL, 
 	  * MODE_INTERRUPT or 
 	  * MODE_INTERRUPT_CLKOUT */
@@ -226,6 +226,7 @@ int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
 {
 	int ret;
 
+//lockdep_assert_held(&db->spi_lockm); --to be used! --20250411
 	ret = regmap_read(db->regmap_dm, reg, prb);
 	if (ret < 0)
 		netif_err(db, drv, db->ndev, "%s: error %d get reg %02x\n",
@@ -1529,16 +1530,17 @@ static int dm9051_all_restart(struct board_info *db)
 	struct net_device *ndev = db->ndev;
 	int ret;
 
-	mutex_unlock(&db->spi_lockm);
-	phy_stop(db->phydev);
-	mutex_lock(&db->spi_lockm);
+//	mutex_unlock(&db->spi_lockm);
+//	phy_stop(db->phydev);
+//	mutex_lock(&db->spi_lockm);
 
 	ret = dm9051_core_reset(db);
 	if (ret)
 		return ret;
 
 	mutex_unlock(&db->spi_lockm);
-	phy_start(db->phydev);
+//	phy_start(db->phydev);
+	phy_start_aneg(db->phydev);
 	mutex_lock(&db->spi_lockm);
 
 	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_intcr_value(db));

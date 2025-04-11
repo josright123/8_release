@@ -203,11 +203,19 @@ no:
 	return 0;
 }
 
+#define PP_HTONS(x) ((u16)((((x) & (u16)0x00ffU) << 8) | (((x) & (u16)0xff00U) >> 8)))
+
+u16 lwip_htons(u16 n)
+{
+  return PP_HTONS(n);
+}
+
 int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 {
 	int ret = 0;
 	u8 message_type;
-	static int sync5 = 5;
+	static int sync5 = 3; //5;
+	static int delayReq5 = 3; //5;
 
 	if (db->ptp_on) {
 		ret = dm9051_nsr_poll(db);	//TX completed
@@ -215,8 +223,50 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 			printk("nsr_polling timeout\n");
 			return ret;
 		}
+//if (db->ptp_tx_flags = skb_shinfo(skb)->tx_flags) {
+if (likely((skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))) { //[.dm9051_ptp_one_step]
+		message_type = get_ptp_message_type(skb) & 0x0f; //_15888_, and 0x0f
 
-		message_type = get_ptp_message_type(skb); //_15888_, 
+		if ((message_type == 0 && sync5) || (message_type == 1 && delayReq5)) {
+		    u8 *packet_data;
+		    struct udphdr *p_udp_hdr;
+		    u8 *ptp_hdr;
+		    int i, j, rlen, splen, rowsize = 32;
+		    char line[120];
+
+		    packet_data = (u8 *) skb->data;
+		    p_udp_hdr = udp_hdr(skb);
+		    ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
+		    if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {  //[.ptp .general event/or .message event]
+			
+			    //printk("udp src port %d, dst port %d\n", p_udp_hdr->source, p_udp_hdr->dest);
+			    printk("udp src port %d, dst port %d (hton)\n", lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest));
+			    printk("message_type is %02x\n", message_type);
+			    //do {
+			    /* show tx packet */
+				
+				//rlen = skb->len;
+				printk(" TX LEN= %3d\n", skb->len);
+				for (i = 0; i < skb->len; i += rlen) {
+					//rlen = print_line(packet_data+i, min(16, skb->len - i));
+					rlen =  skb->len - i;
+					if (rlen >= rowsize) rlen = rowsize;
+
+					splen = 0;
+					splen += sprintf(line + splen, " %3d", i);
+					for (j = 0; j < rlen; j++) {
+						if (!(j % 8)) splen += sprintf(line + splen, " ");
+						if (!(j % 16)) splen += sprintf(line + splen, " ");
+						//printk(" %02x", packet_data[i+j]);
+						splen += sprintf(line + splen, " %02x", packet_data[i+j]);
+					}
+					//printk("\n");
+					//splen += sprintf(line + splen, "\n");
+					printk("%s\n", line);
+				}
+			    //} while(0);
+		    }
+		}
 
 		switch(message_type) {
 			case 0:	//Sync
@@ -234,6 +284,10 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 			case 1:	//Delay Req
 				//remark6-slave
 				//printk("Tx Delay_Req Timestamp\n");
+				if (delayReq5) {
+					
+					printk("%d Tx Delay_Req Timestamp\n", delayReq5--);
+				}
 				
 				dm9051_ptp_tx_hwtstamp(db, skb); //_15888_ // Report HW Timestamp
 				//printk("Tx Delay_Req Timestamp...\n");
@@ -241,6 +295,8 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 			default:
 				break;
 		}
+}
+//}
 	}
 
 	return ret;
@@ -447,17 +503,18 @@ static struct ptp_clock_info ptp_dm9051a_info = {
 };
 
 #if 1
-static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
+int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 {
     struct board_info *db = container_of(ptp, struct board_info, ptp_caps);
     s64 ppm;
     s64 s64_adj;
     s64 subrate;
     u32 rate;
-    u16 hi, lo;
+    // u16 hi, lo;
     u8 s_ppm[4];
     int i;
     int neg_adj = 0;
+static int adjfine5 = 5;
 
     /* 將scaled_ppm轉換為實際ppm值 */
     if (scaled_ppm < 0) {
@@ -487,16 +544,24 @@ static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
     //    rate = 0xffffffff;
     
     /* 準備寄存器數據 */
-    hi = (rate >> 16);
-    lo = rate & 0xffff;
+    // hi = (rate >> 16);
+    // lo = rate & 0xffff;
 
-    s_ppm[0] = lo & 0xff;
-    s_ppm[1] = (lo >> 8) & 0xff;
-    s_ppm[2] = hi & 0xFF;
-    s_ppm[3] = (hi >> 8) & 0xff;
+    // s_ppm[0] = lo & 0xff;
+    // s_ppm[1] = (lo >> 8) & 0xff;
+    // s_ppm[2] = hi & 0xFF;
+    // s_ppm[3] = (hi >> 8) & 0xff;// 將32位rate值直接拆分為4個8位字節
+	s_ppm[0] = rate & 0xff;           // 第1個字節（最低有效字節）
+	s_ppm[1] = (rate >> 8) & 0xff;    // 第2個字節
+	s_ppm[2] = (rate >> 16) & 0xff;   // 第3個字節
+	s_ppm[3] = (rate >> 24) & 0xff;   // 第4個字節（最高有效字節）
 
     s64_adj = (ppm * 171797) / 1000;  // base = 171.79
-printk("After Caculated s64_offset_pps 0x%llX, pre_rate = 0x%llX, s64_delta_rate = 0x%llX, u32_rate = 0x%X, sign = %d\n", s64_adj, db->pre_rate, subrate, rate, neg_adj);
+
+if (adjfine5) {
+printk("%d. Ent 0x%lX offset_pps %llX, pre_rat %llX, s64_delta_rat= 0x%llX, u32_rat= %X, sign= %d\n",
+	adjfine5--, scaled_ppm, s64_adj, db->pre_rate, subrate, rate, neg_adj);
+}
 
     /* 保護寄存器訪問 */
     mutex_lock(&db->spi_lockm);
@@ -527,7 +592,7 @@ printk("After Caculated s64_offset_pps 0x%llX, pre_rate = 0x%llX, s64_delta_rate
 #endif
 
 #if 0
-static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
+int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 {
 	struct board_info *db = container_of(ptp, struct board_info, ptp_caps);
 	//s32 subrate;
