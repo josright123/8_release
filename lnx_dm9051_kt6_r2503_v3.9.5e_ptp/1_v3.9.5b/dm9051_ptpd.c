@@ -446,57 +446,162 @@ static struct ptp_clock_info ptp_dm9051a_info = {
  
 };
 
-
 #if 1
 static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 {
+    struct board_info *db = container_of(ptp, struct board_info, ptp_caps);
+    s64 ppm;
+    s64 s64_adj;
+    s64 subrate;
+    u32 rate;
+    u16 hi, lo;
+    u8 s_ppm[4];
+    int i;
+    int neg_adj = 0;
+
+    /* 將scaled_ppm轉換為實際ppm值 */
+    if (scaled_ppm < 0) {
+        ppm = ((s64)(-scaled_ppm) * 1000) / 65536;
+        ppm = -ppm;
+    } else {
+        ppm = ((s64)scaled_ppm * 1000) / 65536;
+    }
+
+    /* 計算調整值 */
+    s64_adj = (ppm * 171797) / 1000;  // base = 171.79
+
+    /* 計算與上次調整的差值 */
+    subrate = s64_adj - db->pre_rate;
+    
+    /* 處理正負值 */
+    if (subrate < 0) {
+        rate = (u32)(-subrate);
+        neg_adj = 1;
+    } else {
+        rate = (u32)subrate;
+        neg_adj = 0;
+    }
+    
+    /* 溢出保護 */
+    //if (rate > 0xffffffff)
+    //    rate = 0xffffffff;
+    
+    /* 準備寄存器數據 */
+    hi = (rate >> 16);
+    lo = rate & 0xffff;
+
+    s_ppm[0] = lo & 0xff;
+    s_ppm[1] = (lo >> 8) & 0xff;
+    s_ppm[2] = hi & 0xFF;
+    s_ppm[3] = (hi >> 8) & 0xff;
+
+    s64_adj = (ppm * 171797) / 1000;  // base = 171.79
+printk("After Caculated s64_offset_pps 0x%llX, pre_rate = 0x%llX, s64_delta_rate = 0x%llX, u32_rate = 0x%X, sign = %d\n", s64_adj, db->pre_rate, subrate, rate, neg_adj);
+
+    /* 保護寄存器訪問 */
+    mutex_lock(&db->spi_lockm);
+
+    /* 重置PTP時鐘控制寄存器 */
+    dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);
+    
+    /* 寫入4字節調整數據 */
+    for (i = 0; i < 4; i++) {
+        dm9051_set_reg(db, DM9051_1588_TS, s_ppm[i]);
+    }
+
+    /* 根據正負值設置不同的控制位 */
+    if (neg_adj == 1) {
+        dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
+            DM9051_CCR_RATE_CTL | DM9051_CCR_PTP_RATE);
+    } else {
+        dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_RATE);
+    }
+
+    mutex_unlock(&db->spi_lockm);
+
+    /* 存儲當前調整值供下次使用 */
+    db->pre_rate = s64_adj;
+
+    return 0;
+}
+#endif
+
+#if 0
+static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
+{
 	struct board_info *db = container_of(ptp, struct board_info, ptp_caps);
-	s32 subrate;
+	//s32 subrate;
 	s64 ppm;
-	int ret = 0;
+	s64 s64_adj;
+	s64 subrate;
+	u32 rate;
+	u16 hi, lo;
+	u8 s_ppm[4];
+	int i;
+	//int ret = 0;
 
 	/* Convert scaled_ppm to actual ppm value */
 	ppm = scaled_ppm;
 	ppm = div_s64(ppm, 65);  /* Scale factor for hardware */
 
+	s64_adj =  (ppm * 171797) / 1000;		//base = 171.79
+	subrate = s64_adj - db->pre_rate;	
+
 	/* Calculate subrate value with overflow protection */
-	if (ppm > 0) {
-		if (ppm > 32767)
-			ppm = 32767;
-		subrate = (s32)ppm;
-	} else {
-		if (ppm < -32768)
-			ppm = -32768;
-		subrate = (s32)ppm;
-	}
+//	if (ppm > 0) {
+//		if (ppm > 32767)
+//			ppm = 32767;
+//		subrate = (s32)ppm;
+//	} else {
+//		if (ppm < -32768)
+//			ppm = -32768;
+//		subrate = (s32)ppm;
+//	}
+	ppm = abs(subrate); //if (subrate < 0) ...
+	if (ppm > 0xffffffff)
+		ppm = 0xffffffff;
+	rate = ppm;
+	
+	hi = (rate >> 16);
+	lo = rate & 0xffff;
+
+	s_ppm[0] = lo & 0xff;
+	s_ppm[1] = (lo >> 8) & 0xff;
+	s_ppm[2] = hi & 0xFF;
+	s_ppm[3] = (hi >> 8) & 0xff;
 
 	/* Protect register access with mutex */
 	mutex_lock(&db->spi_lockm);
 
 	/* Reset PTP clock control register */
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);
+	
+	for (i = 0; i < 4; i++) {
+		dm9051_set_reg(db, DM9051_1588_TS, s_ppm[i]);
+	}
 
-	/* Set rate control and PTP rate bits */
-	dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
-		       DM9051_CCR_RATE_CTL | DM9051_CCR_PTP_RATE);
-
-	/* Write subrate value to register */
-	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_RATE);
-
-	/* Store the rate for future reference */
-	db->pre_rate = scaled_ppm;
+	if (subrate < 0)
+		/* Set rate control and PTP rate bits */
+		dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
+				DM9051_CCR_RATE_CTL | DM9051_CCR_PTP_RATE);
+	else
+		/* Write subrate value to register */
+		dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_RATE);
 
 	mutex_unlock(&db->spi_lockm);
 
-	return ret;
+	/* Store the rate for future reference */
+	//db->pre_rate = scaled_ppm;
+	db->pre_rate = s64_adj;	//store value of rate register
+
+	return 0;
 }
 #endif
 
 #if 0
 int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 {
- 	struct board_info *db = container_of(ptp, struct board_info,
-					     ptp_caps);
+ 	struct board_info *db = container_of(ptp, struct board_info, ptp_caps);
 	u32 rate;
 	int neg_adj = 0;
 	u8 s_ppm[4];
