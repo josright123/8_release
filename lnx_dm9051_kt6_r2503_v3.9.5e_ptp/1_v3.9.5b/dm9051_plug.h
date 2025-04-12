@@ -109,20 +109,6 @@ enum
 				   __func__, ret, pstr, reg, BLKLEN)
 #endif
 
-#ifdef DMCONF_AARCH_64
-#define PRINT_ALIGN_INFO(n) \
-			printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
-				   dmplug_tx,
-				   mconf->align.rx_blk, \
-				   mconf->align.tx_blk, n)
-#else
-#define PRINT_ALIGN_INFO(n) \
-			printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
-				   dmplug_tx,
-				   mconf->align.rx_blk, \
-				   mconf->align.tx_blk, n)
-#endif
-
 /*
  * MAIN Data: 
  */

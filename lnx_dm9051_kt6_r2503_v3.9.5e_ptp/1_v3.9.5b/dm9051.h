@@ -391,6 +391,7 @@ struct mod_config
 	int checksuming;
 	struct align_config
 	{
+		char *burst_mode_info;
 		int burst_mode;
 		size_t tx_blk;
 		size_t rx_blk;
@@ -406,21 +407,30 @@ const struct mod_config driver_align_mode = {
 	.test_info = "Test in rpi5 bcm2712",
 	.skb_wb_mode = SKB_WB_ON,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
-	.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
+	.align = {
+		.burst_mode_info = "Alignment",
+		.burst_mode = BURST_MODE_ALIGN,
+		.tx_blk = 32, .rx_blk = 64},
 };
 
 const struct mod_config driver_burst_mode = {
 	.test_info = "Test in rpi4 bcm2711",
 	.skb_wb_mode = SKB_WB_ON,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
-	.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
+	.align = {
+		.burst_mode_info = "Burst",
+		.burst_mode = BURST_MODE_FULL,
+		.tx_blk = 0, .rx_blk = 0},
 };
 
 const struct mod_config driver_misc_mode = {
 	.test_info = "Test in processor Cortex-A",
 	.skb_wb_mode = SKB_WB_OFF,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
-	.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
+	.align = {
+		.burst_mode_info = "Burst",
+		.burst_mode = BURST_MODE_FULL,
+		.tx_blk = 0, .rx_blk = 0},
 };
 #else
 //.

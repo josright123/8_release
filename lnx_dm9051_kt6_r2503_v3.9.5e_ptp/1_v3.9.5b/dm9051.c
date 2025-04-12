@@ -30,10 +30,21 @@
 #define DM9051_SKB_PROTECT	//tX 'wb' do skb protect
 const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configuration */
 
-#define dm9051_cmode_int (drvdata->interrupt)
+#ifdef DMCONF_AARCH_64
+#define PRINT_ALIGN_INFO(n) \
+			printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
+				   dmplug_tx,
+				   dm9051_modedata->align.rx_blk, \
+				   dm9051_modedata->align.tx_blk, n)
+#else
+#define PRINT_ALIGN_INFO(n) \
+			printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
+				   dmplug_tx,
+				   dm9051_modedata->align.rx_blk, \
+				   dm9051_modedata->align.tx_blk, n)
+#endif
 
-#define mconf (dm9051_modedata)
-#define dm9051_mode_info (dm9051_modedata->test_info)
+#define dm9051_cmode_int (drvdata->interrupt)
 
 /* Helper macros */
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
@@ -89,15 +100,14 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi, int cint)
 		SHOW_POLL_MODE(cint, spi);
 	} while (0);
 	printk("\n");
-	dev_info(dev, "Davicom: %s", dm9051_mode_info); //mconf->test_info
-	dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]);
-	//dev_info(dev, "SPI_XFER_MEM= %s\n", mconf->align.burst_mode ? "burst mode" : "alignment mode");
+	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
+	dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]); /* Driver configuration test_info */
 #ifdef DMCONF_AARCH_64
-	dev_info(dev, "TX: %s %lu\n", mconf->align.burst_mode ? "Burst blk" : "Alignment blk", mconf->align.tx_blk);
-	dev_info(dev, "RX: %s %lu\n", mconf->align.burst_mode ? "Burst blk" : "Alignment blk", mconf->align.tx_blk);
+	dev_info(dev, "TX: %s blk %lu\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
+	dev_info(dev, "RX: %s blk %lu\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
 #else
-	dev_info(dev, "TX: %s %u\n", mconf->align.burst_mode ? "Burst blk" : "Alignment blk", mconf->align.tx_blk);
-	dev_info(dev, "RX: %s %u\n", mconf->align.burst_mode ? "Burst blk" : "Alignment blk", mconf->align.tx_blk);
+	dev_info(dev, "TX: %s blk %u\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
+	dev_info(dev, "RX: %s blk %u\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
 #endif
 }
 
@@ -116,11 +126,11 @@ static void SHOW_OPTION_MODE(struct spi_device *spi)
 
 static void SHOW_MONITOR_RXC(struct board_info *db)
 {
-	if (mconf->align.burst_mode == BURST_MODE_FULL)
+	if (dm9051_modedata->align.burst_mode == BURST_MODE_FULL)
 		printk("___[rx/tx %s mode] nRxc %d\n",
 			   dmplug_tx,
 			   db->bc.nRxcF);
-	else if (mconf->align.burst_mode == BURST_MODE_ALIGN)
+	else if (dm9051_modedata->align.burst_mode == BURST_MODE_ALIGN)
 		PRINT_ALIGN_INFO(db->bc.nRxcF);
 }
 
@@ -219,14 +229,14 @@ int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 {
 	int ret;
 
-	if (mconf->align.burst_mode)
+	if (dm9051_modedata->align.burst_mode)
 	{ // tx
 		ret = regmap_noinc_write(db->regmap_dm, reg, buff, len);
 	}
 	else
 	{
 		const u8 *p = (const u8 *)buff;
-		size_t BLKTX = mconf->align.tx_blk;
+		size_t BLKTX = dm9051_modedata->align.tx_blk;
 		while (len >= BLKTX)
 		{
 			ret = regmap_noinc_write(db->regmap_dm, reg, p, BLKTX);
@@ -284,7 +294,7 @@ static int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 {
 	int ret;
 
-	if (mconf->align.burst_mode)
+	if (dm9051_modedata->align.burst_mode)
 	{ // rx
 		ret = regmap_noinc_read(db->regmap_dm, reg, buff, len);
 	}
@@ -292,7 +302,7 @@ static int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 	{
 		u8 *p = buff;
 		unsigned int rb;
-		size_t BLKRX = mconf->align.rx_blk;
+		size_t BLKRX = dm9051_modedata->align.rx_blk;
 		while (len >= BLKRX)
 		{
 			ret = regmap_noinc_read(db->regmap_dm, reg, p, BLKRX);
@@ -907,7 +917,7 @@ static int dm9051_core_reset(struct board_info *db)
 	if (ret)
 		return ret;
 
-	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (mconf->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
+	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (dm9051_modedata->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
 	if (ret)
 		return ret;
 	// Spenser
@@ -1730,7 +1740,7 @@ static int dm9051_loop_rx(struct board_info *db)
 			return ret;
 
 		rxlen = le16_to_cpu(db->rxhdr.rxlen);
-		padlen = (mconf->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
+		padlen = (dm9051_modedata->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
 		skb = dev_alloc_skb(padlen);
 		if (!skb)
 		{
@@ -1830,7 +1840,7 @@ static int dm9051_loop_tx(struct board_info *db)
 			ndev->stats.tx_packets++;
 #else
 			do {
-				unsigned int pad = (mconf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
+				unsigned int pad = (dm9051_modedata->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
 
 				#ifdef DM9051_SKB_PROTECT
 				if (pad) {
@@ -2464,7 +2474,7 @@ static int dm9051_probe(struct spi_device *spi)
 	ndev->ethtool_ops = &dm9051_ethtool_ops;//&dm9051_ptpd_ethtool_ops;
 
 	/* Set default features */
-	if (mconf->checksuming)
+	if (dm9051_modedata->checksuming)
 	{
 		// Spenser - Setup for Checksum Offload
 	#ifdef DMPLUG_PTP
