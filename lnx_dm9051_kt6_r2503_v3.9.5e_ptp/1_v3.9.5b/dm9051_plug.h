@@ -72,12 +72,6 @@ enum
 	MODE_INTERRUPT_CLKOUT = 2, /* need pi3/pi5 test and verify more */
 };
 
-#ifdef DMPLUG_CONTI
-#define dmplug_tx "continue"
-#else
-#define dmplug_tx "normal"
-#endif
-
 #ifdef DMPLUG_INT
   #ifdef DMPLUG_INT_CLKOUT
   #define dmplug_interrupt MODE_INTERRUPT_CLKOUT
@@ -96,6 +90,37 @@ enum
 #else
 #define dmplug_interrupt MODE_POLL
 #define dmplug_intterrpt_des "poll mode"
+#endif
+
+/* Log definitions */
+#ifdef DMPLUG_CONTI
+#define dmplug_tx "continue"
+#else
+#define dmplug_tx "normal"
+#endif
+
+#ifdef DMCONF_AARCH_64
+#define PRINT_REGMAP_BLK_ERR(pstr, ret, reg, BLKLEN) \
+			netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %lu\n", \
+				   __func__, ret, pstr, reg, BLKLEN)
+#else
+#define PRINT_REGMAP_BLK_ERR(pstr, ret, reg, BLKLEN) \
+			netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
+				   __func__, ret, pstr, reg, BLKLEN)
+#endif
+
+#ifdef DMCONF_AARCH_64
+#define PRINT_ALIGN_INFO(n) \
+			printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
+				   dmplug_tx,
+				   mconf->align.rx_blk, \
+				   mconf->align.tx_blk, n)
+#else
+#define PRINT_ALIGN_INFO(n) \
+			printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
+				   dmplug_tx,
+				   mconf->align.rx_blk, \
+				   mconf->align.tx_blk, n)
 #endif
 
 /*
@@ -129,8 +154,6 @@ const struct driver_config confdata = {
 	  * MODE_INTERRUPT_CLKOUT */
 };
 const struct driver_config *drvdata = &confdata;
-//.
-//const struct mod_config *dm9051_modedata = &driver_align_mode;
 #else
 //.
 #endif

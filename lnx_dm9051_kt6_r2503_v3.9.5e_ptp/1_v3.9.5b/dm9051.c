@@ -28,92 +28,16 @@
 #define KERNEL_BUILD_CONF	DM9051_KERNEL_6_6
 //#define AARCH_OS_BITS		AARCH_OS_64
 #define DM9051_SKB_PROTECT	//tX 'wb' do skb protect
-
-/* Driver configuration structure */
-struct mod_config
-{
-	char *test_info;
-	int skb_wb_mode;
-//	int tx_mode;
-	int checksuming;
-	struct align_config
-	{
-		int burst_mode;
-		size_t tx_blk;
-		size_t rx_blk;
-	} align;
-};
-
-/* Default driver configuration */
-const struct mod_config driver_align_mode = {
-	.test_info = "Test in rpi5 bcm2712",
-	.skb_wb_mode = SKB_WB_ON,
-	//.tx_mode = FORCE_TX_CONTI_OFF,
-	.checksuming = DEFAULT_CHECKSUM_OFF,
-	.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
-};
-
-const struct mod_config driver_burst_mode = {
-	.test_info = "Test in rpi4 bcm2711",
-	.skb_wb_mode = SKB_WB_ON,
-	//.tx_mode = FORCE_TX_CONTI_OFF,
-	.checksuming = DEFAULT_CHECKSUM_OFF,
-	.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
-};
-
-const struct mod_config driver_misc_mode = {
-	.test_info = "Test in processor Cortex-A",
-	.skb_wb_mode = SKB_WB_OFF,
-	//.tx_mode = FORCE_TX_CONTI_OFF,
-	.checksuming = DEFAULT_CHECKSUM_OFF,
-	.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
-};
-
-/* Configuration access & Mode access */
-enum
-{
-	SPI_SYNC_ALIGN_MODE = 0,
-	SPI_SYNC_BURST_MODE = 1,
-	SPI_SYNC_MISC_MODE = 2,
-	MODE_NUM = 3
-};
-const struct mod_config *dm9051_modedata = &driver_align_mode;
+const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configuration */
 
 #define dm9051_cmode_int (drvdata->interrupt)
-//#define dm9051_driver_int (drvdata->interrupt)
-//#define dm9051_intrconfig (drvdata->interrupt)
 
-#define mconf (dm9051_modedata) //(drvdata->mod[MODE_ALIGN]) //#define MODE_SELECT MODE_ALIGN //(confdata.mod[MODE_SELECT]) //(confdata.mod[confdata.mid])
+#define mconf (dm9051_modedata)
 #define dm9051_mode_info (dm9051_modedata->test_info)
 
 /* Helper macros */
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
-
-/* Log macros */
-#ifdef DMCONF_AARCH_64
-#define PRINT_REG_BLKRX_INFO(pstr, ret, reg, BLKLEN) \
-			netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %lu\n", \
-				   __func__, ret, pstr, reg, BLKLEN)
-#else
-#define PRINT_REG_BLKRX_INFO(pstr, ret, reg, BLKLEN) \
-			netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
-				   __func__, ret, pstr, reg, BLKLEN)
-#endif
-
-#ifdef DMCONF_AARCH_64
-#define PRINT_ALIGN_INFO(n) \
-			printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
-				   dmplug_tx, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",*/ \
-				   mconf->align.rx_blk, \
-				   mconf->align.tx_blk, n)
-#else
-#define PRINT_ALIGN_INFO(n) \
-			printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
-				   dmplug_tx, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",*/ \
-				   mconf->align.rx_blk, \
-				   mconf->align.tx_blk, n)
-#endif
 
 #if 0 //sticked fixed here is better!
 struct rx_ctl_mach
@@ -194,7 +118,7 @@ static void SHOW_MONITOR_RXC(struct board_info *db)
 {
 	if (mconf->align.burst_mode == BURST_MODE_FULL)
 		printk("___[rx/tx %s mode] nRxc %d\n",
-			   dmplug_tx, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal"*/
+			   dmplug_tx,
 			   db->bc.nRxcF);
 	else if (mconf->align.burst_mode == BURST_MODE_ALIGN)
 		PRINT_ALIGN_INFO(db->bc.nRxcF);
@@ -310,7 +234,7 @@ int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 			len -= BLKTX;
 			if (ret < 0)
 			{
-				PRINT_REG_BLKRX_INFO("writing", ret, reg, BLKTX);
+				PRINT_REGMAP_BLK_ERR("writing", ret, reg, BLKTX);
 				return ret;
 			}
 		}
@@ -374,7 +298,7 @@ static int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 			ret = regmap_noinc_read(db->regmap_dm, reg, p, BLKRX);
 			if (ret < 0)
 			{
-				PRINT_REG_BLKRX_INFO("reading", ret, reg, BLKRX);
+				PRINT_REGMAP_BLK_ERR("reading", ret, reg, BLKRX);
 				return ret;
 			}
 			p += BLKRX;
@@ -465,8 +389,7 @@ static int dm9051_set_fcr(struct board_info *db)
 static int dm9051_set_rcr(struct board_info *db)
 {
 #ifdef DMPLUG_CONTI
-	//if (mconf->tx_mode == FORCE_TX_CONTI_ON)
-		return TX_SET_CONTI(db);
+	return TX_SET_CONTI(db);
 #else
 	return dm9051_set_reg(db, DM9051_RCR, db->rctl.rcr_all);
 #endif
@@ -1895,20 +1818,16 @@ static int dm9051_loop_tx(struct board_info *db)
 			db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
 
 #ifdef DMPLUG_CONTI
-			//if (mconf->tx_mode == FORCE_TX_CONTI_ON)
-			//{
-				ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
-				dm9051_hwtstamp_to_skb(skb, db); //_15888_,
-				dev_kfree_skb(skb);
-				if (ret < 0)
-				{
-					db->bc.tx_err_counter++;
-					return 0;
-				}
-				ndev->stats.tx_bytes += len;
-				ndev->stats.tx_packets++;
-			//}
-			//else
+			ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
+			dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+			dev_kfree_skb(skb);
+			if (ret < 0)
+			{
+				db->bc.tx_err_counter++;
+				return 0;
+			}
+			ndev->stats.tx_bytes += len;
+			ndev->stats.tx_packets++;
 #else
 			do {
 				unsigned int pad = (mconf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'

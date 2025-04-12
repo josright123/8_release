@@ -382,4 +382,48 @@ void dm9051_irq_delayp(struct work_struct *work); //.dm9051_poll_delay_plat()
 
 int dm9051_nsr_poll(struct board_info *db);
 
+#ifdef MAIN_DATA
+/* Driver configuration structure */
+struct mod_config
+{
+	char *test_info;
+	int skb_wb_mode;
+	int checksuming;
+	struct align_config
+	{
+		int burst_mode;
+		size_t tx_blk;
+		size_t rx_blk;
+	} align;
+};
+
+/* Default driver configuration */
+//SPI_SYNC_ALIGN_MODE = 0,
+//SPI_SYNC_BURST_MODE = 1,
+//SPI_SYNC_MISC_MODE = 2,
+//MODE_NUM = 3
+const struct mod_config driver_align_mode = {
+	.test_info = "Test in rpi5 bcm2712",
+	.skb_wb_mode = SKB_WB_ON,
+	.checksuming = DEFAULT_CHECKSUM_OFF,
+	.align = {.burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
+};
+
+const struct mod_config driver_burst_mode = {
+	.test_info = "Test in rpi4 bcm2711",
+	.skb_wb_mode = SKB_WB_ON,
+	.checksuming = DEFAULT_CHECKSUM_OFF,
+	.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
+};
+
+const struct mod_config driver_misc_mode = {
+	.test_info = "Test in processor Cortex-A",
+	.skb_wb_mode = SKB_WB_OFF,
+	.checksuming = DEFAULT_CHECKSUM_OFF,
+	.align = {.burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
+};
+#else
+//.
+#endif
+
 #endif /* _DM9051_H_ */
