@@ -27,19 +27,9 @@
 
 #define KERNEL_BUILD_CONF	DM9051_KERNEL_6_6
 //#define AARCH_OS_BITS		AARCH_OS_64
-
-/* Operating modes */
-
 #define DM9051_SKB_PROTECT	//tX 'wb' do skb protect
 
 /* Driver configuration structure */
-
-struct driver_config
-{
-	const char *release_version;
-	int interrupt;
-};
-
 struct mod_config
 {
 	char *test_info;
@@ -55,22 +45,6 @@ struct mod_config
 };
 
 /* Default driver configuration */
-const struct driver_config confdata = {
-	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-	.interrupt = MODE_POLL, //MODE_POLL, //MODE_INTERRUPT, //MODE_INTERRUPT,
-	 /* MODE_POLL, 
-	  * MODE_INTERRUPT or 
-	  * MODE_INTERRUPT_CLKOUT */
-};
-
-enum
-{
-	SPI_SYNC_ALIGN_MODE = 0,
-	SPI_SYNC_BURST_MODE = 1,
-	SPI_SYNC_MISC_MODE = 2,
-	MODE_NUM = 3
-};
-
 const struct mod_config driver_align_mode = {
 	.test_info = "Test in rpi5 bcm2712",
 	.skb_wb_mode = SKB_WB_ON,
@@ -96,7 +70,13 @@ const struct mod_config driver_misc_mode = {
 };
 
 /* Configuration access & Mode access */
-const struct driver_config *drvdata = &confdata;
+enum
+{
+	SPI_SYNC_ALIGN_MODE = 0,
+	SPI_SYNC_BURST_MODE = 1,
+	SPI_SYNC_MISC_MODE = 2,
+	MODE_NUM = 3
+};
 const struct mod_config *dm9051_modedata = &driver_align_mode;
 
 #define dm9051_cmode_int (drvdata->interrupt)
@@ -124,13 +104,13 @@ const struct mod_config *dm9051_modedata = &driver_align_mode;
 #ifdef DMCONF_AARCH_64
 #define PRINT_ALIGN_INFO(n) \
 			printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
-				   dmplug_int, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",*/ \
+				   dmplug_tx, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",*/ \
 				   mconf->align.rx_blk, \
 				   mconf->align.tx_blk, n)
 #else
 #define PRINT_ALIGN_INFO(n) \
 			printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
-				   dmplug_int, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",*/ \
+				   dmplug_tx, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal",*/ \
 				   mconf->align.rx_blk, \
 				   mconf->align.tx_blk, n)
 #endif
@@ -201,12 +181,10 @@ static void SHOW_OPTION_MODE(struct spi_device *spi)
 {
 	struct device *dev = &spi->dev;
 
-	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", econf->tx_timeout_us, dmplug_int,
+	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", econf->tx_timeout_us, dmplug_tx,
 			econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
 			econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
 	//dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
-	//dev_info(dev, "[TX mode]= %s mode\n",
-			 //dmplug_int); /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal"*/
 	//dev_info(dev, "DRVR= %s, %s\n",
 			 //econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
 			 //econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
@@ -216,7 +194,7 @@ static void SHOW_MONITOR_RXC(struct board_info *db)
 {
 	if (mconf->align.burst_mode == BURST_MODE_FULL)
 		printk("___[rx/tx %s mode] nRxc %d\n",
-			   dmplug_int, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal"*/
+			   dmplug_tx, /*(mconf->tx_mode == FORCE_TX_CONTI_ON) ? "continue" : "normal"*/
 			   db->bc.nRxcF);
 	else if (mconf->align.burst_mode == BURST_MODE_ALIGN)
 		PRINT_ALIGN_INFO(db->bc.nRxcF);

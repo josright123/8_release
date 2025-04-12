@@ -210,7 +210,7 @@ struct eng_config {
         int force_monitor_rxb;
         int force_monitor_rxc;
         int force_monitor_tx_timeout;
-        struct {
+        struct eng_sched {
                 unsigned long delayF[POLL_TABLE_NUM];
                 u16 nTargetMaxNum;
         } sched;
