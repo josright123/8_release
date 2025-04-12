@@ -26,10 +26,12 @@
 #include "dm9051_ptpd.h"
 
 #define KERNEL_BUILD_CONF	DM9051_KERNEL_6_6
-//#define AARCH_OS_BITS		AARCH_OS_64
-#define DM9051_SKB_PROTECT	//tX 'wb' do skb protect
 const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configuration */
 
+/* tX 'wb' do skb protect */
+#define DM9051_SKB_PROTECT
+
+/* log */
 #ifdef DMCONF_AARCH_64
 #define PRINT_ALIGN_INFO(n) \
 			printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \

@@ -229,10 +229,6 @@ struct eng_config {
 //};
 #endif
 
-/* Architecture definitions */
-//#define AARCH_OS_32                     0
-//#define AARCH_OS_64                     1
-
 /* driver config */
 //#define	FORCE_TX_CONTI_OFF	0
 //#define	FORCE_TX_CONTI_ON	1
