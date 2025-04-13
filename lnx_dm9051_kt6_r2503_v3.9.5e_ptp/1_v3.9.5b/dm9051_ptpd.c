@@ -1060,3 +1060,6 @@ void dm9051_ptp_init(struct board_info *db)
 
 }
 #endif
+
+MODULE_DESCRIPTION("Davicom DM9051 driver, ptpd"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
+MODULE_LICENSE("GPL");

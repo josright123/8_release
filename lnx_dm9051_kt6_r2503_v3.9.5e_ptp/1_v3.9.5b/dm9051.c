@@ -2512,7 +2512,7 @@ static int dm9051_probe(struct spi_device *spi)
 
 	#ifdef DMPLUG_INT
 	#ifdef INT_TWO_STEP
-		INIT_RX_DELAY_SETUP(db);
+		INIT_RX_INT2_DELAY_SETUP(db);
 	#endif
 	#else
 		INIT_RX_POLL_DELAY_SETUP(db);
