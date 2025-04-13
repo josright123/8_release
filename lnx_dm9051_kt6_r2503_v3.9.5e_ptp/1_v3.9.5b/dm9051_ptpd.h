@@ -1,7 +1,13 @@
 #ifndef _DM9051_PTPD_H_
 #define _DM9051_PTPD_H_
 
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
+int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info);
+#else
 int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info);
+#endif
 int dm9051_ptp_set_timestamp_mode(struct board_info *db,
 					 struct hwtstamp_config *config);
 int dm9051_ptp_one_step(struct sk_buff *skb);

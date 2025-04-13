@@ -28,6 +28,9 @@
 #define KERNEL_BUILD_CONF	DM9051_KERNEL_6_6
 //#define AARCH_OS_BITS		AARCH_OS_64
 
+/* Linux kernel version check */
+#include <linux/version.h>
+
 /* Operating modes */
 
 #define DM9051_SKB_PROTECT	//tX 'wb' do skb protect
@@ -58,8 +61,8 @@ struct mod_config
 const struct driver_config confdata = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
 	.interrupt = MODE_POLL, //MODE_POLL, //MODE_INTERRUPT, //MODE_INTERRUPT,
-	 /* MODE_POLL, 
-	  * MODE_INTERRUPT or 
+	 /* MODE_POLL,
+	  * MODE_INTERRUPT or
 	  * MODE_INTERRUPT_CLKOUT */
 };
 
@@ -154,7 +157,7 @@ struct board_info
 #endif
 
 /*
- * Info: 
+ * Info:
  */
 
 const static char *linux_name[] = {
@@ -757,7 +760,7 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 				if (ret)
 					return ret;
 				printk("_mdio_read.PHYID1[_check_], phyaddr %d [PHYID1] %04x\n", addr, vval);
-				
+
 				if (vval != 0x0181) {
 					printk("_mdio_read.PHYID1[NOT 0x0181] fail!\n");
 
@@ -777,7 +780,7 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 				if (ret)
 					return ret;
 				printk("_mdio_read.PHYID1[_check_], phyaddr %d [PHYID1] %04x\n", addr, vval);
-				
+
 				if (vval != 0x0181) {
 					printk("_mdio_read.PHYID1[NOT 0x0181] fail!\n");
 
@@ -1462,7 +1465,7 @@ static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_op
 static int dm9051_all_start(struct board_info *db)
 {
 	int ret;
-	
+
 	printk("dm9051_all_start\n");
 
 	/* GPR power on of the internal phy
@@ -1717,7 +1720,7 @@ static int rx_head_break(struct board_info *db)
 
 	//_15888_
 	u8 err_bits = RSR_ERR_BITS;
-	if (db->ptp_on) 
+	if (db->ptp_on)
 		err_bits &= ~(RSR_LCS | RSR_PLE | RSR_AE); //(0x93);
 
 	rxlen = le16_to_cpu(db->rxhdr.rxlen);
@@ -1762,14 +1765,14 @@ static int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
 				return ret;
 			}
 		}else{
-			/* 4bytes, dm9051a NOT supported 
+			/* 4bytes, dm9051a NOT supported
 			 */
 			ret = dm9051_read_mem(db, DM_SPI_MRCMD, rxTSbyte, 4);
 			if (ret) {
 				netdev_dbg(ndev, "Read TimeStamp error: %02x\n", ret);
 				return ret;
 			}
-		}			
+		}
 	}}
 	return 0;
 }
@@ -1849,7 +1852,7 @@ static int dm9051_loop_rx(struct board_info *db)
 		}
 
 		skb->protocol = eth_type_trans(skb, db->ndev);
-		//_15888_, 
+		//_15888_,
 		if(db->ptp_on)
 			dm9051_ptp_rx_hwtstamp(db, skb, rxTSbyte);
 
@@ -2067,7 +2070,7 @@ static void dm9051_rx_int2_plat(int voidirq, void *pw) //.dm9051_(macro)_rx_tx_p
 		goto out_unlock;
 
 	dm9051_rx_plat_loop(db);
-#else //[TEMP.]	
+#else //[TEMP.]
 	//result = dm9051_clear_interrupt(db);
 	//if (result)
 	//	goto out_unlock;
@@ -2106,7 +2109,7 @@ void dm9051_irq_delayp(struct work_struct *work) //.dm9051_poll_delay_plat()
 
 	/* redundent, but for safe */
 	//if (!dm9051_cmode_int)
-	
+
 		schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
 }
 
@@ -2151,7 +2154,7 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 {
 	if (!thread_servicep_re_enter)
 		printk("_.eval   [dm9051_rx_threaded_plat] first-enter %d\n", thread_servicep_re_enter++);
-		
+
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
 
@@ -2173,7 +2176,7 @@ static int dm9051_open(struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	struct spi_device *spi = db->spidev;
 	int ret;
-	
+
 	printk("dm9051_open\n");
 
 	db->imr_all = IMR_PAR | IMR_PRM;
@@ -2281,7 +2284,7 @@ static netdev_tx_t dm9051_start_xmit(struct sk_buff *skb, struct net_device *nde
 
 #if 0
 		//show_ptp_type(skb);	//Show PTP message type
-		skb_tx_timestamp(skb);	
+		skb_tx_timestamp(skb);
 		//Spenser - Report software Timestamp ----- no need? v.s. skb_tstamp_tx(skb, &shhwtstamps);//Report HW Timestamp
 #endif
 
@@ -2383,7 +2386,7 @@ int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr)
 {
 	struct board_info *db = netdev_priv(netdev);
 	struct hwtstamp_config *config = &db->tstamp_config;
-        
+
 	return copy_to_user(ifr->ifr_data, config, sizeof(*config)) ?
 		-EFAULT : 0;
 
