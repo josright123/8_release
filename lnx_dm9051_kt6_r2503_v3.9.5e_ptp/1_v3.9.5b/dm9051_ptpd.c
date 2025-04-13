@@ -14,6 +14,7 @@
 #include <linux/spi/spi.h>
 #include <linux/types.h>
 #include <linux/of.h>
+#include <linux/version.h>
 
 //_15888_
 #include <linux/ptp_clock_kernel.h>
@@ -34,11 +35,15 @@ static u8 get_ptp_message_type(struct sk_buff *skb) {
     return ptp_hdr[0];
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
+int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
+#else
 int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
+#endif
 {
 	struct board_info *db = netdev_priv(net_dev);
-	
-//Spenser - get phc_index	
+
+//Spenser - get phc_index
 	//info->phc_index = -1;
 	info->phc_index = db->ptp_clock ? ptp_clock_index(db->ptp_clock) : -1;
 
@@ -160,7 +165,7 @@ int dm9051_ptp_set_timestamp_mode(struct board_info *db,
  * return -
  * 0: not PTP packet
  * 1: one-step
- * 2: two-step 
+ * 2: two-step
  * 3: Not Sync packet
 */
 int dm9051_ptp_one_step(struct sk_buff *skb)
@@ -182,10 +187,10 @@ int dm9051_ptp_one_step(struct sk_buff *skb)
 		hdr = ptp_parse_header(skb, ptp_class);
 		if (!hdr)
 			goto no;
-		
+
 		msgtype = ptp_get_msgtype(hdr, ptp_class);
 		if (msgtype == PTP_MSGTYPE_SYNC) {
-			
+
 			if (hdr->flag_field[0] & PTP_FLAG_TWOSTEP) {
 				//printk("two-step TX Sync Message\n");
 				return 2;
@@ -197,7 +202,7 @@ int dm9051_ptp_one_step(struct sk_buff *skb)
 			//printk("Not Sync Message\n");
 			return 3;
 		}
-		
+
 	}
 no:
 	return 0;
@@ -238,13 +243,13 @@ if (likely((skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))) { //[.dm9051_ptp_one_
 		    p_udp_hdr = udp_hdr(skb);
 		    ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
 		    if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {  //[.ptp .general event/or .message event]
-			
+
 			    //printk("udp src port %d, dst port %d\n", p_udp_hdr->source, p_udp_hdr->dest);
 			    printk("udp src port %d, dst port %d (hton)\n", lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest));
 			    printk("message_type is %02x\n", message_type);
 			    //do {
 			    /* show tx packet */
-				
+
 				//rlen = skb->len;
 				printk(" TX LEN= %3d\n", skb->len);
 				for (i = 0; i < skb->len; i += rlen) {
@@ -272,7 +277,7 @@ if (likely((skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))) { //[.dm9051_ptp_one_
 			case 0:	//Sync
 				//remark3-slave - none sync
 				if (sync5) {
-					
+
 					printk("%d TX Sync Timestamp\n", sync5--);
 				}
 				/*Spenser - Don't report HW timestamp to skb if one-step,
@@ -285,10 +290,10 @@ if (likely((skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))) { //[.dm9051_ptp_one_
 				//remark6-slave
 				//printk("Tx Delay_Req Timestamp\n");
 				if (delayReq5) {
-					
+
 					printk("%d Tx Delay_Req Timestamp\n", delayReq5--);
 				}
-				
+
 				dm9051_ptp_tx_hwtstamp(db, skb); //_15888_ // Report HW Timestamp
 				//printk("Tx Delay_Req Timestamp...\n");
 				break;
@@ -499,7 +504,7 @@ static struct ptp_clock_info ptp_dm9051a_info = {
     .settime64 = ptp_9051_settime,
     .enable = ptp_9051_feature_enable,
     .verify = ptp_9051_verify_pin,
- 
+
 };
 
 #if 1
@@ -529,7 +534,7 @@ static int adjfine5 = 5;
 
     /* 計算與上次調整的差值 */
     subrate = s64_adj - db->pre_rate;
-    
+
     /* 處理正負值 */
     if (subrate < 0) {
         rate = (u32)(-subrate);
@@ -538,11 +543,11 @@ static int adjfine5 = 5;
         rate = (u32)subrate;
         neg_adj = 0;
     }
-    
+
     /* 溢出保護 */
     //if (rate > 0xffffffff)
     //    rate = 0xffffffff;
-    
+
     /* 準備寄存器數據 */
     // hi = (rate >> 16);
     // lo = rate & 0xffff;
@@ -568,7 +573,7 @@ printk("%d. Ent 0x%lX offset_pps %llX, pre_rat %llX, s64_delta_rat= 0x%llX, u32_
 
     /* 重置PTP時鐘控制寄存器 */
     dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);
-    
+
     /* 寫入4字節調整數據 */
     for (i = 0; i < 4; i++) {
         dm9051_set_reg(db, DM9051_1588_TS, s_ppm[i]);
@@ -610,7 +615,7 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	ppm = div_s64(ppm, 65);  /* Scale factor for hardware */
 
 	s64_adj =  (ppm * 171797) / 1000;		//base = 171.79
-	subrate = s64_adj - db->pre_rate;	
+	subrate = s64_adj - db->pre_rate;
 
 	/* Calculate subrate value with overflow protection */
 //	if (ppm > 0) {
@@ -626,7 +631,7 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	if (ppm > 0xffffffff)
 		ppm = 0xffffffff;
 	rate = ppm;
-	
+
 	hi = (rate >> 16);
 	lo = rate & 0xffff;
 
@@ -640,7 +645,7 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 
 	/* Reset PTP clock control register */
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);
-	
+
 	for (i = 0; i < 4; i++) {
 		dm9051_set_reg(db, DM9051_1588_TS, s_ppm[i]);
 	}
@@ -675,7 +680,7 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	s64 s64_adj;
 	s64 subrate;
 	s64 ppm; //= (scaled_ppm * 1000) / 65536;
-	
+
 	if (scaled_ppm < 0) {
 		ppm = ((s64)(-scaled_ppm) * 1000) / 65536;
 		ppm = -ppm;
@@ -685,7 +690,7 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 
 	s64_adj =  (ppm * 171797) / 1000;		//base = 171.79
 
-	subrate = s64_adj - db->pre_rate;	
+	subrate = s64_adj - db->pre_rate;
 	if (subrate < 0) {
 		subrate = -subrate;
 		if (subrate > 0xffffffff)
@@ -701,7 +706,7 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 		neg_adj = 0;
 	}
 	db->pre_rate = s64_adj;	//store value of rate register
-	
+
 	hi = (rate >> 16);
 	lo = rate & 0xffff;
 
@@ -712,11 +717,11 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 
 	//mutex_lock(&db->spi_lockm);
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST); //R61 W80
-	
+
 	for (i = 0; i < 4; i++) {
 		dm9051_set_reg(db, DM9051_1588_TS, s_ppm[i]);
 	}
-	
+
 	if (neg_adj == 1) {
 		dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
 			       DM9051_CCR_RATE_CTL | DM9051_CCR_PTP_RATE);
@@ -733,7 +738,7 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 {
 	//remark2-slave
 	//printk("...ptp_9051_adjfine\n");
-	
+
  	struct board_info *db = container_of(ptp, struct board_info,
 					     ptp_caps);
 	//struct phy_device *phydev = clock->chosen->phydev;
@@ -748,7 +753,7 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	s64 s64_adj;
 	s64 subrate;
 	s64 ppm = (scaled_ppm * 1000) / 65536;
-	
+
 	//remark2-slave
 	//printk("+++00112+++++ [in %s] scaled_ppm = %ld +++++++++\n", __FUNCTION__ ,scaled_ppm);
 
@@ -761,30 +766,30 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	//s64_adj =  (ppm * 1859696) / 10000;		//Freq= 74343
 	//s64_adj =  (ppm * 2859696) / 10000;		//Freq= 48394
 	//s64_adj =  (ppm * 3059696) / 10000;		//Freq= 45535, offset>600
-	
+
 	//s64_adj =  (ppm * 1659696) / 10000;		//Freq=83373,  linreg
 	//s64_adj =  (ppm * 1629696) / 10000;		//Freq=84373,  linreg
 	//s64_adj =  (ppm * 1619696) / 10000;		//Freq=84373,  linreg
 	//s64_adj =  (ppm * 1609696) / 10000;		//Freq=85373,  linreg offset<300
-	
+
 	//s64_adj =  (ppm * 1589696) / 10000;		//Not use, Freq=86673,  linreg offset<300, pi not Sync
-	
+
 	//printk("Before Writing pre_rate = 0x%llX\n", db->pre_rate);
-	
-	/*s64*/ subrate = s64_adj - db->pre_rate;	
+
+	/*s64*/ subrate = s64_adj - db->pre_rate;
 	if (subrate < 0) {
 		rate = (s32)-subrate;
 		neg_adj = 1;
-		
+
 	}else{
 		rate = (s32)subrate;
 		neg_adj = 0;
-		
+
 	}
-	db->pre_rate = s64_adj;	//store value of rate register 
-	
+	db->pre_rate = s64_adj;	//store value of rate register
+
 	//printk("After Caculated pre_rate = 0x%llX, subrate = 0x%llX, rate = 0x%X, sign = %d\n", db->pre_rate, subrate, rate, neg_adj);
-	
+
 	hi = (rate >> 16);
 	lo = rate & 0xffff;
 
@@ -796,12 +801,12 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 //Spenser - Update PTP Clock Rate
 	//mutex_lock(&db->spi_lockm);
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST); //R61 W80
-	
+
 	for (i = 0; i < 4; i++) {
 		dm9051_set_reg(db, DM9051_1588_TS, s_ppm[i]);
-		//printk("s_ppm_%d = 0x%X\n", i, s_ppm[i]); 
+		//printk("s_ppm_%d = 0x%X\n", i, s_ppm[i]);
 	}
-	
+
 	if (neg_adj == 1) {
 		dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
 			       DM9051_CCR_RATE_CTL | DM9051_CCR_PTP_RATE);
@@ -815,9 +820,9 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	u32 rate_reg = dm9051_get_rate_reg(db);
 	printk("RateReg value = 0x%08X\n", rate_reg);
 #endif
-	
+
 	//printk("ptp_9051_adjfine...\n");
-	
+
 	return 0;
 }
 #endif
@@ -829,18 +834,18 @@ int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 {
 	//remark1-slave
 	//printk("...ptp_9051_adjtime\n");
-	
+
 	struct board_info *db = container_of(ptp, struct board_info,
 					     ptp_caps);
 	struct timespec64 ts;
 	int sign = 1;
 	//int err;
 	u8 temp[8];
-	
-	//Spenser - Reset Rate register, write 0x60 bit0=1, then write bit0=0 
+
+	//Spenser - Reset Rate register, write 0x60 bit0=1, then write bit0=0
 	//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x01); //Disable PTP function Register offset 0x60, value 0x01
 	//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00); //Enable PTP function Register offset 0x60, value 0x00
-	
+
 
 	//remark1-slave
 	//printk("+++00111+++++ [in %s] delta = %lld+++++++++\n", __FUNCTION__ ,delta);
@@ -867,7 +872,7 @@ int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	//printk("@@@2-2 ptp_dm8806_adjtime delta 0x%llx sec 0x%llx \n", delta, ts.tv_sec);
 
 	ts.tv_nsec = (delta - (ts.tv_sec * 0x3b9aca00))& 0xffffffff;
-	
+
 
 	//printk("@@@3 ptp_dm8806_adjtime delta %llx  nsec=%lx  \n", delta, ts.tv_nsec);
 
@@ -902,9 +907,9 @@ int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 		dm9051_set_reg(db, DM9051_1588_TS, temp[i] & 0xff);
 	}
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_ADD);
-	
+
 	mutex_unlock(&db->spi_lockm);
-	
+
 	//remark1-slave
 	//printk(" ptp_9051_adjtime hwtstamp = %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n",
 	//       temp[0], temp[1],temp[2],temp[3],temp[4],temp[5],temp[6],temp[7]);
@@ -917,7 +922,7 @@ int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	//ADDR_LOCK_TAIL_ESSENTIAL(db); //mutex_unlock
 
 	printk("ptp_9051_adjtime...\n");
-	
+
 	return 0;
 
 }
@@ -938,7 +943,7 @@ printk("DM9051A ...ptp_9051_gettime\n");
 mutex_lock(&db->spi_lockm);
 dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
    DM9051_CCR_IDX_RST | DM9051_CCR_PTP_READ);
-   
+
 for (i=0; i< 8; i++) {
 regmap_read(db->regmap_dm, DM9051_1588_TS, &uIntTemp);
 temp[i] = (u8)(uIntTemp & 0xFF);
@@ -949,7 +954,7 @@ dm9051_read_mem(db, DM9051_1588_TS, temp, DM9051_1588_TS_BULK_SIZE);
 
 dm9051_set_reg(db, DM9051_1588_CLK_CTRL, 0x80);	// Reset Register 68H Index
 dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x01); //Read TX Time Stamp Clock Register offset 0x62, value 0x01
-*/	
+*/
 //regmap_noinc_read(db->regmap_dm, DM9051_1588_TS, &temp, 8);	//Spenser -  Read HW Timestamp from DM9051A REG_68H
 
 // tom: re-write the upper statements
@@ -971,7 +976,7 @@ int ptp_9051_settime(struct ptp_clock_info *ptp,
 struct board_info *db = container_of(ptp, struct board_info,
 			 ptp_caps);
 printk("...ptp_9051_settime\n");
-			 
+
 dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)(ts->tv_nsec & 0xff));             // Write register 0x68
 dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_nsec >> 8) & 0xff));      // Write register 0x68
 dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_nsec >> 16) & 0xff));     // Write register 0x68
@@ -1003,21 +1008,21 @@ int ptp_9051_verify_pin(struct ptp_clock_info *ptp, unsigned int pin,
 
 void dm9051_ptp_init(struct board_info *db)
 {
-	
+
 	db->ptp_caps = ptp_dm9051a_info;
-	
-#if 0					   
+
+#if 0
 	db->tstamp_config.flags = 0;
-	db->tstamp_config.rx_filter = 
+	db->tstamp_config.rx_filter =
 		(1 << HWTSTAMP_FILTER_ALL) |
 		(1 << HWTSTAMP_FILTER_SOME) |
 		(1 << HWTSTAMP_FILTER_NONE);
-		
+
 	db->tstamp_config.tx_type =
 		(1 << HWTSTAMP_TX_ON) |
 		(1 << HWTSTAMP_TX_OFF);
 #endif
-		
+
 	db->ptp_clock = ptp_clock_register(&db->ptp_caps,
 					   &db->ndev->dev);
 	if (IS_ERR(db->ptp_clock)) {
@@ -1026,34 +1031,34 @@ void dm9051_ptp_init(struct board_info *db)
 	}  else if (db->ptp_clock) {
 		printk("ptp_clock_register added PHC on %s\n",
 		       db->ndev->name);
-		
+
 	}
 	//db->ptp_flags |= IGB_PTP_ENABLED;	// Spenser - no used
 
 //Spenser
-/*	
+/*
 	dm9051_set_reg(db, DM9051_1588_RX_CONF1,
 		       DM9051A_RC_SLAVE | DM9051A_RC_RX_EN | DM9051A_RC_RX2_EN);
 */
 	dm9051_set_reg(db, DM9051_1588_RX_CONF1, 0x12);		//enable 8 bytes timestamp & multicast filter
-	
-	//Spenser - Reset Rate register, write 0x60 bit0=1, then write bit0=0 
+
+	//Spenser - Reset Rate register, write 0x60 bit0=1, then write bit0=0
 	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x01); //Disable PTP function Register offset 0x60, value 0x01
 	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00); //Enable PTP function Register offset 0x60, value 0x00
-	
+
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, 0x01); //Enable PTP clock function Register offset 0x61, value 0x01
-	
-	
+
+
 	//Setup GP1 to edge trigger output!
 	//Register 0x60 to 0x0 (GP page (bit 1), PTP Function(bit 0))
 	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00);
 
 	//Register 0x6A to 0x06 (interrupt disable(bit 2), trigger or event enable(bit 1), trigger output(bit 0))
 	dm9051_set_reg(db, DM9051_1588_GPIO_CONF, 0x06);
-	
+
 	//Register 0x6B to 0x02(trigger out type: edge output(bit 3:2),  triger output active high(bit 1))
 	dm9051_set_reg(db, DM9051_1588_GPIO_TE_CONF, 0x02);
-	
+
 	//Stone add for 1588 Read 0x68 in one SPI cycle enable (register 0x63 bit 6 0:enable, 1:disable => 0x40)
 	//Stone add for 1588 TX 1-Step checksum enable (register 0x63 bit 7 0:enable, 1:disable => 0x80)
 	dm9051_set_reg(db, DM9051_1588_1_STEP_CHK, 0x00);
