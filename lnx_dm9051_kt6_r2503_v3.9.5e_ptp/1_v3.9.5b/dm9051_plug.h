@@ -56,7 +56,7 @@
 #endif
 
 //#define PLUG_INT_CLKOUT
-#ifder PLUG_INT_CLKOUT
+#ifdef PLUG_INT_CLKOUT
 #define DMPLUG_INT_CLKOUT
 #endif
 

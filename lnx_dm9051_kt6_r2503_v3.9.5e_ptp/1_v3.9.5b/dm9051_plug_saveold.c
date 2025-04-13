@@ -636,6 +636,79 @@ static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	return 0;
 }
 
+#if 0
+int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
+{
+	struct board_info *db = container_of(ptp, struct board_info, ptp_caps);
+	//s32 subrate;
+	s64 ppm;
+	s64 s64_adj;
+	s64 subrate;
+	u32 rate;
+	u16 hi, lo;
+	u8 s_ppm[4];
+	int i;
+	//int ret = 0;
+
+	/* Convert scaled_ppm to actual ppm value */
+	ppm = scaled_ppm;
+	ppm = div_s64(ppm, 65);  /* Scale factor for hardware */
+
+	/* 計算調整值 */
+	s64_adj =  (ppm * 171797) / 1000;		//base = 171.79
+	subrate = s64_adj - db->pre_rate;	
+
+	/* Calculate subrate value with overflow protection */
+//	if (ppm > 0) {
+//		if (ppm > 32767)
+//			ppm = 32767;
+//		subrate = (s32)ppm;
+//	} else {
+//		if (ppm < -32768)
+//			ppm = -32768;
+//		subrate = (s32)ppm;
+//	}
+	ppm = abs(subrate); //if (subrate < 0) ...
+	if (ppm > 0xffffffff)
+		ppm = 0xffffffff;
+	rate = ppm;
+	
+	hi = (rate >> 16);
+	lo = rate & 0xffff;
+
+	s_ppm[0] = lo & 0xff;
+	s_ppm[1] = (lo >> 8) & 0xff;
+	s_ppm[2] = hi & 0xFF;
+	s_ppm[3] = (hi >> 8) & 0xff;
+
+	/* Protect register access with mutex */
+	mutex_lock(&db->spi_lockm);
+
+	/* Reset PTP clock control register */
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);
+	
+	for (i = 0; i < 4; i++) {
+		dm9051_set_reg(db, DM9051_1588_TS, s_ppm[i]);
+	}
+
+	if (subrate < 0)
+		/* Set rate control and PTP rate bits */
+		dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
+				DM9051_CCR_RATE_CTL | DM9051_CCR_PTP_RATE);
+	else
+		/* Write subrate value to register */
+		dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_RATE);
+
+	mutex_unlock(&db->spi_lockm);
+
+	/* Store the rate for future reference */
+	//db->pre_rate = scaled_ppm;
+	db->pre_rate = s64_adj;	//store value of rate register
+
+	return 0;
+}
+#endif
+
 
 static int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 {

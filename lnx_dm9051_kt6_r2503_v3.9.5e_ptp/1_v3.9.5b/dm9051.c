@@ -35,15 +35,17 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #ifdef DMCONF_AARCH_64
 #define PRINT_ALIGN_INFO(n) \
 			printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
-				   dmplug_tx,
+				   dmplug_tx, \
 				   dm9051_modedata->align.rx_blk, \
-				   dm9051_modedata->align.tx_blk, n)
+				   dm9051_modedata->align.tx_blk, \
+				   n)
 #else
 #define PRINT_ALIGN_INFO(n) \
 			printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
-				   dmplug_tx,
+				   dmplug_tx, \
 				   dm9051_modedata->align.rx_blk, \
-				   dm9051_modedata->align.tx_blk, n)
+				   dm9051_modedata->align.tx_blk, \
+				   n)
 #endif
 
 /* Helper macros */
@@ -653,6 +655,43 @@ static int PHY_LOG(struct board_info *db)
 	return 0;
 }
 
+/*void set_log_addr(struct board_info *db, char *p)
+  {
+  }*/
+char *get_log_addr(struct board_info *db)
+{
+	//int i;
+	if (!db->automdix_log[0][0]) {
+		db->automdix_log[0][0] = 1;
+		return &db->automdix_log[0][1];
+	}
+	if (!db->automdix_log[1][0]) {
+		db->automdix_log[1][0] = 1;
+		return &db->automdix_log[1][1];
+	}
+	if (!db->automdix_log[2][0]) {
+		db->automdix_log[2][0] = 1;
+		return &db->automdix_log[2][1];
+	}
+	
+	strcpy(&db->automdix_log[0][1], &db->automdix_log[1][1]);
+	strcpy(&db->automdix_log[1][1], &db->automdix_log[2][1]);
+	return &db->automdix_log[2][1];
+	//for () {
+	//}
+}
+void show_log_addr(struct board_info *db)
+{
+	if (db->automdix_log[0][0]) {
+		printk("\n");
+		printk("%s\n", &db->automdix_log[0][1]);
+	}
+	if (db->automdix_log[1][0])
+		printk("%s\n", &db->automdix_log[1][1]);
+	if (db->automdix_log[2][0])
+		printk("%s\n", &db->automdix_log[2][1]);
+}
+
 // dm9051_phyread.EXTEND
 static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 								   unsigned int reg, unsigned int *val)
@@ -668,6 +707,13 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 		unsigned int vval;
 		if (*val != bmsr)
 		{
+			/* link change to up */
+			if (!(bmsr & BIT(2)) && (*val & BIT(2))) {
+				if (!db->stop_automdix_flag)
+					show_log_addr(db);
+				printk("<from_phylib. on %02u to %02u, found reach link\n", db->stop_automdix_flag, db->n_automdix);
+			}
+
 			bmsr = *val;
 		}
 		else
@@ -713,78 +759,74 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 				}
 			}
 			if (!(*val & BIT(2))) {
-				static unsigned int n_automdix = 0;
-				static unsigned int mdi = 0x0830;
+				//static unsigned int n_automdix = 0;
+				//static unsigned int mdi = 0x0830;
+				//#define TOGG_INTVL		1
+				//#define TOGG_TOT_SHOW	5
+				db->n_automdix++;
 
-				n_automdix++;
-				if (!(n_automdix % 5)) {
-					mdi ^= 0x0020;
+				ret = dm9051_phyread(db, 5, &vval);
+				if (ret)
+					return ret;
+				
+				if (vval) {
+					if (!db->stop_automdix_flag)
+						show_log_addr(db);
 
-					if (n_automdix <= 15) printk("\n");
-					if (n_automdix <= 15 && !(*val & BIT(6)))
-						printk("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", addr, *val);
+					//db->stop_automdix_flag = 1; //.
+					printk("<from_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> stop automdix\n", db->stop_automdix_flag, db->n_automdix, vval);
+					db->stop_automdix_flag = db->n_automdix; //.
+				}
 
-					ret = dm9051_phyread(db, 2, &vval);
+				if (db->stop_automdix_flag)
+					break;
+
+				if (!(db->n_automdix % TOGG_INTVL)) {
+					char *p;
+					db->mdi ^= 0x0020;
+
+					if (db->n_automdix <= TOGG_TOT_SHOW) {
+						if (db->n_automdix == TOGG_INTVL) //only first.
+							printk("\n");
+					}
+					if (db->n_automdix <= TOGG_TOT_SHOW 
+						&& !(*val & BIT(6))) printk("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", addr, *val);
+
+					/*ret = dm9051_phyread(db, 2, &vval);*/
+					/*if (ret)
+						return ret;*/
+
+					/*if (db->n_automdix <= TOGG_TOT_SHOW) printk("_mdio_read.PHYID1[_check_], phyaddr %d [PHYID1] %04x\n", addr, vval);*/
+
+					ret = dm9051_phywrite(db, 20, db->mdi);
 					if (ret)
 						return ret;
-					if (n_automdix <= 15) printk("_mdio_read.PHYID1[_check_], phyaddr %d [PHYID1] %04x\n", addr, vval);
 
-					ret = dm9051_phywrite(db, 20, mdi);
-					if (ret)
-						return ret;
-					if (n_automdix <= 15) printk("%02u _dm9051_phywrite[_AutoMDIX_], phyreg %d [val] %04x\n", n_automdix, 20, mdi);
+					p = get_log_addr(db);
+					sprintf(p, "from_phylib. %02u _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]", db->n_automdix, 20, db->mdi);
+					//set_log_addr(db, p);
+					if (db->n_automdix <= TOGG_TOT_SHOW)
+						printk("%s\n", p); //printk("from_phylib. %02u _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]\n", db->n_automdix, 20, db->mdi);
 
 					ret = dm9051_phyread(db, 20, &vval);
 					if (ret)
 						return ret;
-					if (n_automdix <= 15) printk("%02u _mdio_read.[_AutoMDIX_], phyreg %d [val] %04x\n", n_automdix, addr, vval);
+
+					/*if (db->n_automdix <= TOGG_TOT_SHOW) printk("%02u _mdio_read.[_AutoMDIX_], phyreg %d [val] %04x\n", db->n_automdix, addr, vval);*/
 				}
 				break;
+			} else {
+				db->n_automdix = 0; //log-reset
+				db->stop_automdix_flag = 0;
+				db->automdix_log[0][0] = 0;
+				db->automdix_log[1][0] = 0;
+				db->automdix_log[2][0] = 0;
 			}
-
-			//.printk("DM9051a Link up - bmsr %04x, while ptp_on: %d\n", *val, db->ptp_on);
 		}
 	} while (0);
 
 	return ret;
 }
-
-/*static int dm9051_mdio_read_delay(struct board_info *db, int addr, int regnum, unsigned int *val)
-{
-	int ret;
-
-	mutex_lock(&db->spi_lockm);
-
-	if (regnum == 1)
-		ret = dm9051_phyread_log_bmsr(db, addr, regnum, val);
-	else
-		ret = dm9051_phyread(db, regnum, val);
-
-	mutex_unlock(&db->spi_lockm);
-
-	if (ret)
-		return ret;
-	return *val;
-}
-
-static int dm9051_mdio_write_delay(struct board_info *db, int addr, int regnum, unsigned int val)
-{
-	int ret;
-
-	mutex_lock(&db->spi_lockm);
-
-	// [dbg] mdio.wr BMCR
-	if (regnum == 0)
-	{
-		if (val & 0x800)
-			printk("_[mii_bus] mdio write : power down (warn)\n");
-	}
-	ret = dm9051_phywrite(db, regnum, val);
-
-	mutex_unlock(&db->spi_lockm);
-
-	return ret;
-}*/
 
 static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 {
@@ -823,7 +865,6 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 
 	if (addr == DM9051_PHY_ADDR)
 	{
-		//=return dm9051_mdio_write_delay(db, addr, regnum, val);
 		int ret;
 
 		#if MI_FIX
@@ -844,6 +885,12 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 				printk("\n");
 				printk("_[mii_bus] mdio write : power down (warn)\n");
 			}
+
+			db->n_automdix = 0; //log-reset
+			db->stop_automdix_flag = 0;
+			db->automdix_log[0][0] = 0;
+			db->automdix_log[1][0] = 0;
+			db->automdix_log[2][0] = 0;
 		}
 		ret = dm9051_phywrite(db, regnum, val);
 
@@ -905,7 +952,7 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 
 static unsigned int dm9051_init_intcr_value(struct board_info *db)
 {
-	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || dm9051_irq_flag(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
+	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || get_dts_irqf(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
 }
 
 static int dm9051_core_reset(struct board_info *db)
@@ -1452,7 +1499,6 @@ static int dm9051_all_stop(struct board_info *db)
  */
 static int dm9051_all_restart(struct board_info *db)
 {
-	struct net_device *ndev = db->ndev;
 	int ret;
 
 //	mutex_unlock(&db->spi_lockm);
@@ -1481,6 +1527,9 @@ static int dm9051_all_restart(struct board_info *db)
 
 int dm9051_subconcl_and_rerxctrl(struct board_info *db)
 {
+	struct net_device *ndev = db->ndev;
+	int ret;
+
 	printk("dm9.Show rxstatus_Er & rxlen_Er %d, RST_c %d\n",
 		   db->bc.status_err_counter + db->bc.large_err_counter,
 		   db->bc.fifo_rst_counter);
@@ -1988,7 +2037,7 @@ static void dm9051_rx_int2_plat(int voidirq, void *pw) //.dm9051_(macro)_rx_tx_p
 	mutex_lock(&db->spi_lockm);
 
 #if 1 //[REAL.]	//'MI_FIX' (result = dm9051_rx_plat_disable(db);)
-	int result = dm9051_disable_interrupt(db);
+	result = dm9051_disable_interrupt(db);
 	if (result)
 		goto out_unlock;
 
@@ -2412,6 +2461,12 @@ static void dm9051_operation_clear(struct board_info *db)
 
 	db->csum_gen_val = 0; //disabling
 	db->csum_rcv_val = 0; //disabling
+	db->n_automdix = 0; //log-reset
+	db->stop_automdix_flag = 0;
+	db->automdix_log[0][0] = 0;
+	db->automdix_log[1][0] = 0;
+	db->automdix_log[2][0] = 0;
+	db->mdi = 0x0830;
 	db->ptp_on = 0;
 }
 
@@ -2459,7 +2514,7 @@ dev_info(&db->spidev->dev, "link_change.mutex.in / evaluation\n");
 		}
 		dm9051_update_fcr(db);
 	}
-dev_info(&db->spidev->dev, "link_change.mutex.out / evaluation ptp_on: %d\n", db->ptp_on);
+dev_info(&db->spidev->dev, "link_change.mutex.out / lpa on %02u n_automdix count on %02u, evaluation ptp_on: %d\n", db->stop_automdix_flag, db->n_automdix, db->ptp_on);
 }
 
 /* phy connect as poll mode

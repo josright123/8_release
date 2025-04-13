@@ -353,6 +353,12 @@ struct board_info
 
 	unsigned int csum_gen_val;
 	unsigned int csum_rcv_val;
+	
+	unsigned int n_automdix; //= 0;
+	unsigned int stop_automdix_flag; //= 0
+	unsigned int mdi; //= 0x0830;
+	//u16 automdix_flag[3];
+	char automdix_log[3][66];
 
 //_15888_
 	int                             ptp_on; 	//_15888_
@@ -367,6 +373,9 @@ struct board_info
 	struct hwtstamp_config          tstamp_config;
 };
 #endif
+
+#define TOGG_INTVL		1
+#define TOGG_TOT_SHOW	5
 
 int get_dts_irqf(struct board_info *db);
 
