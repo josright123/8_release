@@ -2229,6 +2229,7 @@ static int dm9051_open(struct net_device *ndev)
  * work, shutdown the RX and TX process and then place the chip into a low
  * power state while it is not being used
  */
+#if 1			// is ok.
 static int dm9051_stop(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
@@ -2261,8 +2262,20 @@ static int dm9051_stop(struct net_device *ndev)
 
 	return 0;
 }
+#endif
 
-#if 0
+/* Close network device
+ * Called to close down a network device which has been active. Cancel any
+ * work, shutdown the RX and TX process and then place the chip into a low
+ * power state while it is not being used
+ *
+ * [NOTE]
+ * 1. dm9051_stop() is called by netif_stop_queue()
+ * 2. netif_stop_queue() is called by netif_device_detach()
+ * 3. netif_device_detach() is called by net_device_unregister()
+ * 4. net_device_unregister() is called by device_remove()
+ */
+#if 0				// is fault.
 static int dm9051_stop(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
@@ -2302,6 +2315,56 @@ static int dm9051_stop(struct net_device *ndev)
 	skb_queue_purge(&db->txq);
 
 	return 0;
+}
+#endif
+
+#if 0				// is fault.
+static int dm9051_stop(struct net_device *ndev)
+{
+	struct board_info *db = to_dm9051_board(ndev);
+	int ret;
+
+	/* 首先停止网络队列，防止新的数据包进入 */
+	netif_stop_queue(ndev);
+
+	/* 取消所有延迟工作 */
+	#ifdef INT_TWO_STEP
+	if (dm9051_cmode_int)
+		cancel_delayed_work_sync(&db->irq_servicep);
+	#endif //INT_TWO_STEP
+	if (!dm9051_cmode_int)
+		cancel_delayed_work_sync(&db->irq_workp);
+
+	/* 清理工作队列 */
+	flush_work(&db->tx_work);
+	flush_work(&db->rxctrl_work);
+
+	/* 释放中断 - 在停止PHY之前 */
+	END_FREE_IRQ(dm9051_cmode_int, ndev);
+
+	/* 停止PHY设备 */
+	if (db->phydev) {
+		mutex_lock(&db->spi_lockm);
+		phy_stop(db->phydev);
+		mutex_unlock(&db->spi_lockm);
+	}
+
+	/* 停止DM9051设备 */
+	mutex_lock(&db->spi_lockm);
+	ret = dm9051_all_stop(db);
+	mutex_unlock(&db->spi_lockm);
+
+	/* 清理发送队列 */
+	skb_queue_purge(&db->txq);
+
+	#ifdef DMPLUG_PTP
+	/* 如果PTP功能已启用，停止PTP时钟 */
+	if (db->ptp_on) {
+		// dm9051_ptp_stop(db);
+	}
+	#endif
+
+	return ret;
 }
 #endif
 

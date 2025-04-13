@@ -78,7 +78,7 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
 #endif
 
 /*
- * Interrupt: 
+ * Interrupt:
  */
 
 void SHOW_INT_MODE(int cint, struct spi_device *spi)
@@ -121,7 +121,7 @@ static int dm9051_irq_flag(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
-//static 
+//static
 unsigned int dm9051_intcr_value(struct board_info *db)
 {
 	return (dm9051_irq_flag(db) == IRQF_TRIGGER_LOW || dm9051_irq_flag(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
@@ -186,7 +186,7 @@ void INIT_RX_POLL_SCHED_DELAY(int cpoll, struct board_info *db)
 }
 
 /*
- * Conti: 
+ * Conti:
  */
 
 #ifdef DMPLUG_CONTI
@@ -282,7 +282,7 @@ int TX_OPS_CONTI(struct board_info *db, u8 *buff, unsigned int len)
 #endif
 
 /*
- * ptp 1588 chip control: 
+ * ptp 1588 chip control:
  */
 #if 0
 // show ptp message typee
@@ -370,9 +370,9 @@ s64 dm9051_get_rate_reg(struct board_info *db) {
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);
 	regmap_noinc_read(db->regmap_dm, 0x68, mRate, 4);
 	pre_rate = ((uint32_t)mRate[3] << 24) | ((uint32_t)mRate[2] << 16) |
-		((uint32_t)mRate[1] << 8) | (uint32_t)mRate[0];	
+		((uint32_t)mRate[1] << 8) | (uint32_t)mRate[0];
 	//mutex_unlock(&db->spi_lockm);
-	
+
 	return pre_rate;
 }
 
@@ -388,19 +388,19 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	int i;
 	unsigned int uIntTemp = 0;
 
-	
+
 	memset(&temp, 0, sizeof(temp));
-	
+
 	//printk("==================================> TX_hwtstamp FROM in\r\n");
-	
+
 	//Spenser - Read TX timestamp from REG_68H
 	//remark6-slave
-	
+
 	mutex_lock(&db->spi_lockm);
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);	// Reset Register 68H Index
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);	// dummy reset to workaround unsync
 	dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x01); //Read TX Time Stamp Clock Register offset 0x62, value 0x01
-	
+
 	//regmap_noinc_read(db->regmap_dm, DM9051_1588_TS, &temp, 8);	//Spenser -  Read HW Timestamp from DM9051A REG_68H
 	for (i=0; i< 8; i++) {
 		regmap_read(db->regmap_dm, DM9051_1588_TS, &uIntTemp);
@@ -480,7 +480,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTS
 }
 
 /*
- * ptp 1588 driver netdev ioctrl: 
+ * ptp 1588 driver netdev ioctrl:
  */
 
 
@@ -539,7 +539,7 @@ int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
 	case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
 		db->ptp_on = 1;
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
-		
+
 		//rx_bd_control =  TSTAMP_ALL_PTP_FRAMES;
 		//tstamp_config->rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
 		//regval = macb_readl(bp, NCR);
@@ -549,7 +549,7 @@ int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
 	case HWTSTAMP_FILTER_ALL:
 		db->ptp_on = 1;
 		config.rx_filter = HWTSTAMP_FILTER_ALL;
-		
+
 		//rx_bd_control = TSTAMP_ALL_FRAMES;
 		//tstamp_config->rx_filter = HWTSTAMP_FILTER_ALL;
 		break;
@@ -580,21 +580,21 @@ int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr)
 {
 	struct board_info *db = netdev_priv(netdev);
 	struct hwtstamp_config *config = &db->tstamp_config;
-        
+
 	return copy_to_user(ifr->ifr_data, config, sizeof(*config)) ?
 		-EFAULT : 0;
 
 }
 
 /*
- * ptp 1588 driver ops: 
+ * ptp 1588 driver ops:
  */
 
 static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 {
 	//remark2-slave
 	//printk("...ptp_9051_adjfine\n");
-	
+
  	struct board_info *db = container_of(ptp, struct board_info,
 					     ptp_caps);
 	//struct phy_device *phydev = clock->chosen->phydev;
@@ -614,15 +614,15 @@ static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	s64_adj =  (ppm * 171797) / 1000;		//base = 171.79
 #else
 	s64 ppm = scaled_ppm;
-	
+
 //	ppm *= 1000;
 //	ppm /= 65536;
-	
+
 //	ppm = ppm / 1000;
 //	ppm = ppm * 171797;
 	ppm = ppm * 171797;
 	ppm >>= 16;
-	
+
 	s64_adj = ppm;
 #endif
 	//s64_adj =  (ppm * 1719696) / 10000;		//Freq=80373
@@ -631,30 +631,30 @@ static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	//s64_adj =  (ppm * 1859696) / 10000;		//Freq= 74343
 	//s64_adj =  (ppm * 2859696) / 10000;		//Freq= 48394
 	//s64_adj =  (ppm * 3059696) / 10000;		//Freq= 45535, offset>600
-	
+
 	//s64_adj =  (ppm * 1659696) / 10000;		//Freq=83373,  linreg
 	//s64_adj =  (ppm * 1629696) / 10000;		//Freq=84373,  linreg
 	//s64_adj =  (ppm * 1619696) / 10000;		//Freq=84373,  linreg
 	//s64_adj =  (ppm * 1609696) / 10000;		//Freq=85373,  linreg offset<300
-	
+
 	//s64_adj =  (ppm * 1589696) / 10000;		//Not use, Freq=86673,  linreg offset<300, pi not Sync
-	
+
 	//printk("Before Writing pre_rate = 0x%llX\n", db->pre_rate);
-	
-	s64 subrate = s64_adj - db->pre_rate;	
+
+	s64 subrate = s64_adj - db->pre_rate;
 	if (subrate < 0) {
 		rate = (s32)-subrate;
 		neg_adj = 1;
-		
+
 	}else{
 		rate = (s32)subrate;
 		neg_adj = 0;
-		
+
 	}
-	db->pre_rate = s64_adj;	//store value of rate register 
-	
+	db->pre_rate = s64_adj;	//store value of rate register
+
 	//printk("After Caculated pre_rate = 0x%llX, subrate = 0x%llX, rate = 0x%X, sign = %d\n", db->pre_rate, subrate, rate, neg_adj);
-	
+
 	hi = (rate >> 16);
 	lo = rate & 0xffff;
 
@@ -666,12 +666,12 @@ static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 //Spenser - Update PTP Clock Rate
 	//mutex_lock(&db->spi_lockm);
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST); //R61 W80
-	
+
 	for (i = 0; i < 4; i++) {
 		dm9051_set_reg(db, DM9051_1588_TS, s_ppm[i]);
-		//printk("s_ppm_%d = 0x%X\n", i, s_ppm[i]); 
+		//printk("s_ppm_%d = 0x%X\n", i, s_ppm[i]);
 	}
-	
+
 	if (neg_adj == 1) {
 		dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
 			       DM9051_CCR_RATE_CTL | DM9051_CCR_PTP_RATE);
@@ -679,7 +679,7 @@ static int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 		dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_RATE);
 	}
 	//mutex_unlock(&db->spi_lockm);
-	
+
 	return 0;
 }
 
@@ -691,18 +691,18 @@ static int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 
 	//remark1-slave
 	//printk("...ptp_9051_adjtime\n");
-	
+
 	struct board_info *db = container_of(ptp, struct board_info,
 					     ptp_caps);
 	struct timespec64 ts;
 	int sign = 1;
 	//int err;
 	u8 temp[8];
-	
-	//Spenser - Reset Rate register, write 0x60 bit0=1, then write bit0=0 
+
+	//Spenser - Reset Rate register, write 0x60 bit0=1, then write bit0=0
 	//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x01); //Disable PTP function Register offset 0x60, value 0x01
 	//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00); //Enable PTP function Register offset 0x60, value 0x00
-	
+
 
 	//remark1-slave
 	//printk("+++00111+++++ [in %s] delta = %lld+++++++++\n", __FUNCTION__ ,delta);
@@ -735,7 +735,7 @@ static int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	//printk("@@@2-2 ptp_dm8806_adjtime delta 0x%llx sec 0x%llx \n", delta, ts.tv_sec);
 
 	ts.tv_nsec = (delta - (ts.tv_sec * 0x3b9aca00))& 0xffffffff;
-	
+
 
 	//printk("@@@3 ptp_dm8806_adjtime delta %llx  nsec=%lx  \n", delta, ts.tv_nsec);
 
@@ -770,9 +770,9 @@ static int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 		dm9051_set_reg(db, DM9051_1588_TS, temp[i] & 0xff);
 	}
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_ADD);
-	
+
 	mutex_unlock(&db->spi_lockm);
-	
+
 	//remark1-slave
 	//printk(" ptp_9051_adjtime hwtstamp = %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n",
 	//       temp[0], temp[1],temp[2],temp[3],temp[4],temp[5],temp[6],temp[7]);
@@ -785,7 +785,7 @@ static int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	//ADDR_LOCK_TAIL_ESSENTIAL(db); //mutex_unlock
 
 	printk("ptp_9051_adjtime...\n");
-	
+
 	return 0;
 
 }
@@ -800,13 +800,13 @@ static int ptp_9051_gettime(struct ptp_clock_info *ptp,
 	unsigned int uIntTemp;
 
 	printk("DM9051A ...ptp_9051_gettime\n");
-	
+
 	// tom: from stone's doc. write 0x84 to reg 0x61 is enough,
 	// bit 0 PTP_EN has been set in ptp_init
 	mutex_lock(&db->spi_lockm);
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
 		       DM9051_CCR_IDX_RST | DM9051_CCR_PTP_READ);
-		       
+
 	for (i=0; i< 8; i++) {
 		regmap_read(db->regmap_dm, DM9051_1588_TS, &uIntTemp);
 		temp[i] = (u8)(uIntTemp & 0xFF);
@@ -817,7 +817,7 @@ static int ptp_9051_gettime(struct ptp_clock_info *ptp,
 
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, 0x80);	// Reset Register 68H Index
 	dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x01); //Read TX Time Stamp Clock Register offset 0x62, value 0x01
-*/	
+*/
 	//regmap_noinc_read(db->regmap_dm, DM9051_1588_TS, &temp, 8);	//Spenser -  Read HW Timestamp from DM9051A REG_68H
 
 	// tom: re-write the upper statements
@@ -837,10 +837,10 @@ static int ptp_9051_settime(struct ptp_clock_info *ptp,
 			    const struct timespec64 *ts)
 {
 	printk("...ptp_9051_settime\n");
-	
+
 	struct board_info *db = container_of(ptp, struct board_info,
 					     ptp_caps);
-					     
+
 	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)(ts->tv_nsec & 0xff));             // Write register 0x68
 	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_nsec >> 8) & 0xff));      // Write register 0x68
 	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_nsec >> 16) & 0xff));     // Write register 0x68
@@ -850,10 +850,10 @@ static int ptp_9051_settime(struct ptp_clock_info *ptp,
 	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_sec >> 8) & 0xff));      // Write register 0x68
 	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_sec >> 16) & 0xff));     // Write register 0x68
 	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_sec >> 24) & 0xff));     // Write register 0x68
-	
+
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_WRITE);
-	
-	
+
+
 	return 0;
 }
 
@@ -886,12 +886,12 @@ static struct ptp_clock_info ptp_dm9051a_info = {
     .settime64 = ptp_9051_settime,
     .enable = ptp_9051_feature_enable,
     .verify = ptp_9051_verify_pin,
- 
+
 };
 
 void dm9051_ptp_init(struct board_info *db)
 {
-	
+
 	db->ptp_caps = ptp_dm9051a_info;
 	db->ptp_clock = ptp_clock_register(&db->ptp_caps,
 					   &db->ndev->dev);
@@ -901,29 +901,29 @@ void dm9051_ptp_init(struct board_info *db)
 	}  else if (db->ptp_clock) {
 		printk("added PHC on %s\n",
 		       db->ndev->name);
-		
+
 	}
 	//db->ptp_flags |= IGB_PTP_ENABLED;	// Spenser - no used
 
 //Spenser
 	dm9051_set_reg(db, DM9051_1588_RX_CONF1, 0x12);		//enable 8 bytes timestamp & multicast filter
-	
-	//Spenser - Reset Rate register, write 0x60 bit0=1, then write bit0=0 
+
+	//Spenser - Reset Rate register, write 0x60 bit0=1, then write bit0=0
 	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x01); //Disable PTP function Register offset 0x60, value 0x01
 	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00); //Enable PTP function Register offset 0x60, value 0x00
-	
+
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, 0x01); //Enable PTP clock function Register offset 0x61, value 0x01
-	
+
 	//Setup GP1 to edge trigger output!
 	//Register 0x60 to 0x0 (GP page (bit 1), PTP Function(bit 0))
 	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00);
 
 	//Register 0x6A to 0x06 (interrupt disable(bit 2), trigger or event enable(bit 1), trigger output(bit 0))
 	dm9051_set_reg(db, DM9051_1588_GPIO_CONF, 0x06);
-	
+
 	//Register 0x6B to 0x02(trigger out type: edge output(bit 3:2),  triger output active high(bit 1))
 	dm9051_set_reg(db, DM9051_1588_GPIO_TE_CONF, 0x02);
-	
+
 	//Stone add for 1588 Read 0x68 in one SPI cycle enable (register 0x63 bit 6 0:enable, 1:disable => 0x40)
 	//Stone add for 1588 TX 1-Step checksum enable (register 0x63 bit 7 0:enable, 1:disable => 0x80)
 	dm9051_set_reg(db, DM9051_1588_1_STEP_CHK, 0x00);
