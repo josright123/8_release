@@ -46,8 +46,6 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 				   dm9051_modedata->align.tx_blk, n)
 #endif
 
-#define dm9051_cmode_int (drvdata->interrupt)
-
 /* Helper macros */
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
@@ -87,7 +85,7 @@ const static char *linux_name[] = {
         "UNKNOW",
 };
 
-static void SHOW_CONFIG_MODE(struct spi_device *spi, int cint)
+static void SHOW_CONFIG_MODE(struct spi_device *spi)
 {
 	struct device *dev = &spi->dev;
 
@@ -98,8 +96,11 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi, int cint)
 		unsigned int speed;
 		of_property_read_u32(spi->dev.of_node, "spi-max-frequency", &speed);
 		dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
-		SHOW_INT_MODE(cint, spi);
-		SHOW_POLL_MODE(cint, spi);
+		#ifdef DMPLUG_INT
+		SHOW_INT_MODE(spi);
+		#else
+		SHOW_POLL_MODE(spi);
+		#endif
 	} while (0);
 	printk("\n");
 	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
@@ -945,13 +946,15 @@ static int dm9051_core_reset(struct board_info *db)
 	/* Diagnostic contribute: In dm9051_enable_interrupt()
 	 * (or located in the core reset subroutine is better!!)
 	 */
-	if (dm9051_cmode_int == MODE_INTERRUPT_CLKOUT)
-	{
+	//if (dm9051_cmode_int == MODE_INTERRUPT_CLKOUT)
+	//{
+	#if defined(DMPLUG_INT) && defined(DMPLUG_INT_CLKOUT)
 		printk("_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		if (ret)
 			return ret;
-	}
+	#endif
+	//}
 
 	//_15888_
 	/*u32*/ rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
@@ -1464,6 +1467,11 @@ static int dm9051_all_restart(struct board_info *db)
 	if (ret)
 		return ret;
 
+	return dm9051_subconcl_and_rerxctrl(db);
+}
+
+int dm9051_subconcl_and_rerxctrl(struct board_info *db)
+{
 	printk("dm9.Show rxstatus_Er & rxlen_Er %d, RST_c %d\n",
 		   db->bc.status_err_counter + db->bc.large_err_counter,
 		   db->bc.fifo_rst_counter);
@@ -1914,9 +1922,9 @@ static void dm9051_tx_delay(struct work_struct *work)
 	mutex_unlock(&db->spi_lockm);
 }
 
-/* Interrupt/poll: looping_rx_tx */
+/* Common: looping rx and tx */
 
-static int dm9051_delayp_loop_rxp(struct board_info *db) //.looping_rx_tx()
+static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 {
 	int result, result_tx;
 
@@ -1934,32 +1942,32 @@ static int dm9051_delayp_loop_rxp(struct board_info *db) //.looping_rx_tx()
 }
 
 #if 1
-static int dm9051_rx_plat_disable(struct board_info *db)
-{
-	int result = dm9051_disable_interrupt(db);
-	if (result)
-		return result; //goto out_unlock;
+//static void dm9051_rx_plat_enable(struct board_info *db)
+//{
+//	dm9051_enable_interrupt(db);
+//}
+//static int dm9051_rx_plat_disable(struct board_info *db)
+//{
+//	int result = dm9051_disable_interrupt(db);
+//	if (result)
+//		return result;
 
-	result = dm9051_clear_interrupt(db);
-	if (result)
-		return result; //goto out_unlock;
-	return result;
-}
+//	result = dm9051_clear_interrupt(db);
+//	if (result)
+//		return result;
+//	return result;
+//}
 
 static void dm9051_rx_plat_loop(struct board_info *db)
 {
 	int ret;
 
-	ret = dm9051_delayp_loop_rxp(db); //.looping_rx_tx()
+	ret = dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
 	if (ret < 0)
 		return;
 
-	dm9051_enable_interrupt(db);
+	dm9051_enable_interrupt(db); //"dm9051_rx_plat_enable(struct board_info *db)"
 }
-//static void dm9051_rx_plat_enable(struct board_info *db)
-//{
-//	dm9051_enable_interrupt(db);
-//}
 
 /* Interrupt: Interrupt work */
 
@@ -1970,8 +1978,12 @@ static void dm9051_rx_int2_plat(int voidirq, void *pw) //.dm9051_(macro)_rx_tx_p
 
 	mutex_lock(&db->spi_lockm);
 
-#if 1 //[REAL.]	//'MI_FIX'
-	result = dm9051_rx_plat_disable(db);
+#if 1 //[REAL.]	//'MI_FIX' (result = dm9051_rx_plat_disable(db);)
+	int result = dm9051_disable_interrupt(db);
+	if (result)
+		goto out_unlock;
+
+	result = dm9051_clear_interrupt(db);
 	if (result)
 		goto out_unlock;
 
@@ -1990,7 +2002,7 @@ out_unlock:
 }
 
 /* !Interrupt: Poll delay work */
-
+#ifndef DMPLUG_INT //NOT DMPLUG_INT =POLL
 /* [DM_TIMER_EXPIRE2] poll extream.fast */
 /* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
  * This is by CPU scheduling-poll, so is software driven!
@@ -2006,7 +2018,7 @@ void dm9051_irq_delayp(struct work_struct *work) //.dm9051_poll_delay_plat()
 
 	mutex_lock(&db->spi_lockm);
 
-	dm9051_delayp_loop_rxp(db); //.looping_rx_tx()
+	dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
 
 	mutex_unlock(&db->spi_lockm);
 
@@ -2015,9 +2027,9 @@ void dm9051_irq_delayp(struct work_struct *work) //.dm9051_poll_delay_plat()
 
 	/* redundent, but for safe */
 	//if (!dm9051_cmode_int)
-	
-		schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
+	schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
 }
+#endif
 
 int thread_servicep_done = 1;
 int thread_servicep_re_enter = 0;
@@ -2119,13 +2131,15 @@ static int dm9051_open(struct net_device *ndev)
 
 	netif_wake_queue(ndev);
 
+	#ifdef DMPLUG_INT
 	/* interrupt work */
-	ret = INIT_REQUEST_IRQ(dm9051_cmode_int, ndev);
+	ret = INIT_REQUEST_IRQ(ndev);
 	if (ret < 0)
 		return ret;
-
+	#else
 	/* Or schedule delay work */
-	INIT_RX_POLL_SCHED_DELAY(!dm9051_cmode_int, db);
+	INIT_RX_POLL_SCHED_DELAY(db);
+	#endif
 
 	return 0;
 }
@@ -2147,12 +2161,13 @@ static int dm9051_stop(struct net_device *ndev)
 		return ret;
 
 	/* schedule delay work */
+	#ifdef DMPLUG_INT
 	#ifdef INT_TWO_STEP
-	if (dm9051_cmode_int)
-		cancel_delayed_work_sync(&db->irq_servicep);
+		cancel_delayed_work_sync(&db->irq_servicep); //.if (_dm9051_cmode_int)
 	#endif //INT_TWO_STEP
-	if (!dm9051_cmode_int)
-		cancel_delayed_work_sync(&db->irq_workp);
+	#else //DMPLUG_INT
+		cancel_delayed_work_sync(&db->irq_workp); //.if (!_dm9051_cmode_int)
+	#endif 
 
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
@@ -2161,8 +2176,10 @@ static int dm9051_stop(struct net_device *ndev)
 	phy_stop(db->phydev);
 	mutex_unlock(&db->spi_lockm);
 
+	#ifdef DMPLUG_INT
 	/* when (threadedcfg.interrupt_supp == THREADED_INT) */
-	END_FREE_IRQ(dm9051_cmode_int, ndev);
+	END_FREE_IRQ(ndev);
+	#endif
 
 	netif_stop_queue(ndev);
 
@@ -2493,17 +2510,24 @@ static int dm9051_probe(struct spi_device *spi)
 	INIT_WORK(&db->rxctrl_work, dm9051_rxctl_delay);
 	INIT_WORK(&db->tx_work, dm9051_tx_delay);
 
-	INIT_RX_POLL_DELAY_SETUP(!dm9051_cmode_int, db);
-	INIT_RX_DELAY_SETUP(dm9051_cmode_int, db);
+	#ifdef DMPLUG_INT
+	#ifdef INT_TWO_STEP
+		INIT_RX_DELAY_SETUP(db);
+	#endif
+	#else
+		INIT_RX_POLL_DELAY_SETUP(db);
+	#endif
 
 	ret = dm9051_map_init(spi, db);
 	if (ret)
 		return ret;
 
 	printk("\n");
-	dev_info(dev, "Davicom: %s", drvdata->release_version);
+	dev_info(dev, "Davicom: %s", confdata.release_version);
+	dev_info(dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);
+	//dev_info(dev, "Davicom: confdata.interrupt= %s", confdata.interrupt);
 
-	SHOW_CONFIG_MODE(spi, dm9051_cmode_int);
+	SHOW_CONFIG_MODE(spi);
 
 	ret = dm9051_map_chipid(db);
 	if (ret)

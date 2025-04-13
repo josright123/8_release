@@ -81,25 +81,24 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
  * Interrupt: 
  */
 
-void SHOW_INT_MODE(int cint, struct spi_device *spi)
+void SHOW_INT_MODE(struct spi_device *spi)
 {
-	if (cint)
-	{
+	//if (cint)
+	//{
 		unsigned int intdata[2];
 		of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-//		dev_info(&spi->dev, "Operation: Interrupt mode/ %s\n", (cint == MODE_INTERRUPT_CLKOUT) ? "CLKOUT" : "REG39H");
 		dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
 		dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
 		#ifdef INT_TWO_STEP
 		dev_info(&spi->dev, "Interrupt: Two_step\n");
 		#endif
-	}
+	//}
 }
 
-void SHOW_POLL_MODE(int cint, struct spi_device *spi)
+void SHOW_POLL_MODE(struct spi_device *spi)
 {
-	if (!cint)
-	{
+	//if (!cint)
+	//{
 		int i;
 		dev_info(&spi->dev, "Operation: Polling mode\n"); //~intpin
 		dev_info(&spi->dev, "Operation: Polling operate count %d\n", csched.nTargetMaxNum);
@@ -107,7 +106,7 @@ void SHOW_POLL_MODE(int cint, struct spi_device *spi)
 		{
 			dev_info(&spi->dev, "Operation: Polling operate delayF[%d]= %lu\n", i, csched.delayF[i]);
 		}
-	}
+	//}
 }
 
 static int dm9051_irq_flag(struct board_info *db)
@@ -127,21 +126,20 @@ unsigned int dm9051_intcr_value(struct board_info *db)
 	return (dm9051_irq_flag(db) == IRQF_TRIGGER_LOW || dm9051_irq_flag(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
 }
 
-void INIT_RX_DELAY_SETUP(int cint, struct board_info *db)
+void INIT_RX_DELAY_SETUP(struct board_info *db)
 {
 	#ifdef INT_TWO_STEP
-	if (cint)
-		INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_servicep);
+	//if (cint)
+	INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_servicep);
 	#endif //INT_TWO_STEP
 }
 
-int INIT_REQUEST_IRQ(int cint, struct net_device *ndev)
+int INIT_REQUEST_IRQ(struct net_device *ndev)
 {
-	int ret = 0;
-
-	if (cint) {
+	struct board_info *db = to_dm9051_board(ndev);
+	int ret;
+	//if (cint) {
 	#ifdef INT_TWO_STEP
-		struct board_info *db = to_dm9051_board(ndev);
 		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_int2_delay,
 									dm9051_irq_flag(db) | IRQF_ONESHOT,
 									ndev->name, db);
@@ -151,38 +149,37 @@ int INIT_REQUEST_IRQ(int cint, struct net_device *ndev)
 		if (ret < 0)
 			netdev_err(ndev, "failed to rx request irq setup\n");
 	#else //INT_TWO_STEP
-		struct board_info *db = to_dm9051_board(ndev);
 		ret = request_threaded_irq(ndev->irq, NULL, /*dm9051_rx_threaded_plat*/ /*dm9051_rx_int2_delay*/ dm9051_rx_threaded_plat,
 		 						   dm9051_irq_flag(db) | IRQF_ONESHOT,
 		 						   ndev->name, db);
 		if (ret < 0)
 			netdev_err(ndev, "failed to rx request threaded irq setup\n");
 	#endif //INT_TWO_STEP
-	}
+	//}
 	return ret;
 }
 
-void END_FREE_IRQ(int cint, struct net_device *ndev)
+void END_FREE_IRQ(struct net_device *ndev)
 {
-	if (cint)
-	{
-		struct board_info *db = to_dm9051_board(ndev);
-		free_irq(db->spidev->irq, db);
-		printk("_stop [free irq %d]\n", db->spidev->irq);
-	}
+	//if (cint)
+	//{
+	struct board_info *db = to_dm9051_board(ndev);
+	free_irq(db->spidev->irq, db);
+	printk("_stop [free irq %d]\n", db->spidev->irq);
+	//}
 }
 
-void INIT_RX_POLL_DELAY_SETUP(int cpoll, struct board_info *db)
+void INIT_RX_POLL_DELAY_SETUP(struct board_info *db)
 {
-	if (cpoll)
-		/* schedule delay work */
-		INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp); //.dm9051_poll_delay_plat()
+	//if (cpoll)
+	/* schedule delay work */
+	INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp); //.dm9051_poll_delay_plat()
 }
 
-void INIT_RX_POLL_SCHED_DELAY(int cpoll, struct board_info *db)
+void INIT_RX_POLL_SCHED_DELAY(struct board_info *db)
 {
-	if (cpoll)
-		schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
+	//if (cpoll)
+	schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
 }
 
 /*

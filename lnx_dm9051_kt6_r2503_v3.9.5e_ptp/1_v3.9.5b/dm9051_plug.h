@@ -86,7 +86,6 @@ enum
   #else
   #define dmplug_intterrpt2 "interrupt direct trigger"
   #endif
-  //".DMPLUG_INT"
 #else
 #define dmplug_interrupt MODE_POLL
 #define dmplug_intterrpt_des "poll mode"
@@ -133,13 +132,8 @@ struct driver_config
 };
 const struct driver_config confdata = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-	.interrupt = dmplug_interrupt, //as 
-	 /* dmplug_interrupt =
-	  * MODE_POLL, 
-	  * MODE_INTERRUPT or 
-	  * MODE_INTERRUPT_CLKOUT */
+	//.interrupt = dmplug_interrupt,
 };
-const struct driver_config *drvdata = &confdata;
 #else
 //.
 #endif
@@ -172,20 +166,24 @@ extern const struct eng_sched csched;
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb); //used in the plug section
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
 
+#ifndef DMPLUG_INT //NOT DMPLUG_INT =POLL
+void dm9051_irq_delayp(struct work_struct *work); //.dm9051_poll_delay_plat()
+#endif
+
 /*
  * Interrupt: 
  */
 
-void SHOW_POLL_MODE(int cint, struct spi_device *spi);
-void SHOW_INT_MODE(int cint, struct spi_device *spi);
+void SHOW_INT_MODE(struct spi_device *spi);
+void SHOW_POLL_MODE(struct spi_device *spi);
 
 unsigned int dm9051_intcr_value(struct board_info *db);
-void INIT_RX_DELAY_SETUP(int cint, struct board_info *db);
-int INIT_REQUEST_IRQ(int cint, struct net_device *ndev);
-void END_FREE_IRQ(int cint, struct net_device *ndev);
+void INIT_RX_DELAY_SETUP(struct board_info *db);
+int INIT_REQUEST_IRQ(struct net_device *ndev);
+void END_FREE_IRQ(struct net_device *ndev);
 
-void INIT_RX_POLL_DELAY_SETUP(int cpoll, struct board_info *db);
-void INIT_RX_POLL_SCHED_DELAY(int cpoll, struct board_info *db);
+void INIT_RX_POLL_DELAY_SETUP(struct board_info *db);
+void INIT_RX_POLL_SCHED_DELAY(struct board_info *db);
 
 /*
  * Conti: 

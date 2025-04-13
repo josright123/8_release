@@ -334,10 +334,13 @@ struct board_info
 	struct work_struct rxctrl_work;
 	struct work_struct tx_work;
 
-	struct delayed_work irq_workp;
+	#ifdef DMPLUG_INT
 	#ifdef INT_TWO_STEP
 	struct delayed_work irq_servicep;
 	#endif //INT_TWO_STEP
+	#else
+	struct delayed_work irq_workp;
+	#endif
 
 	struct ethtool_pauseparam pause;
 	struct mutex spi_lockm;
@@ -374,9 +377,8 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 void dm9051_rx_irq_servicep(struct work_struct *work);
 /*static*/ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
 
-void dm9051_irq_delayp(struct work_struct *work); //.dm9051_poll_delay_plat()
-
 int dm9051_nsr_poll(struct board_info *db);
+int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 #ifdef MAIN_DATA
 /* Driver configuration structure */
