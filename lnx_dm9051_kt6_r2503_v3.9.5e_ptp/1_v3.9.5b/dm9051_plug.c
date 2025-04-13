@@ -48,23 +48,6 @@
 #endif
 #endif
 
-static int dm9051_irq_flag(struct board_info *db)
-{
-	struct spi_device *spi = db->spidev;
-	int irq_type = irq_get_trigger_type(spi->irq);
-
-	if (irq_type)
-		return irq_type;
-
-	return IRQF_TRIGGER_LOW;
-}
-
-//static 
-unsigned int dm9051_intcr_value(struct board_info *db)
-{
-	return (dm9051_irq_flag(db) == IRQF_TRIGGER_LOW || dm9051_irq_flag(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
-}
-
 #ifdef DMCONF_DIV_HLPR_32
 /* Implement the missing ARM EABI division helper */
 long long __aeabi_ldivmod(long long numerator, long long denominator)
@@ -109,28 +92,6 @@ void SHOW_INT_MODE(struct spi_device *spi)
 	#endif
 }
 
-void SHOW_POLL_MODE(struct spi_device *spi)
-{
-	int i;
-	dev_info(&spi->dev, "Operation: Polling mode\n"); //~intpin
-	dev_info(&spi->dev, "Operation: Polling operate count %d\n", csched.nTargetMaxNum);
-	for (i = 0; i < csched.nTargetMaxNum; i++)
-	{
-		dev_info(&spi->dev, "Operation: Polling operate delayF[%d]= %lu\n", i, csched.delayF[i]);
-	}
-}
-
-void INIT_RX_POLL_DELAY_SETUP(struct board_info *db)
-{
-	/* schedule delay work */
-	INIT_DELAYED_WORK(&db->irq_workp, dm9051_irq_delayp); //.dm9051_poll_delay_plat()
-}
-
-void INIT_RX_POLL_SCHED_DELAY(struct board_info *db)
-{
-	schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
-}
-
 void INIT_RX_INT2_DELAY_SETUP(struct board_info *db)
 {
 	#ifdef INT_TWO_STEP
@@ -144,16 +105,16 @@ int INIT_REQUEST_IRQ(struct net_device *ndev)
 	int ret;
 	#ifdef INT_TWO_STEP
 		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_int2_delay,
-									dm9051_irq_flag(db) | IRQF_ONESHOT,
+									get_dts_irqf(db) | IRQF_ONESHOT,
 									ndev->name, db);
 		//ret = request_irq(ndev->irq, dm9051_rx_int2_delay,
-		//							dm9051_irq_flag(db) | IRQF_ONESHOT,
+		//							get_dts_irqf(db) | IRQF_ONESHOT,
 		//							ndev->name, db);
 		if (ret < 0)
 			netdev_err(ndev, "failed to rx request irq setup\n");
 	#else //INT_TWO_STEP
 		ret = request_threaded_irq(ndev->irq, NULL, /*dm9051_rx_threaded_plat*/ /*dm9051_rx_int2_delay*/ dm9051_rx_threaded_plat,
-		 						   dm9051_irq_flag(db) | IRQF_ONESHOT,
+		 						   get_dts_irqf(db) | IRQF_ONESHOT,
 		 						   ndev->name, db);
 		if (ret < 0)
 			netdev_err(ndev, "failed to rx request threaded irq setup\n");

@@ -72,6 +72,17 @@ struct board_info
  * Info: 
  */
 
+int get_dts_irqf(struct board_info *db)
+{
+	struct spi_device *spi = db->spidev;
+	int irq_type = irq_get_trigger_type(spi->irq);
+
+	if (irq_type)
+		return irq_type;
+
+	return IRQF_TRIGGER_LOW;
+}
+
 const static char *linux_name[] = {
         "rsrv",
         "rsrv",
@@ -121,10 +132,6 @@ static void SHOW_OPTION_MODE(struct spi_device *spi)
 	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", econf->tx_timeout_us, dmplug_tx,
 			econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
 			econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
-	//dev_info(dev, "Check TX End: %llu\n", econf->tx_timeout_us);
-	//dev_info(dev, "DRVR= %s, %s\n",
-			 //econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
-			 //econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
 }
 
 static void SHOW_MONITOR_RXC(struct board_info *db)
@@ -893,8 +900,13 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 	return 0;
 }
 
-/* Function read:
+/* Functions:
  */
+
+static unsigned int dm9051_init_intcr_value(struct board_info *db)
+{
+	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || dm9051_irq_flag(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
+}
 
 static int dm9051_core_reset(struct board_info *db)
 {
@@ -959,7 +971,7 @@ static int dm9051_core_reset(struct board_info *db)
 	//_15888_
 	/*u32*/ rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
 	printk("Pre-RateReg value = 0x%08X\n", rate_reg);
-	return ret; /* ~return dm9051_set_reg(db, DM9051_INTCR, dm9051_intcr_value(db)) */
+	return ret; /* ~return dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db)) */
 }
 
 static void dm9051_reg_lock_mutex(void *dbcontext)
@@ -1405,10 +1417,7 @@ static int dm9051_all_start(struct board_info *db)
 	phy_start(db->phydev);
 	mutex_lock(&db->spi_lockm);
 
-	// printk("Set dm9051_irq_flag() %d, _TRIGGER_LOW %d, _TRIGGER_HIGH %d (start)\n",
-	//	   dm9051_irq_flag(db), IRQF_TRIGGER_LOW, IRQF_TRIGGER_HIGH);
-
-	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_intcr_value(db));
+	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
 	if (ret)
 		return ret;
 
@@ -1459,7 +1468,7 @@ static int dm9051_all_restart(struct board_info *db)
 	phy_start_aneg(db->phydev);
 	mutex_lock(&db->spi_lockm);
 
-	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_intcr_value(db));
+	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
 	if (ret)
 		return ret;
 
@@ -2011,7 +2020,7 @@ out_unlock:
 #define DM_TIMER_EXPIRE2 0
 #define DM_TIMER_EXPIRE3 0
 
-void dm9051_irq_delayp(struct work_struct *work) //.dm9051_poll_delay_plat()
+void dm9051_poll_servicep(struct work_struct *work) //.dm9051_poll_delay_plat()
 {
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
@@ -2050,7 +2059,7 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 	struct board_info *db = pw;
 
 	if (!thread_servicep_re_enter)
-		printk("_.eval   [dm9051_rx_int2_delay] first-enter %d\n", thread_servicep_re_enter++);
+		printk("_.eval   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++); //function
 
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
@@ -2062,7 +2071,7 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 	}
 	else {
 		if (thread_servicep_re_enter <= 10)
-			printk("_.eval   [dm9051_rx_int2_delay] re-enter %d\n", thread_servicep_re_enter++);
+			printk("_.eval   [%s] re-enter %d\n", __func__, thread_servicep_re_enter++);
 	}
 	return IRQ_HANDLED;
 }

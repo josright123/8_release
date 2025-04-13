@@ -368,14 +368,13 @@ struct board_info
 };
 #endif
 
+int get_dts_irqf(struct board_info *db);
+
 int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 			size_t len);
 int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);
 
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
-
-void dm9051_rx_irq_servicep(struct work_struct *work);
-/*static*/ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
 
 int dm9051_nsr_poll(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);

@@ -166,14 +166,15 @@ extern const struct eng_sched csched;
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb); //used in the plug section
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
 
-unsigned int dm9051_intcr_value(struct board_info *db);
-
 /*
  * Polling: 
  */
-#ifndef DMPLUG_INT //NOT DMPLUG_INT =POLL
+#ifdef DMPLUG_INT
+void dm9051_rx_irq_servicep(struct work_struct *work);
+irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
+#else //NOT DMPLUG_INT =POLL
 void SHOW_POLL_MODE(struct spi_device *spi);
-void dm9051_irq_delayp(struct work_struct *work); //.dm9051_poll_delay_plat()
+void dm9051_poll_servicep(struct work_struct *work); //.dm9051_poll_delay_plat()
 
 void INIT_RX_POLL_DELAY_SETUP(struct board_info *db);
 void INIT_RX_POLL_SCHED_DELAY(struct board_info *db);
