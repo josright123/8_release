@@ -2234,6 +2234,40 @@ static int dm9051_stop(struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	int ret;
 
+	ret = dm9051_all_stop(db);
+	if (ret)
+		return ret;
+
+	/* schedule delay work */
+	if (!dm9051_cmode_int)
+		cancel_delayed_work_sync(&db->irq_workp);
+	#ifdef INT_TWO_STEP
+	if (dm9051_cmode_int)
+		cancel_delayed_work_sync(&db->irq_servicep);
+	#endif //INT_TWO_STEP
+
+	flush_work(&db->tx_work);
+	flush_work(&db->rxctrl_work);
+
+	phy_stop(db->phydev);
+
+	/* when (threadedcfg.interrupt_supp == THREADED_INT) */
+	// END_RX_REQUEST_FREE(dm9051_cmode_int, ndev);
+	END_FREE_IRQ(dm9051_cmode_int, ndev);
+
+	netif_stop_queue(ndev);
+
+	skb_queue_purge(&db->txq);
+
+	return 0;
+}
+
+#if 0
+static int dm9051_stop(struct net_device *ndev)
+{
+	struct board_info *db = to_dm9051_board(ndev);
+	int ret;
+
 	mutex_lock(&db->spi_lockm);
 	ret = dm9051_all_stop(db);
 	mutex_unlock(&db->spi_lockm);
@@ -2269,6 +2303,7 @@ static int dm9051_stop(struct net_device *ndev)
 
 	return 0;
 }
+#endif
 
 /* event: play a schedule starter in condition
  */
