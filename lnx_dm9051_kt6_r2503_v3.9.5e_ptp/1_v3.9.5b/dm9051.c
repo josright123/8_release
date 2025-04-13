@@ -2251,10 +2251,10 @@ static int dm9051_stop(struct net_device *ndev)
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
 
-	#ifdef DMPLUG_PTP
-	/* 停止並釋放 PTP 時鐘資源 */
-	dm9051_ptp_stop(db);
-	#endif
+	// #ifdef DMPLUG_PTP
+	// /* 停止並釋放 PTP 時鐘資源 */
+	// dm9051_ptp_stop(db);
+	// #endif
 
 	mutex_lock(&db->spi_lockm);
 	phy_stop(db->phydev);
