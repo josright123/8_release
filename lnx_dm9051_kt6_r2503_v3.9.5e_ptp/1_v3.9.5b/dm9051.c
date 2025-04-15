@@ -680,16 +680,16 @@ char *get_log_addr(struct board_info *db)
 	//for () {
 	//}
 }
-void show_log_addr(struct board_info *db)
+static void show_log_addr(char *head, struct board_info *db)
 {
 	if (db->automdix_log[0][0]) {
 		printk("\n");
-		printk("%s\n", &db->automdix_log[0][1]);
+		printk("<%s> %s\n", head, &db->automdix_log[0][1]);
 	}
 	if (db->automdix_log[1][0])
-		printk("%s\n", &db->automdix_log[1][1]);
+		printk("<%s> %s\n", head, &db->automdix_log[1][1]);
 	if (db->automdix_log[2][0])
-		printk("%s\n", &db->automdix_log[2][1]);
+		printk("<%s> %s\n", head, &db->automdix_log[2][1]);
 }
 
 // dm9051_phyread.EXTEND
@@ -709,8 +709,8 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 		{
 			/* link change to up */
 			if (!(bmsr & BIT(2)) && (*val & BIT(2))) {
-				if (!db->stop_automdix_flag)
-					show_log_addr(db);
+				//.if (!db->stop_automdix_flag)
+				show_log_addr("link", db);
 				printk("<from_phylib. on %02u to %02u, found reach link\n", db->stop_automdix_flag, db->n_automdix);
 			}
 
@@ -771,10 +771,10 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 				
 				if (vval) {
 					if (!db->stop_automdix_flag)
-						show_log_addr(db);
+						show_log_addr("lpa", db);
 
-					//db->stop_automdix_flag = 1; //.
 					printk("<from_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> stop automdix\n", db->stop_automdix_flag, db->n_automdix, vval);
+					//db->stop_automdix_flag = 1; //.
 					db->stop_automdix_flag = db->n_automdix; //.
 				}
 
@@ -803,10 +803,9 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 						return ret;
 
 					p = get_log_addr(db);
-					sprintf(p, "from_phylib. %02u _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]", db->n_automdix, 20, db->mdi);
-					//set_log_addr(db, p);
+					sprintf(p, "from_phylib. %02u _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]", db->n_automdix, 20, db->mdi); //= set_log_addr(db, p, ...);
 					if (db->n_automdix <= TOGG_TOT_SHOW)
-						printk("%s\n", p); //printk("from_phylib. %02u _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]\n", db->n_automdix, 20, db->mdi);
+						printk("<now> %s\n", p);
 
 					ret = dm9051_phyread(db, 20, &vval);
 					if (ret)
@@ -816,6 +815,7 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 				}
 				break;
 			} else {
+				printk("[same] linking clear log...");
 				db->n_automdix = 0; //log-reset
 				db->stop_automdix_flag = 0;
 				db->automdix_log[0][0] = 0;
@@ -2212,9 +2212,9 @@ static int dm9051_stop(struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	int ret;
 
-	mutex_lock(&db->spi_lockm);
+//	mutex_lock(&db->spi_lockm);
 	ret = dm9051_all_stop(db);
-	mutex_unlock(&db->spi_lockm);
+//	mutex_unlock(&db->spi_lockm);
 	if (ret)
 		return ret;
 
@@ -2230,9 +2230,9 @@ static int dm9051_stop(struct net_device *ndev)
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
 
-	mutex_lock(&db->spi_lockm);
+//	mutex_lock(&db->spi_lockm);
 	phy_stop(db->phydev);
-	mutex_unlock(&db->spi_lockm);
+//	mutex_unlock(&db->spi_lockm);
 
 	#ifdef DMPLUG_INT
 	/* when (threadedcfg.interrupt_supp == THREADED_INT) */
