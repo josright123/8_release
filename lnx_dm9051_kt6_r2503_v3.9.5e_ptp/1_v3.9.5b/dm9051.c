@@ -564,80 +564,85 @@ static int dm9051_phywrite(void *context, unsigned int reg, unsigned int val)
 }
 
 // dm9051_phyread.EXTEND
-static int dm9051_phyread_log_reset(struct board_info *db,
-									unsigned int reg)
-{
-	unsigned int val;
-	int ret = dm9051_phyread(db, reg, &val);
-	if (ret)
-	{
-		printk("_reset [_core_reset] dm9051_phyread(%u), ret = %d (ERROR)\n", reg, ret);
-		return ret;
-	}
-	printk("_reset [_core_reset] dm9051_phyread(%u), %04x\n", reg, val);
-	return ret;
-}
+//static int dm9051_phyread_log_reset(struct board_info *db,
+//									unsigned int reg)
+//{
+//	unsigned int val;
+//	int ret = dm9051_phyread(db, reg, &val);
+//	if (ret)
+//	{
+//		printk("_reset [_core_reset] dm9051_phyrd(%u), ret = %d (ERROR)\n", reg, ret);
+//		return ret;
+//	}
+//	printk("_reset [_core_reset] dm9051_phyrd(%u), %04x\n", reg, val);
+//	return ret;
+//}
 
 // dm9051_phyread.EXTEND
-static int dm9051_phyread_log_dscsr(struct board_info *db,
-									unsigned int reg)
+//static int dm9051_phyread_log_dscsr(struct board_info *db,
+//									unsigned int reg)
+//{
+//	unsigned int val;
+//	int ret = dm9051_phyread(db, reg, &val);
+//	if (ret)
+//	{
+//		printk("_reset [_core_reset] dm9051_phyrd(dscsr), ret = %d (ERROR)\n", ret);
+//		return ret;
+//	}
+//	printk("_reset [_core_reset] dm9051_phyrd(dscsr), %04x\n", val);
+
+//	if ((val & 0x01f0) == 0x0010)
+//	{
+//		printk("_reset [_core_reset] PHY addr DOES 1\n");
+//	}
+//	else
+//	{
+//		printk("_reset [_core_reset] PHY addr NOT 1 ?\n");
+
+//		/* write */
+//		printk("_reset [_core_reset] PHY addr SETTO 1\n");
+//		ret = dm9051_phywrite(db, reg, 0xf210); // register 17
+//		if (ret)
+//			return ret;
+
+//		ret = dm9051_phyread(db, reg, &val);
+//		if (ret)
+//		{
+//			printk("_reset [_core_reset] dm9051_phyrd-2(dscsr), ret = %d (ERROR)\n", ret);
+//			return ret;
+//		}
+//		printk("_reset [_core_reset] dm9051_phyrd-2(dscsr), %04x\n", val);
+//		if ((val & 0x01f0) == 0x0010)
+//		{
+//			printk("_reset [_core_reset] PHY addr DOES 1 [workaround fixed]\n");
+//		}
+//		else
+//		{
+//			printk("_reset [_core_reset] PHY addr NOT 1 ? [second time]\n");
+//		}
+//	}
+
+//	return ret;
+//}
+
+//static int PHY_LOG(struct board_info *db)
+//{
+//	int ret = dm9051_phyread_log_reset(db, 0);
+//	if (ret)
+//		return ret;
+//	ret = dm9051_phyread_log_reset(db, 3);
+//	if (ret)
+//		return ret;
+//	ret = dm9051_phyread_log_dscsr(db, 17);
+//	if (ret)
+//		return ret;
+
+//	return 0;
+//}
+
+static int PHY_RST(struct board_info *db)
 {
-	unsigned int val;
-	int ret = dm9051_phyread(db, reg, &val);
-	if (ret)
-	{
-		printk("_reset [_core_reset] dm9051_phyread(dscsr), ret = %d (ERROR)\n", ret);
-		return ret;
-	}
-	printk("_reset [_core_reset] dm9051_phyread(dscsr), %04x\n", val);
-
-	if ((val & 0x01f0) == 0x0010)
-	{
-		printk("_reset [_core_reset] PHY addr DOES 1\n");
-	}
-	else
-	{
-		printk("_reset [_core_reset] PHY addr NOT 1 ?\n");
-
-		/* write */
-		printk("_reset [_core_reset] PHY addr SETTO 1\n");
-		ret = dm9051_phywrite(db, reg, 0xf210); // register 17
-		if (ret)
-			return ret;
-
-		ret = dm9051_phyread(db, reg, &val);
-		if (ret)
-		{
-			printk("_reset [_core_reset] dm9051_phyread-2(dscsr), ret = %d (ERROR)\n", ret);
-			return ret;
-		}
-		printk("_reset [_core_reset] dm9051_phyread-2(dscsr), %04x\n", val);
-		if ((val & 0x01f0) == 0x0010)
-		{
-			printk("_reset [_core_reset] PHY addr DOES 1 [workaround fixed]\n");
-		}
-		else
-		{
-			printk("_reset [_core_reset] PHY addr NOT 1 ? [second time]\n");
-		}
-	}
-
-	return ret;
-}
-
-static int PHY_LOG(struct board_info *db)
-{
-	int ret = dm9051_phyread_log_reset(db, 0);
-	if (ret)
-		return ret;
-	ret = dm9051_phyread_log_reset(db, 3);
-	if (ret)
-		return ret;
-	ret = dm9051_phyread_log_dscsr(db, 17);
-	if (ret)
-		return ret;
-
-	ret = dm9051_phywrite(db, 0, 0x8000);
+	int ret = dm9051_phywrite(db, 0, 0x8000);
 	if (ret)
 		return ret;
 
@@ -972,9 +977,18 @@ static int dm9051_core_reset(struct board_info *db)
 	dm9051_ncr_poll(db);
 
 	/* debug */
+#if 0
 	ret = PHY_LOG(db);
 	if (ret)
 		return ret;
+#endif
+
+#if 1
+	/* PHY reset */
+	ret = PHY_RST(db);
+	if (ret)
+		return ret;
+#endif
 
 	ret = BUS_SETUP(db); //reserved customization
 	if (ret)
@@ -2567,6 +2581,8 @@ netdev_info(db->phydev->attached_dev, "DO ALL_RESTART, link_change.mutex.in / li
 		}
 		dm9051_update_fcr(db);
 		//dev_info(&db->spidev->dev, "link_change.mutex.out / lpa on %02u n_automdix count on %02u, evaluation ptp_on: %d\n", db->stop_automdix_flag, db->n_automdix, db->ptp_on);
+
+//		dm9051_dump_registers(db);
 
 		dm9051_all_upstart(db);
 	}
