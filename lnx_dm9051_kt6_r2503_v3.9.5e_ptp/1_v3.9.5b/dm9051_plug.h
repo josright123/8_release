@@ -220,10 +220,6 @@ void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
 #warning "dm9051 DIV_HLPR_32"
 #endif
 
-#ifdef DMCONF_CHGPOWER_ALLOW
-#pragma message("dm9051 CHGPOWER_ALLOW")
-#endif
-
 #ifdef DMPLUG_CONTI
 #warning "dm9051 CONTI"
 #endif

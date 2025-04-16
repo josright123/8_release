@@ -16,7 +16,6 @@
  */
 /*#define DMCONF_DIV_HLPR_32 */	//(32-bit division helper, __aeabi_ldivmod())
 /*#define DMCONF_AARCH_64 */ //(64-bit OS)
-/*#define DMCONF_CHGPOWER_ALLOW */ //(Power chip)
 
 /* Macro for already known platforms
  */ 
@@ -28,11 +27,6 @@
 #define PLUG_CFG64
 #ifdef PLUG_CFG64
 #define DMCONF_AARCH_64 //(64-bit OS)
-#endif
-
-#define PLUG_CFG_CHGPOWER
-#ifdef PLUG_CFG_CHGPOWER
-#define DMCONF_CHGPOWER_ALLOW
 #endif
 
 /* Device identification */

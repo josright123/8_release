@@ -1411,8 +1411,6 @@ static int dm9051_all_start(struct board_info *db)
 	/* dm9051 chip registers could not be accessed within 1 ms
 	 * after GPR power on, delay 1 ms is essential
 	 */
-	#ifdef DMCONF_CHGPOWER_ALLOW
-	#endif
 	msleep(1);
 
 	ret = dm9051_core_reset(db);
