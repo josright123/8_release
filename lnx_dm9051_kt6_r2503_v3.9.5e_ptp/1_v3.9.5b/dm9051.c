@@ -2181,7 +2181,15 @@ static int dm9051_open(struct net_device *ndev)
 
 	ret = DM9051_OPEN_REQUEST(db);
 	if (ret < 0) {
+		#if MI_FIX
+		mutex_unlock(&db->spi_lockm);
+		#endif
+
 		phy_stop(db->phydev); //of 'dm9051_core_clear(db)' //
+
+		#if MI_FIX
+		mutex_lock(&db->spi_lockm);
+		#endif
 		goto open_end;
 	}
 
