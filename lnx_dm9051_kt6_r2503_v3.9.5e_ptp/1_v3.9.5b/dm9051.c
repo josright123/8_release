@@ -925,13 +925,6 @@ static int dm9051_core_reset(struct board_info *db)
 
 	dm9051_ncr_poll(db);
 
-	/* debug */
-#if 0
-	ret = PHY_LOG(db);
-	if (ret)
-		return ret;
-#endif
-
 #if 1
 	/* PHY reset */
 	ret = PHY_RST(db);
@@ -953,7 +946,7 @@ static int dm9051_core_reset(struct board_info *db)
 		return ret;
 
 	// Checksum Offload
-	printk("dm9051_set [write TX/RX checksum] wr 0x31 0x%02x wr 0x32 0x%02x, in dm9051_core_reset\n",
+	printk("dm9051_set [write TX/RX checksum] wr 0x31 0x%02x wr 0x32 0x%02x, in _core_reset\n",
 		db->csum_gen_val, db->csum_rcv_val);
 	ret = regmap_write(db->regmap_dm, 0x31, db->csum_gen_val);
 	if (ret)
@@ -969,23 +962,23 @@ static int dm9051_core_reset(struct board_info *db)
 	/* Diagnostic contribute: In dm9051_enable_interrupt()
 	 * (or located in the core reset subroutine is better!!)
 	 */
-	//if (dm9051_cmode_int == MODE_INTERRUPT_CLKOUT)
-	//{
 	#if defined(DMPLUG_INT) && defined(DMPLUG_INT_CLKOUT)
 		printk("_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		if (ret)
 			return ret;
 	#endif
-	//}
 
 #ifdef DMPLUG_PTP
+//#ifdef DMCONF_OPEN_EXTRA
+//#endif
 	if (db->ptp_on) {
 		//_15888_ 
 		u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
 		printk("Pre-RateReg value = 0x%08X\n", rate_reg);
 	}
 #endif
+
 	return ret; /* ~return dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db)) */
 }
 
@@ -1396,7 +1389,7 @@ static int dm9051_all_start(struct board_info *db)
 {
 	int ret;
 	
-	printk("dm9051_all_start\n");
+	printk("_all_start\n");
 
 	/* GPR power on of the internal phy
 	 */
@@ -1413,20 +1406,7 @@ static int dm9051_all_start(struct board_info *db)
 	 */
 	msleep(1);
 
-	ret = dm9051_core_reset(db);
-	if (ret)
-		return ret;
-
-	mutex_unlock(&db->spi_lockm);
-	phy_support_sym_pause(db->phydev);
-	phy_start(db->phydev);
-	mutex_lock(&db->spi_lockm);
-
-	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
-	if (ret)
-		return ret;
-
-	return dm9051_enable_interrupt(db);
+	return dm9051_core_reset(db);
 }
 
 static int dm9051_all_stop(struct board_info *db)
@@ -1496,7 +1476,7 @@ static int dm9051_all_restart(struct board_info *db)
 static int dm9051_all_upstart(struct board_info *db)
 {
 	int ret;
-	printk("dm9051_all_upstart\n");
+	printk("_all_upstart\n");
 
 	ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
 	if (ret)
@@ -1512,11 +1492,7 @@ static int dm9051_all_upstart(struct board_info *db)
 	if (ret)
 		return ret;
 
-	ret = dm9051_subconcl_and_rerxctrl(db);
-	if (ret)
-		return ret;
-
-	return 0;
+	return dm9051_subconcl_and_rerxctrl(db);
 }
 
 int dm9051_subconcl_and_rerxctrl(struct board_info *db)
@@ -2171,6 +2147,25 @@ static int dm9051_open(struct net_device *ndev)
 	if (ret)
 		goto open_end;
 
+	#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+	#endif
+
+	phy_support_sym_pause(db->phydev);
+	phy_start(db->phydev);
+
+	#if MI_FIX
+	mutex_lock(&db->spi_lockm);
+	#endif
+
+	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
+	if (ret)
+		return open_end;
+
+	ret = dm9051_enable_interrupt(db);
+	if (ret)
+		return open_end;
+
 //.	phy_support_sym_pause(db->phydev);
 //.	phy_start(db->phydev);
 
@@ -2185,8 +2180,10 @@ static int dm9051_open(struct net_device *ndev)
 	netif_wake_queue(ndev);
 
 	ret = DM9051_OPEN_REQUEST(db);
-	//if (ret < 0)
-	//	goto open_end;
+	if (ret < 0) {
+		phy_stop(db->phydev); //of 'dm9051_core_clear(db)' //
+		goto open_end;
+	}
 
 open_end:
 	printk("dm9051_open_end.done\n");
