@@ -11,6 +11,8 @@
 #include <linux/mii.h>
 #include <linux/module.h>
 #include <linux/utsname.h>
+#include <generated/utsrelease.h> // For newer kernels
+//#include <linux/utsrelease.h>      // For older kernels
 #include <linux/netdevice.h>
 #include <linux/phy.h>
 #include <linux/regmap.h>
@@ -19,13 +21,14 @@
 #include <linux/spi/spi.h>
 #include <linux/types.h>
 #include <linux/of.h>
+#include <linux/version.h>
 #define MAIN_DATA
 #include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
 #include "dm9051_plug.h"
 #include "dm9051_ptpd.h"
 
-#define KERNEL_BUILD_CONF	DM9051_KERNEL_6_6
+//#define KERNEL_BUILD_CONF	DM9051_KERNEL_6_6
 const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configuration */
 
 /* tX 'wb' do skb protect */
@@ -85,39 +88,36 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
-const static char *linux_name[] = {
-        "rsrv",
-        "rsrv",
-        "rsrv",
-        "rsrv",
-        "rsrv",
-        "DM9051_KERNEL_5_10",
-        "DM9051_KERNEL_5_15",
-        "DM9051_KERNEL_6_1",
-        "DM9051_KERNEL_6_6",
-        "UNKNOW",
-};
+//const static char *linux_name[] = {
+//        "rsrv",
+//        "rsrv",
+//        "rsrv",
+//        "rsrv",
+//        "rsrv",
+//        "DM9051_KERNEL_5_10",
+//        "DM9051_KERNEL_5_15",
+//        "DM9051_KERNEL_6_1",
+//        "DM9051_KERNEL_6_6",
+//        "UNKNOW",
+//};
 
 static void SHOW_CONFIG_MODE(struct spi_device *spi)
 {
 	struct device *dev = &spi->dev;
 
 	/* [dbg] spi.speed */
-	dev_info(dev, "Linux %s DM9051A\n", utsname()->release);
+//	dev_info(dev, "Linux %s DM9051A\n", utsname()->release);
 	do
 	{
 		unsigned int speed;
 		of_property_read_u32(spi->dev.of_node, "spi-max-frequency", &speed);
 		dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
-		#ifdef DMPLUG_INT
-		SHOW_INT_MODE(spi);
-		#else
-		SHOW_POLL_MODE(spi);
-		#endif
+		SHOW_MODE(spi);
 	} while (0);
 	printk("\n");
 	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
-	dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]); /* Driver configuration test_info */
+	dev_info(dev, "LXR: %s, BUILD: %s\n", utsname()->release, utsname()->release); //dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]); /* Driver configuration test_info */
+	dev_info(dev, "Kernel Version (compile-time): %s\n", UTS_RELEASE);
 #ifdef DMCONF_AARCH_64
 	dev_info(dev, "TX: %s blk %lu\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
 	dev_info(dev, "RX: %s blk %lu\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
@@ -522,7 +522,7 @@ static int dm9051_phyread(void *context, unsigned int reg, unsigned int *val)
 
 	ret = dm9051_epcr_poll(db);
 	if (ret) {
-		printk("timeout of dm9051_phyread %d %04x\n", reg, *val);
+		printk("timeout of dm9051_phyrd %d %04x\n", reg, *val);
 		return ret;
 	}
 
@@ -696,6 +696,9 @@ static void show_log_addr(char *head, struct board_info *db)
 static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 								   unsigned int reg, unsigned int *val)
 {
+	//strcpy(db->bc.head, "dm9051_mdio_read: bmsr.s");
+	//dm9051_dump_reg2s(db, 0x74, 0x75);
+
 	int ret = dm9051_phyread(db, reg, val);
 	if (ret)
 		return ret;
@@ -709,11 +712,19 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 		{
 			/* link change to up */
 			if (!(bmsr & BIT(2)) && (*val & BIT(2))) {
-				//.if (!db->stop_automdix_flag)
-				show_log_addr("link", db);
-				printk("<from_phylib. on %02u to %02u, found reach link\n", db->stop_automdix_flag, db->n_automdix);
+				//[show]
+				show_log_addr("link", db); //.if (!db->stop_automdix_flag).
+				//[message]
+				printk("<from_phylib. on %02u to %02u, current[bmsr] %04x>, found reach link\n", db->stop_automdix_flag, db->n_automdix, *val);
+				//[clear]
+				printk("[link] clear log...");
+				db->n_automdix = 0; //log-reset
+				db->stop_automdix_flag = 0;
+				db->automdix_log[0][0] = 0;
+				db->automdix_log[1][0] = 0;
+				db->automdix_log[2][0] = 0;
 			}
-
+			/* updation save */
 			bmsr = *val;
 		}
 		else
@@ -814,13 +825,6 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 					/*if (db->n_automdix <= TOGG_TOT_SHOW) printk("%02u _mdio_read.[_AutoMDIX_], phyreg %d [val] %04x\n", db->n_automdix, addr, vval);*/
 				}
 				break;
-			} else {
-				printk("[same] linking clear log...");
-				db->n_automdix = 0; //log-reset
-				db->stop_automdix_flag = 0;
-				db->automdix_log[0][0] = 0;
-				db->automdix_log[1][0] = 0;
-				db->automdix_log[2][0] = 0;
 			}
 		}
 	} while (0);
@@ -882,7 +886,7 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 		if (regnum == 0)
 		{
 			if (val & 0x800) {
-				printk("\n");
+				//printk("\n");
 				printk("_[mii_bus] mdio write : power down (warn)\n");
 			}
 
@@ -957,7 +961,6 @@ static unsigned int dm9051_init_intcr_value(struct board_info *db)
 
 static int dm9051_core_reset(struct board_info *db)
 {
-	u32 rate_reg;
 	int ret;
 
 	printk("dm9051_core_reset\n");
@@ -1015,9 +1018,13 @@ static int dm9051_core_reset(struct board_info *db)
 	#endif
 	//}
 
-	//_15888_
-	/*u32*/ rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
-	printk("Pre-RateReg value = 0x%08X\n", rate_reg);
+#ifdef DMPLUG_PTP
+	if (db->ptp_on) {
+		//_15888_ 
+		u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
+		printk("Pre-RateReg value = 0x%08X\n", rate_reg);
+	}
+#endif
 	return ret; /* ~return dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db)) */
 }
 
@@ -1218,18 +1225,9 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 	{
 		eth_hw_addr_random(ndev);
 
-		/* [ndev->dev_addr[0] = 0x00; ndev->dev_addr[1] = 0x60; ndev->dev_addr[2] = 0x6e;] */
-		// #if KERNEL_BUILD_CONF < DM9051_KERNEL_6_1
-		//		ether_addr_copy(ndev->dev_addr, addr);
-		// #else
-		//		eth_hw_addr_set(ndev, addr);
-		// #endif
-
-//#if KERNEL_BUILD_CONF < DM9051_KERNEL_6_1
+		//#if LINUX_VERSION_CODE < KERNEL_VERSION(6,1,0)//#endif
+		//#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,1,0)//#endif
 		ether_addr_copy(addr, ndev->dev_addr);
-//#else
-		//eth_hw_addr_set(addr, //ndev);
-//#endif
 		addr[0] = 0x00;
 		addr[1] = 0x60;
 		addr[2] = 0x6e;
@@ -1242,12 +1240,11 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 				 addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	}
 
-#if KERNEL_BUILD_CONF < DM9051_KERNEL_6_1
-	ether_addr_copy(ndev->dev_addr, addr);
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,1,0)
 	eth_hw_addr_set(ndev, addr);
+#else
+	ether_addr_copy(ndev->dev_addr, addr);
 #endif
-	//eth_hw_addr_set(ndev, addr); //ether_addr_copy(ndev->dev_addr, addr);
 
 	dev_info(&db->spidev->dev, "Power-on chip MAC address.e: %02x:%02x:%02x:%02x:%02x:%02x\n",
 			 addr[0], addr[1], addr[2],
@@ -2016,16 +2013,16 @@ static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 //	return result;
 //}
 
-static void dm9051_rx_plat_loop(struct board_info *db)
-{
-	int ret;
+//static void dm9051_rx_plat_loop(struct board_info *db)
+//{
+//	int ret;
 
-	ret = dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
-	if (ret < 0)
-		return;
+//	ret = dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
+//	if (ret < 0)
+//		return;
 
-	dm9051_enable_interrupt(db); //"dm9051_rx_plat_enable(struct board_info *db)"
-}
+//	dm9051_enable_interrupt(db); //"dm9051_rx_plat_enable(struct board_info *db)"
+//}
 
 /* Interrupt: Interrupt work */
 
@@ -2045,7 +2042,12 @@ static void dm9051_rx_int2_plat(int voidirq, void *pw) //.dm9051_(macro)_rx_tx_p
 	if (result)
 		goto out_unlock;
 
-	dm9051_rx_plat_loop(db);
+	//.dm9051_rx_plat_loop(db);
+	result = dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
+	if (result < 0)
+		goto out_unlock;
+
+	dm9051_enable_interrupt(db);
 #else //[TEMP.]	
 	//result = dm9051_clear_interrupt(db);
 	//if (result)
@@ -2090,7 +2092,7 @@ void dm9051_poll_servicep(struct work_struct *work) //.dm9051_poll_delay_plat()
 #endif
 
 int thread_servicep_done = 1;
-int thread_servicep_re_enter = 0;
+int thread_servicep_re_enter;
 
 #ifdef INT_TWO_STEP
 void dm9051_rx_irq_servicep(struct work_struct *work) //optional: INT: TWO_STEP SRVEICE
@@ -2108,7 +2110,7 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 	struct board_info *db = pw;
 
 	if (!thread_servicep_re_enter)
-		printk("_.eval   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++); //function
+		printk("_.int2   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++); //function
 
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
@@ -2120,7 +2122,7 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 	}
 	else {
 		if (thread_servicep_re_enter <= 10)
-			printk("_.eval   [%s] re-enter %d\n", __func__, thread_servicep_re_enter++);
+			printk("_.int2   [%s] re-enter %d\n", __func__, thread_servicep_re_enter++);
 	}
 	return IRQ_HANDLED;
 }
@@ -2129,7 +2131,7 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 {
 	if (!thread_servicep_re_enter)
-		printk("_.eval   [dm9051_rx_threaded_plat] first-enter %d\n", thread_servicep_re_enter++);
+		printk("_.int   [dm9051_rx_threaded_plat] first-enter %d\n", thread_servicep_re_enter++);
 		
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
@@ -2137,7 +2139,7 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 		dm9051_rx_int2_plat(voidirq, pw); //.dm9051_(macro)_rx_tx_plat()
 		thread_servicep_done = 1;
 	} else {
-		printk("_.eval   [dm9051_rx_threaded_plat] re-enter %d\n", thread_servicep_re_enter++);
+		printk("_.int   [dm9051_rx_threaded_plat] re-enter %d\n", thread_servicep_re_enter++);
 	}
 	return IRQ_HANDLED;
 }
@@ -2153,17 +2155,19 @@ static int dm9051_open(struct net_device *ndev)
 	struct spi_device *spi = db->spidev;
 	int ret;
 	
-	printk("dm9051_open\n");
+	printk("\n");
+//	dev_info(&spi->dev, "dm9051_open\n");//.
+//	dev_info(&spi->dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);//.
+	netdev_info(db->phydev->attached_dev, "dm9051_open\n");
+	netdev_info(db->phydev->attached_dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);
 
 	db->imr_all = IMR_PAR | IMR_PRM;
 	db->lcr_all = LMCR_MODE1;
 	//db->rctl.rcr_all = RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN;
-	//_15888_
-	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN;		//Disable discard CRC error
+	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)
 	memset(db->rctl.hash_table, 0, sizeof(db->rctl.hash_table));
 
 	ndev->irq = spi->irq; /* by dts */
-
 //before [spi_lockm]
 
 
@@ -2199,6 +2203,7 @@ static int dm9051_open(struct net_device *ndev)
 	INIT_RX_POLL_SCHED_DELAY(db);
 	#endif
 
+printk("dm9051_open_end.done\n");
 	return 0;
 }
 
@@ -2210,7 +2215,11 @@ static int dm9051_open(struct net_device *ndev)
 static int dm9051_stop(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
+	struct spi_device *spi = db->spidev;
 	int ret;
+
+	dev_info(&spi->dev, "dm9051_stop\n");
+	printk("\n");
 
 //	mutex_lock(&db->spi_lockm);
 	ret = dm9051_all_stop(db);
@@ -2499,7 +2508,13 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
 
-dev_info(&db->spidev->dev, "link_change.mutex.in / evaluation\n");
+	#if MI_FIX
+	mutex_lock(&db->spi_lockm);
+	#endif
+printk("\n");
+printk("LOCK_MUTEX\n");
+
+//dev_info(&db->spidev->dev, "link_change.mutex.in / evaluation\n");
 	phy_print_status(db->phydev);
 
 	/* only write pause settings to mac. since mac and phy are integrated
@@ -2507,14 +2522,44 @@ dev_info(&db->spidev->dev, "link_change.mutex.in / evaluation\n");
 	 */
 	if (db->phydev->link)
 	{
+#if 1
+netdev_info(db->phydev->attached_dev, "DO ALL_RESTART, link_change.mutex.in / link-is-up do RST\n"); //dm9051_open
+#endif
 		if (db->phydev->pause)
 		{
 			db->pause.rx_pause = true;
 			db->pause.tx_pause = true;
 		}
 		dm9051_update_fcr(db);
+		//dev_info(&db->spidev->dev, "link_change.mutex.out / lpa on %02u n_automdix count on %02u, evaluation ptp_on: %d\n", db->stop_automdix_flag, db->n_automdix, db->ptp_on);
+		//dm9051_all_upstart(db);
+			do {
+				int ret;
+				printk("dm9051_all_upstart\n");
+
+			ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
+			if (ret)
+				break;
+
+			dm9051_ncr_poll(db);
+			
+				ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
+				if (ret)
+					break;
+
+				ret = dm9051_enable_interrupt(db);
+				if (ret)
+					break;
+
+				ret = dm9051_subconcl_and_rerxctrl(db);
+				if (ret)
+					break;
+			} while(0);
 	}
-dev_info(&db->spidev->dev, "link_change.mutex.out / lpa on %02u n_automdix count on %02u, evaluation ptp_on: %d\n", db->stop_automdix_flag, db->n_automdix, db->ptp_on);
+printk("UNLOCK_MUTEX\n");
+	#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+	#endif
 }
 
 /* phy connect as poll mode
@@ -2588,7 +2633,7 @@ static int dm9051_probe(struct spi_device *spi)
 
 	printk("\n");
 	dev_info(dev, "Davicom: %s", confdata.release_version);
-	dev_info(dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);
+	//dev_info(dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);
 	//dev_info(dev, "Davicom: confdata.interrupt= %s", confdata.interrupt);
 
 	SHOW_CONFIG_MODE(spi);
@@ -2627,13 +2672,14 @@ static int dm9051_probe(struct spi_device *spi)
 
 	#ifdef DMPLUG_PTP
 	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
+	//db->ptp_on = 1;
 	dm9051_ptp_init(db); //_15888_
 	#endif
 
 	return 0;
 }
 
-#if KERNEL_BUILD_CONF <= DM9051_KERNEL_5_10
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,0)
 static int dm9051_drv_remove(struct spi_device *spi)
 {
 	struct device *dev = &spi->dev;

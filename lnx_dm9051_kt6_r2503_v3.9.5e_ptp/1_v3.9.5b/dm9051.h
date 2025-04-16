@@ -262,6 +262,8 @@ struct rx_ctl_mach
 	u16 evaluate_rxb_counter;
 	int nRxcF;
 	u16 ndelayF;
+	
+	char head[62];
 };
 
 /**
@@ -379,6 +381,10 @@ struct board_info
 
 int get_dts_irqf(struct board_info *db);
 
+void dm9051_dump_reg2(struct board_info *db, unsigned int reg1, unsigned int reg2);
+void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+void dm9051_dump_reg3(struct board_info *db, unsigned int reg1, unsigned int reg2, unsigned int reg3);
+void dm9051_dump_registers(struct board_info *db);
 int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 			size_t len);
 int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);

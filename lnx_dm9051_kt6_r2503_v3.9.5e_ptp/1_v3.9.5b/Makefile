@@ -12,13 +12,14 @@
 #(call from kernel build system)
 obj-m	:=	dm9051a.o
 #dm9051a-objs := dm9051.o dm9051_poll.o
-dm9051a-objs := dm9051.o dm9051_plug.o dm9051_ptpd.o
-#dm9051a-objs := dm9051.o dm9051_poll.o dm9051_plug.o dm9051_ptpd.o
+#dm9051a-objs := dm9051.o dm9051_plug.o dm9051_ptpd.o
+dm9051a-objs := dm9051.o dm9051_open.o dm9051_ptpd.o
+#dm9051a-objs := dm9051.o dm9051_open.o dm9051_crypt.o dm9051_conti.o
+# ~dm9051_plug.o dm9051_poll.o
 #dm9051a-objs := dm9051.o dm9051_plug.o
 #dm9051a-objs := _dm9051_monitor.o
 #
 #dm9051a-objs := dm9051.o dm9051_ptp.o dm9051_proc.o
-#dm9051a-objs := dm9051.o dm9051_plug.o dm9051_crypt.o
 #dm9051a-objs := dm9051.o dm9051_ptp.o dm9051_proc.o dm9051_adv.o
 #else
 # MODULE_INSTALDIR ?= /lib/modules/$(shell uname -r)/kernel/drivers/net/usb
@@ -41,11 +42,32 @@ clean:
 	rm -rf *.o *~ core .depend .*.cmd *.mod.c .tmp_versions .*.o.d *.symvers *.order *.bak *.mod
 
 install:
+ins:
 	sudo insmod dm9051a.ko
 
 remove:
-	sudo ifconfig eth1 down
+rm:
 	sudo rmmod dm9051a
+#	sudo ifconfig eth1 down
+#	sudo rmmod dm9051a
+
+ls:
+	lsmod | grep dm9
+msg:
+	sudo dmesg
+rmmsg:
+	sudo dmesg -c
+
+down:
+	sudo ifconfig eth1 down
+up:
+	sudo ifconfig eth1 up
+if:
+	ifconfig eth1
+cat:
+	cat /proc/interrupts
+pin:
+	ping 192.168.6.1 -I eth1 -s 64
 
 first:
 	sudo ifconfig eth0 down

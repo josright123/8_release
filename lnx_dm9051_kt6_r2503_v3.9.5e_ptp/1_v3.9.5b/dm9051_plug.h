@@ -50,7 +50,7 @@
 #define DMPLUG_PTP //(ptp 1588)
 #endif
 
-#define PLUG_ENABLE_INT
+//#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT 39)
 #endif
@@ -166,6 +166,10 @@ extern const struct eng_sched csched;
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb); //used in the plug section
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
 
+//void SHOW_INT_MODE(struct spi_device *spi);
+//void SHOW_POLL_MODE(struct spi_device *spi);
+void SHOW_MODE(struct spi_device *spi); //BOTH, #ifdef DMPLUG_INT #else/#endif
+
 /*
  * Polling: 
  */
@@ -173,7 +177,6 @@ int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); /
 void dm9051_rx_irq_servicep(struct work_struct *work);
 irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
 #else //NOT DMPLUG_INT =POLL
-void SHOW_POLL_MODE(struct spi_device *spi);
 void dm9051_poll_servicep(struct work_struct *work); //.dm9051_poll_delay_plat()
 
 void INIT_RX_POLL_DELAY_SETUP(struct board_info *db);
@@ -183,8 +186,6 @@ void INIT_RX_POLL_SCHED_DELAY(struct board_info *db);
 /*
  * Interrupt: 
  */
-
-void SHOW_INT_MODE(struct spi_device *spi);
 
 void INIT_RX_INT2_DELAY_SETUP(struct board_info *db);
 int INIT_REQUEST_IRQ(struct net_device *ndev);
