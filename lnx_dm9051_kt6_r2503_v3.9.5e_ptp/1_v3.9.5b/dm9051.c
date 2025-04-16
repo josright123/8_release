@@ -1450,6 +1450,8 @@ static int dm9051_all_start(struct board_info *db)
 	/* dm9051 chip registers could not be accessed within 1 ms
 	 * after GPR power on, delay 1 ms is essential
 	 */
+	#ifdef DMCONF_CHGPOWER_ALLOW
+	#endif
 	msleep(1);
 
 	ret = dm9051_core_reset(db);
@@ -1496,6 +1498,7 @@ static int dm9051_all_stop(struct board_info *db)
  */
 static int dm9051_all_restart(struct board_info *db)
 {
+	struct net_device *ndev = db->ndev;
 	int ret;
 
 //	mutex_unlock(&db->spi_lockm);
@@ -1511,6 +1514,13 @@ static int dm9051_all_restart(struct board_info *db)
 	phy_start_aneg(db->phydev);
 	mutex_lock(&db->spi_lockm);
 
+	printk("dm9.Show rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+		   db->bc.status_err_counter + db->bc.large_err_counter,
+		   db->bc.fifo_rst_counter);
+	netdev_dbg(ndev, " rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+			   db->bc.status_err_counter + db->bc.large_err_counter,
+			   db->bc.fifo_rst_counter);
+
 	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
 	if (ret)
 		return ret;
@@ -1522,17 +1532,37 @@ static int dm9051_all_restart(struct board_info *db)
 	return dm9051_subconcl_and_rerxctrl(db);
 }
 
+/* linkup to reset while rx error found
+ */
+static int dm9051_all_upstart(struct board_info *db)
+{
+	int ret;
+	printk("dm9051_all_upstart\n");
+
+	ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
+	if (ret)
+		return ret;
+
+	dm9051_ncr_poll(db);
+
+	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
+	if (ret)
+		return ret;
+
+	ret = dm9051_enable_interrupt(db);
+	if (ret)
+		return ret;
+
+	ret = dm9051_subconcl_and_rerxctrl(db);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
 int dm9051_subconcl_and_rerxctrl(struct board_info *db)
 {
-	struct net_device *ndev = db->ndev;
 	int ret;
-
-	printk("dm9.Show rxstatus_Er & rxlen_Er %d, RST_c %d\n",
-		   db->bc.status_err_counter + db->bc.large_err_counter,
-		   db->bc.fifo_rst_counter);
-	netdev_dbg(ndev, " rxstatus_Er & rxlen_Er %d, RST_c %d\n",
-			   db->bc.status_err_counter + db->bc.large_err_counter,
-			   db->bc.fifo_rst_counter);
 
 	ret = dm9051_set_recv(db);
 	if (ret)
@@ -2532,29 +2562,8 @@ netdev_info(db->phydev->attached_dev, "DO ALL_RESTART, link_change.mutex.in / li
 		}
 		dm9051_update_fcr(db);
 		//dev_info(&db->spidev->dev, "link_change.mutex.out / lpa on %02u n_automdix count on %02u, evaluation ptp_on: %d\n", db->stop_automdix_flag, db->n_automdix, db->ptp_on);
-		//dm9051_all_upstart(db);
-			do {
-				int ret;
-				printk("dm9051_all_upstart\n");
 
-			ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
-			if (ret)
-				break;
-
-			dm9051_ncr_poll(db);
-			
-				ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
-				if (ret)
-					break;
-
-				ret = dm9051_enable_interrupt(db);
-				if (ret)
-					break;
-
-				ret = dm9051_subconcl_and_rerxctrl(db);
-				if (ret)
-					break;
-			} while(0);
+		dm9051_all_upstart(db);
 	}
 printk("UNLOCK_MUTEX\n");
 	#if MI_FIX
