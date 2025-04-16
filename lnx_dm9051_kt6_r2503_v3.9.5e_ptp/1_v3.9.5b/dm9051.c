@@ -731,68 +731,30 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 		}
 		else
 		{
-			if (*val == 0xffff)
-			{
-				ret = dm9051_phyread(db, 2, &vval);
-				if (ret)
-					return ret;
-				printk("_mdio_read.PHYID1[_check_], phyaddr %d [PHYID1] %04x\n", addr, vval);
-				
-				if (vval != 0x0181) {
-					printk("_mdio_read.PHYID1[NOT 0x0181] fail!\n");
-
-					printk("PHY_Off/PHY_On\n");
-					ret = dm9051_set_reg(db, DM9051_GPCR, GPCR_GEP_CNTL);
-					if (ret)
-						return ret;
-					ret = dm9051_set_reg(db, DM9051_GPR, GPR_PHY_OFF);
-					if (ret)
-						return ret;
-					return dm9051_set_reg(db, DM9051_GPR, 0);
-				}
-			}
-			if (*val == 0)
-			{
-				ret = dm9051_phyread(db, 2, &vval);
-				if (ret)
-					return ret;
-				printk("_mdio_read.PHYID1[_check_], phyaddr %d [PHYID1] %04x\n", addr, vval);
-				
-				if (vval != 0x0181) {
-					printk("_mdio_read.PHYID1[NOT 0x0181] fail!\n");
-
-					printk("PHY_Off/PHY_On\n");
-					ret = dm9051_set_reg(db, DM9051_GPCR, GPCR_GEP_CNTL);
-					if (ret)
-						return ret;
-					ret = dm9051_set_reg(db, DM9051_GPR, GPR_PHY_OFF);
-					if (ret)
-						return ret;
-					return dm9051_set_reg(db, DM9051_GPR, 0);
-				}
-			}
 			if (!(*val & BIT(2))) {
 				//static unsigned int n_automdix = 0;
 				//static unsigned int mdi = 0x0830;
 				//#define TOGG_INTVL		1
 				//#define TOGG_TOT_SHOW	5
 				db->n_automdix++;
+				
+				if (db->stop_automdix_flag) {
+					//printk("<conti_phyl. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> stop automdix\n", db->stop_automdix_flag, db->n_automdix, vval);
+					printk("<conti_phylib. on %02u to %02u, current[bmsr] %04x> stop automdix\n", db->stop_automdix_flag, db->n_automdix, *val);
+					//sprintf(db->bc.head, "%2d", db->n_automdix);
+					//dm9051_dump_reg2s(db, 0x74, 0x75);
+					break;
+				}
 
 				ret = dm9051_phyread(db, 5, &vval);
 				if (ret)
 					return ret;
 				
 				if (vval) {
-					if (!db->stop_automdix_flag)
-						show_log_addr("lpa", db);
-
-					printk("<from_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> stop automdix\n", db->stop_automdix_flag, db->n_automdix, vval);
-					//db->stop_automdix_flag = 1; //.
-					db->stop_automdix_flag = db->n_automdix; //.
+					printk("<from_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> STOPPING... automdix\n", db->stop_automdix_flag, db->n_automdix, vval);
+					db->stop_automdix_flag = db->n_automdix; //db->stop_automdix_flag = 1; //.
+//					break; //(STOP avoid below possible more once toggle...)
 				}
-
-				if (db->stop_automdix_flag)
-					break;
 
 				if (!(db->n_automdix % TOGG_INTVL)) {
 					char *p;
@@ -805,26 +767,13 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 					if (db->n_automdix <= TOGG_TOT_SHOW 
 						&& !(*val & BIT(6))) printk("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", addr, *val);
 
-					/*ret = dm9051_phyread(db, 2, &vval);*/
-					/*if (ret)
-						return ret;*/
-
-					/*if (db->n_automdix <= TOGG_TOT_SHOW) printk("_mdio_read.PHYID1[_check_], phyaddr %d [PHYID1] %04x\n", addr, vval);*/
-
 					ret = dm9051_phywrite(db, 20, db->mdi);
 					if (ret)
 						return ret;
 
+					/* store to showlist */
 					p = get_log_addr(db);
 					sprintf(p, "from_phylib. %02u _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]", db->n_automdix, 20, db->mdi); //= set_log_addr(db, p, ...);
-					if (db->n_automdix <= TOGG_TOT_SHOW)
-						printk("<now> %s\n", p);
-
-					ret = dm9051_phyread(db, 20, &vval);
-					if (ret)
-						return ret;
-
-					/*if (db->n_automdix <= TOGG_TOT_SHOW) printk("%02u _mdio_read.[_AutoMDIX_], phyreg %d [val] %04x\n", db->n_automdix, addr, vval);*/
 				}
 				break;
 			}
