@@ -156,6 +156,7 @@ int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); /
 //void SHOW_INT_MODE(struct spi_device *spi);
 //void SHOW_POLL_MODE(struct spi_device *spi);
 void SHOW_MODE(struct spi_device *spi); //BOTH, #ifdef DMPLUG_INT #else/#endif
+int DM9051_OPEN_REQUEST(struct board_info *db);
 
 /*
  * Polling: 

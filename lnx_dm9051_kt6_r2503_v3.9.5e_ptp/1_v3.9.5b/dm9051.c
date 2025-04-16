@@ -2186,15 +2186,9 @@ static int dm9051_open(struct net_device *ndev)
 
 	netif_wake_queue(ndev);
 
-	#ifdef DMPLUG_INT
-	/* interrupt work */
-	ret = INIT_REQUEST_IRQ(ndev);
-	if (ret < 0)
-		goto open_end;
-	#else
-	/* Or schedule delay work */
-	INIT_RX_POLL_SCHED_DELAY(db);
-	#endif
+	ret = DM9051_OPEN_REQUEST(db);
+	//if (ret < 0)
+	//	goto open_end;
 
 open_end:
 	printk("dm9051_open_end.done\n");
