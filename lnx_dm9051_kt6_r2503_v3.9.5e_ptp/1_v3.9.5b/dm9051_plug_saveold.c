@@ -81,20 +81,6 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
  * Interrupt: 
  */
 
-void SHOW_INT_MODE(struct spi_device *spi)
-{
-	//if (cint)
-	//{
-		unsigned int intdata[2];
-		of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-		dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
-		dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
-		#ifdef INT_TWO_STEP
-		dev_info(&spi->dev, "Interrupt: Two_step\n");
-		#endif
-	//}
-}
-
 void INIT_RX_INT2_DELAY_SETUP(struct board_info *db)
 {
 	#ifdef INT_TWO_STEP

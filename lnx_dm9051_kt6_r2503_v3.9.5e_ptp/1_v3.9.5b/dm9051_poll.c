@@ -22,21 +22,6 @@
 #include "dm9051.h"
 #include "dm9051_plug.h"
 
-//#ifdef DMCONF_DIV_HLPR_32
-//#warning "dm9051 DIV_HLPR_32"
-//#endif
-
-void SHOW_POLL_MODE(struct spi_device *spi)
-{
-	int i;
-	dev_info(&spi->dev, "Operation: Polling mode\n"); //~intpin
-	dev_info(&spi->dev, "Operation: Polling operate count %d\n", csched.nTargetMaxNum);
-	for (i = 0; i < csched.nTargetMaxNum; i++)
-	{
-		dev_info(&spi->dev, "Operation: Polling operate delayF[%d]= %lu\n", i, csched.delayF[i]);
-	}
-}
-
 void INIT_RX_POLL_DELAY_SETUP(struct board_info *db)
 {
 	/* schedule delay work */

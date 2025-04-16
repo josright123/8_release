@@ -696,9 +696,6 @@ static void show_log_addr(char *head, struct board_info *db)
 static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 								   unsigned int reg, unsigned int *val)
 {
-	//strcpy(db->bc.head, "dm9051_mdio_read: bmsr.s");
-	//dm9051_dump_reg2s(db, 0x74, 0x75);
-
 	int ret = dm9051_phyread(db, reg, val);
 	if (ret)
 		return ret;
@@ -878,7 +875,8 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 			return 0;
 
 		if (mdio_write_count <= 15)
-			printk("_dm9051 [_write mdio] dm9051_phywrite(%d), %04x (wr count %2d)\n", regnum, val, mdio_write_count++);
+			printk("[dm9051_mdio_write, count %2d] dm9051_phywr(%d), %04x\n", mdio_write_count++, regnum, val);
+
 		mutex_lock(&db->spi_lockm);
 		#endif
 
@@ -2193,25 +2191,27 @@ static int dm9051_open(struct net_device *ndev)
 
 	db->imr_all = IMR_PAR | IMR_PRM;
 	db->lcr_all = LMCR_MODE1;
-	//db->rctl.rcr_all = RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN;
+	#ifdef DMPLUG_PTP
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)
+	#else
+	db->rctl.rcr_all = RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN;
+	#endif
 	memset(db->rctl.hash_table, 0, sizeof(db->rctl.hash_table));
 
 	ndev->irq = spi->irq; /* by dts */
 //before [spi_lockm]
 
-
 //use [spi_lockm]
+	#if MI_FIX
 	mutex_lock(&db->spi_lockm);
-	ret = dm9051_all_start(db);
-	mutex_unlock(&db->spi_lockm);
-	if (ret)
-		return ret;
+	#endif
 
-//.	mutex_lock(&db->spi_lockm);
+	ret = dm9051_all_start(db);
+	if (ret)
+		goto open_end;
+
 //.	phy_support_sym_pause(db->phydev);
 //.	phy_start(db->phydev);
-//.	mutex_unlock(&db->spi_lockm);
 
 	/* flow control parameters init */
 	db->pause.rx_pause = true;
@@ -2227,14 +2227,19 @@ static int dm9051_open(struct net_device *ndev)
 	/* interrupt work */
 	ret = INIT_REQUEST_IRQ(ndev);
 	if (ret < 0)
-		return ret;
+		goto open_end;
 	#else
 	/* Or schedule delay work */
 	INIT_RX_POLL_SCHED_DELAY(db);
 	#endif
 
-printk("dm9051_open_end.done\n");
-	return 0;
+open_end:
+	printk("dm9051_open_end.done\n");
+
+	#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+	#endif
+	return ret;
 }
 
 /* Close network device

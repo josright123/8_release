@@ -11,10 +11,7 @@
 //#include <linux/if.h>
 
 /* Macro domain
- */ 
-/*#define DMCONF_AARCH_64 */ //(64-bit OS)
-/*#define DMCONF_DIV_HLPR_32 */	//(32-bit division helper, __aeabi_ldivmod())
-
+ */
 /*#define DMPLUG_INT */ //(INT 39)
 /*#define DMPLUG_CONTI */ //(conti)
 /*#define DMPLUG_CRYPT */ //(crypt)
@@ -25,16 +22,6 @@
 
 /* Macro for already known platforms
  */ 
-//#define PLUG_CFG_HLPR
-#ifdef PLUG_CFG_HLPR
-#define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
-#endif
-
-#define PLUG_CFG64
-#ifdef PLUG_CFG64
-#define DMCONF_AARCH_64 //(64-bit OS)
-#endif
-
 //#define PLUG_MODEN
 #ifdef PLUG_MODEN
 #define DMPLUG_CONTI //(conti)
@@ -215,6 +202,45 @@ void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
 #else
 #define BUS_SETUP(db)	0		//empty(NoError)
 #define BUS_OPS(db, buff, crlen)	//empty
+#endif
+
+/*
+ * Engineering Verification
+ */
+#ifdef MAIN_DATA
+#ifdef DMCONF_AARCH_64
+//#warning "dm9051 AARCH_64"
+#pragma message("dm9051 AARCH_64")
+#else
+#warning "dm9051 AARCH_32"
+#endif
+
+#ifdef DMCONF_DIV_HLPR_32
+#warning "dm9051 DIV_HLPR_32"
+#endif
+
+#ifdef DMCONF_CHGPOWER_ALLOW
+#pragma message("dm9051 CHGPOWER_ALLOW")
+#endif
+
+#ifdef DMPLUG_CONTI
+#warning "dm9051 CONTI"
+#endif
+
+#ifdef DMPLUG_PTP
+//#warning "dm9051 PTP"
+//#info  "dm9051 PTP" //"This is an informational : dm9051 PTP"
+#pragma message("dm9051 PTP")
+#endif
+
+/* INT and INT two_step */
+#ifdef DMPLUG_INT
+//#warning "dm9051 INT"
+#pragma message("dm9051 INT")
+#ifdef INT_TWO_STEP
+#warning "INT: TWO_STEP"
+#endif
+#endif
 #endif
 
 #endif //_DM9051_PLUG_H_

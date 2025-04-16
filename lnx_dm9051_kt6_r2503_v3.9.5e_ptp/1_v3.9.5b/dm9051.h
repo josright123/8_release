@@ -12,6 +12,29 @@
 #include <linux/netdevice.h>
 #include <linux/types.h>
 
+/* Macro domain
+ */
+/*#define DMCONF_DIV_HLPR_32 */	//(32-bit division helper, __aeabi_ldivmod())
+/*#define DMCONF_AARCH_64 */ //(64-bit OS)
+/*#define DMCONF_CHGPOWER_ALLOW */ //(Power chip)
+
+/* Macro for already known platforms
+ */ 
+//#define PLUG_CFG_HLPR
+#ifdef PLUG_CFG_HLPR
+#define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
+#endif
+
+#define PLUG_CFG64
+#ifdef PLUG_CFG64
+#define DMCONF_AARCH_64 //(64-bit OS)
+#endif
+
+#define PLUG_CFG_CHGPOWER
+#ifdef PLUG_CFG_CHGPOWER
+#define DMCONF_CHGPOWER_ALLOW
+#endif
+
 /* Device identification */
 #define DM9051_ID              0x9051
 #define DRVNAME_9051           "dm9051"
@@ -178,12 +201,12 @@
 #define	DM_RXHDR_SIZE		sizeof(struct dm9051_rxhdr)
 
 /* Kernel version definitions */
-#define DM9051_KERNEL_5_10	5
-#define DM9051_KERNEL_5_15	6
-#define DM9051_KERNEL_6_1	7
-#define DM9051_KERNEL_6_6	8
+//#define DM9051_KERNEL_5_10	5
+//#define DM9051_KERNEL_5_15	6
+//#define DM9051_KERNEL_6_1	7
+//#define DM9051_KERNEL_6_6	8
 
-#define LXR_REF_CONF		DM9051_KERNEL_6_6
+//#define LXR_REF_CONF		DM9051_KERNEL_6_6
 
 /* Helper functions */
 static inline struct board_info *to_dm9051_board(struct net_device *ndev)

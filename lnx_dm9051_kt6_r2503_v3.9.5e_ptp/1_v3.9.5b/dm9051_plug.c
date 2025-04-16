@@ -18,35 +18,10 @@
 #include <linux/spi/spi.h>
 #include <linux/types.h>
 #include <linux/of.h>
+#include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
 #include "dm9051_plug.h"
-
-#ifdef DMCONF_AARCH_64
-#warning "dm9051 AARCH_64"
-#else
-#warning "dm9051 AARCH_32"
-#endif
-
-#ifdef DMCONF_DIV_HLPR_32
-#warning "dm9051 DIV_HLPR_32"
-#endif
-
-#ifdef DMPLUG_CONTI
-#warning "dm9051 CONTI"
-#endif
-
-#ifdef DMPLUG_PTP
-#warning "dm9051 PTP"
-#endif
-
-/* INT and INT two_step */
-#ifdef DMPLUG_INT
-#warning "dm9051 INT"
-#ifdef INT_TWO_STEP
-#warning "INT: TWO_STEP"
-#endif
-#endif
 
 #ifdef DMCONF_DIV_HLPR_32
 /* Implement the missing ARM EABI division helper */
@@ -76,58 +51,6 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
     return res;
 }
 #endif
-
-/*
- * Interrupt: 
- */
-
-void SHOW_INT_MODE(struct spi_device *spi)
-{
-	unsigned int intdata[2];
-	of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-	dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
-	dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
-	#ifdef INT_TWO_STEP
-	dev_info(&spi->dev, "Interrupt: Two_step\n");
-	#endif
-}
-
-void INIT_RX_INT2_DELAY_SETUP(struct board_info *db)
-{
-	#ifdef INT_TWO_STEP
-	INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_servicep);
-	#endif //INT_TWO_STEP
-}
-
-int INIT_REQUEST_IRQ(struct net_device *ndev)
-{
-	struct board_info *db = to_dm9051_board(ndev);
-	int ret;
-	#ifdef INT_TWO_STEP
-		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_int2_delay,
-									get_dts_irqf(db) | IRQF_ONESHOT,
-									ndev->name, db);
-		//ret = request_irq(ndev->irq, dm9051_rx_int2_delay,
-		//							get_dts_irqf(db) | IRQF_ONESHOT,
-		//							ndev->name, db);
-		if (ret < 0)
-			netdev_err(ndev, "failed to rx request irq setup\n");
-	#else //INT_TWO_STEP
-		ret = request_threaded_irq(ndev->irq, NULL, /*dm9051_rx_threaded_plat*/ /*dm9051_rx_int2_delay*/ dm9051_rx_threaded_plat,
-		 						   get_dts_irqf(db) | IRQF_ONESHOT,
-		 						   ndev->name, db);
-		if (ret < 0)
-			netdev_err(ndev, "failed to rx request threaded irq setup\n");
-	#endif //INT_TWO_STEP
-	return ret;
-}
-
-void END_FREE_IRQ(struct net_device *ndev)
-{
-	struct board_info *db = to_dm9051_board(ndev);
-	free_irq(db->spidev->irq, db);
-	printk("_stop [free irq %d]\n", db->spidev->irq);
-}
 
 /*
  * Conti: 
