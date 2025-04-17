@@ -696,6 +696,37 @@ static void show_log_addr(char *head, struct board_info *db)
 	if (db->automdix_log[2][0])
 		printk("<%s> %s\n", head, &db->automdix_log[2][1]);
 }
+void amdix_link_change_up(struct board_info *db, unsigned int bmsr, unsigned int val)
+{
+	if (!(bmsr & BIT(2)) && (val & BIT(2))) {
+		//[show]
+		show_log_addr("link", db); //.if (!db->stop_automdix_flag).
+		//[message]
+		printk("<from_phylib. on %02u to %02u, current[bmsr] %04x>, found reach link\n", db->stop_automdix_flag, db->n_automdix, val);
+		//[clear]
+		printk("[link] clear log...");
+		db->n_automdix = 0; //log-reset
+		db->stop_automdix_flag = 0;
+		db->automdix_log[0][0] = 0;
+		db->automdix_log[1][0] = 0;
+		db->automdix_log[2][0] = 0;
+	}
+}
+
+static int amdix_link_change(struct board_info *db, unsigned int val)
+{
+	static unsigned int bmsr = 0xffff;
+
+	/* bmcr(link) change */
+	if (val != bmsr) {		
+		/* link change to up */
+		amdix_link_change_up(db, bmsr, val);
+
+		bmsr = val;
+		return 1;
+	}
+	return 0;
+}
 
 // dm9051_phyread.EXTEND
 static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
@@ -708,30 +739,20 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 	/* check log */
 	do
 	{
-		static unsigned int bmsr = 0xffff;
-		unsigned int vval;
-		if (*val != bmsr)
-		{
-			/* link change to up */
-			if (!(bmsr & BIT(2)) && (*val & BIT(2))) {
-				//[show]
-				show_log_addr("link", db); //.if (!db->stop_automdix_flag).
-				//[message]
-				printk("<from_phylib. on %02u to %02u, current[bmsr] %04x>, found reach link\n", db->stop_automdix_flag, db->n_automdix, *val);
-				//[clear]
-				printk("[link] clear log...");
-				db->n_automdix = 0; //log-reset
-				db->stop_automdix_flag = 0;
-				db->automdix_log[0][0] = 0;
-				db->automdix_log[1][0] = 0;
-				db->automdix_log[2][0] = 0;
-			}
-			/* updation save */
-			bmsr = *val;
-		}
-		else
+//		static unsigned int bmsr = 0xffff;
+//		if (*val != bmsr)
+//		{
+//			/* link change to up */
+//			amdix_link_change_up(db, *val);
+//			/* updation save */
+//			bmsr = *val;
+//		}
+//		else
+		
+		if (!amdix_link_change(db, *val))
 		{
 			if (!(*val & BIT(2))) {
+				unsigned int vval;
 				//static unsigned int n_automdix = 0;
 				//static unsigned int mdi = 0x0830;
 				//#define TOGG_INTVL		1
@@ -739,7 +760,6 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 				db->n_automdix++;
 				
 				if (db->stop_automdix_flag) {
-					//printk("<conti_phyl. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> stop automdix\n", db->stop_automdix_flag, db->n_automdix, vval);
 					printk("<conti_phylib. on %02u to %02u, current[bmsr] %04x> stop automdix\n", db->stop_automdix_flag, db->n_automdix, *val);
 					//sprintf(db->bc.head, "%2d", db->n_automdix);
 					//dm9051_dump_reg2s(db, 0x74, 0x75);

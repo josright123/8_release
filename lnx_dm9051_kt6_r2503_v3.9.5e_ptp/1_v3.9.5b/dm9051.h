@@ -411,6 +411,9 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 int dm9051_nsr_poll(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
+/* amdix functions */
+void amdix_link_change_up(struct board_info *db, unsigned int bmsr, unsigned int val);
+
 #ifdef MAIN_DATA
 /* Driver configuration structure */
 struct mod_config
