@@ -1473,39 +1473,47 @@ static int dm9051_all_stop(struct board_info *db)
 #if 1
 /* fifo reset while rx error found
  */
-/*static*/ int dm9051_all_restart(struct board_info *db) //todo
+static int dm9051_all_restart(struct board_info *db) //todo
 {
+	int ret;
+		
+	ret = dm9051_ncr_reset(db);
+	if (ret)
+		return ret;
+	ret = dm9051_phy_reset(db);
+	if (ret)
+		return ret;
+	ret = dm9051_all_reinit(db); //head_restart
+	if (ret)
+		return ret;
+
+	dm9051_all_restart_sum(db);
 	return 0;
 }
 
 /* to reset while link change up
  */
-/*static*/ int dm9051_all_upstart(struct board_info *db) //todo
+static int dm9051_all_upstart(struct board_info *db) //todo
 {
-//	int ret;
+	int ret;
 
-//	ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
-//	if (ret)
-//		return ret;
+	printk("_all_upstart\n");
 
-//	dm9051_ncr_poll(db);
+	ret = dm9051_ncr_reset(db);
+	if (ret)
+		return ret;
 
-//	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
-//	if (ret)
-//		return ret;
+	ret = dm9051_all_reinit(db); //up_restart
+	if (ret)
+		return ret;
 
-//	ret = dm9051_enable_interrupt(db);
-//	if (ret)
-//		return ret;
-
-//	return dm9051_subconcl_and_rerxctrl(db);
 	return 0;
 }
 #endif
 
 /* all reinit while rx error found
  */
-static int dm9051_all_reinit(struct board_info *db)
+int dm9051_all_reinit(struct board_info *db)
 {
 	int ret;
 
@@ -1533,7 +1541,7 @@ static int dm9051_all_reinit(struct board_info *db)
 	return dm9051_subconcl_and_rerxctrl(db);
 }
 
-static void dm9051_all_restart_sum(struct board_info *db)
+void dm9051_all_restart_sum(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
 
@@ -1792,16 +1800,10 @@ static int dm9051_loop_rx(struct board_info *db)
 		if (rx_break(rxbyte, ndev->features))
 		{
 			if (trap_rxb(db, &rxbyte)) {
-				ret = dm9051_ncr_reset(db);
+				ret = dm9051_all_restart(db);
 				if (ret)
 					return ret;
-				ret = dm9051_phy_reset(db);
-				if (ret)
-					return ret;
-				ret = dm9051_all_reinit(db); //rxb_restart ...
-				if (ret)
-					return ret;
-				dm9051_all_restart_sum(db);
+			
 				return -EINVAL;
 			}
 			break;
@@ -1815,16 +1817,10 @@ static int dm9051_loop_rx(struct board_info *db)
 		/* rx_head_takelen check */
 		ret = rx_head_break(db);
 		if (ret) {
-			ret = dm9051_ncr_reset(db);
+			ret = dm9051_all_restart(db);
 			if (ret)
 				return ret;
-			ret = dm9051_phy_reset(db);
-			if (ret)
-				return ret;
-			ret = dm9051_all_reinit(db); //head_restart
-			if (ret)
-				return ret;
-			dm9051_all_restart_sum(db);
+
 			return -EINVAL;
 		}
 
@@ -2638,22 +2634,11 @@ printk("LOCK_MUTEX\n");
 			db->pause.rx_pause = true;
 			db->pause.tx_pause = true;
 		}
-	#if 1
-		printk("_all_upstart\n");
 
-		ret = dm9051_ncr_reset(db);
+		ret = dm9051_all_upstart(db);
 		if (ret)
 			goto u_end;
 
-		ret = dm9051_all_reinit(db); //up_restart
-		if (ret)
-			goto u_end;
-
-//=
-//		ret = dm9051_all_upstart(db);
-//		if (ret)
-//			goto u_end;
-	#endif
 		dm9051_update_fcr(db);
 	}
 u_end:

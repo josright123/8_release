@@ -409,6 +409,10 @@ int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 
 int dm9051_nsr_poll(struct board_info *db);
+
+/* init functions */
+int dm9051_all_reinit(struct board_info *db);
+void dm9051_all_restart_sum(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 /* amdix functions */
