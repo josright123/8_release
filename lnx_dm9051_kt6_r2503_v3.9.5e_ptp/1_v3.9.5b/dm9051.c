@@ -1409,9 +1409,8 @@ static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_op
 	.get_strings = dm9051_get_strings,
 	.get_sset_count = dm9051_get_sset_count,
 	.get_ethtool_stats = dm9051_get_ethtool_stats,
-	//_15888_,
 #ifdef DMPLUG_PTP
-	.get_ts_info = dm9051_ts_info,
+	.get_ts_info = dm9051_ts_info, //_15888_,
 #endif
 };
 
@@ -1847,9 +1846,9 @@ static int dm9051_loop_rx(struct board_info *db)
 		}
 
 		skb->protocol = eth_type_trans(skb, db->ndev);
-		//_15888_, 
+
 		#ifdef DMPLUG_PTP
-		dm9051_ptp_rx_hwtstamp(db, skb, db->rxTSbyte);
+		dm9051_ptp_rx_hwtstamp(db, skb, db->rxTSbyte); //_15888_, 
 		#endif
 
 		if (ndev->features & NETIF_F_RXCSUM)
@@ -1921,8 +1920,7 @@ static int dm9051_loop_tx(struct board_info *db)
 #ifdef DMPLUG_CONTI
 			ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
 			#ifdef DMPLUG_PTP
-			if (db->ptp_on)
-				dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+			dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 			#endif
 			dev_kfree_skb(skb);
 			if (ret < 0)
@@ -1948,8 +1946,7 @@ static int dm9051_loop_tx(struct board_info *db)
 
 				ret = dm9051_single_tx(db, skb->data, len + pad, len); //'skb->len'
 				#ifdef DMPLUG_PTP
-				if (db->ptp_on)
-					dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+				dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 				#endif
 				dev_kfree_skb(skb);
 				if (ret) //.NOT (ret < 0)
@@ -2380,7 +2377,7 @@ static netdev_tx_t dm9051_start_xmit(struct sk_buff *skb, struct net_device *nde
 
 #if 0
 	//printk("dm9051_start_xmit...\n");
-	db->ptp_tx_flags = skb_shinfo(skb)->tx_flags; ---------- in _dm9051_single_tx()
+	db->ptp_tx_flags = _skb_shinfo(skb)->tx_flags; ---------- in _dm9051_single_tx()
 	if (db->ptp_tx_flags & SKBTX_HW_TSTAMP) ---------------- no need
 		db->ptp_tx_flags |= SKBTX_IN_PROGRESS; ------------- no need
 #endif
@@ -2479,91 +2476,7 @@ static struct net_device_stats *dm9051_get_stats(struct net_device *ndev)
 	return &ndev->stats;
 }
 
-#ifdef DMPLUG_PTP
-/**
- * dm9051_ptp_get_ts_config - get hardware time stamping config
- * @netdev:
- * @ifreq:
- *
- * Get the hwtstamp_config settings to return to the user. Rather than attempt
- * to deconstruct the settings from the registers, just return a shadow copy
- * of the last known settings.
- **/
-
-int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr)
-{
-	struct board_info *db = netdev_priv(netdev);
-	struct hwtstamp_config *config = &db->tstamp_config;
-        
-	return copy_to_user(ifr->ifr_data, config, sizeof(*config)) ?
-		-EFAULT : 0;
-
-}
-
-/**
- * dm9051_ptp_set_ts_config - set hardware time stamping config
- * @netdev:
- * @ifreq:
- *
- **/
-int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
-{
-	struct board_info *db = netdev_priv(netdev);
-	struct hwtstamp_config config;
-	int err;
-
-        //dm_printk("[in %s()]", __FUNCTION__);
-
-	if (copy_from_user(&config, ifr->ifr_data, sizeof(config)))
-		return -EFAULT;
-
-	err = dm9051_ptp_set_timestamp_mode(db, &config);
-	if (err)
-		return err;
-
-	/* save these settings for future reference */
-	memcpy(&db->tstamp_config, &config,
-	       sizeof(db->tstamp_config));
-
-	return copy_to_user(ifr->ifr_data, &config, sizeof(config)) ?
-		-EFAULT : 0;
-}
-
-/* netdev_ops tell support ptp */
-static int dm9051_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
-{
-	//struct board_info *db = to_dm9051_board(ndev);
-    //struct hwtstamp_config config;
-
-	switch(cmd) {
-		case SIOCGHWTSTAMP:
-			//printk("Process SIOCGHWTSTAMP\n");
-			//db->ptp_on = 1;
-			return dm9051_ptp_get_ts_config(ndev, rq);
-		case SIOCSHWTSTAMP:
-			//printk("Process SIOCSHWTSTAMP\n");
-			//db->ptp_on = 1;
-			return dm9051_ptp_set_ts_config(ndev, rq);
-		default:
-			printk("dm9051_netdev_ioctl cmd = 0x%X\n", cmd);
-			//db->ptp_on = 0;
-			return -EOPNOTSUPP;
-	}
-}
-#endif
-
-const struct net_device_ops dm9051_netdev_ops = { //ignored
-	.ndo_open = dm9051_open,
-	.ndo_stop = dm9051_stop,
-	.ndo_start_xmit = dm9051_start_xmit,
-	.ndo_set_rx_mode = dm9051_set_rx_mode,
-	.ndo_validate_addr = eth_validate_addr,
-	.ndo_set_mac_address = dm9051_set_mac_address,
-	.ndo_set_features = dm9051_ndo_set_features,
-	.ndo_get_stats = dm9051_get_stats,
-};
-
-static const struct net_device_ops dm9051_ptp_netdev_ops = {
+static const struct net_device_ops dm9051_netdev_ops = {
 	.ndo_open = dm9051_open,
 	.ndo_stop = dm9051_stop,
 	.ndo_start_xmit = dm9051_start_xmit,
@@ -2573,7 +2486,7 @@ static const struct net_device_ops dm9051_ptp_netdev_ops = {
 	.ndo_set_features = dm9051_ndo_set_features,
 	.ndo_get_stats = dm9051_get_stats,
 	#ifdef DMPLUG_PTP
-	.ndo_eth_ioctl = dm9051_netdev_ioctl, //_15888_
+	.ndo_eth_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
 	#endif
 };
 
@@ -2698,7 +2611,7 @@ static int dm9051_probe(struct spi_device *spi)
 	//.by ptp4l run command
 	//db->ptp_on = 1;		//Enable PTP must disable checksum_offload
 
-	ndev->netdev_ops = &dm9051_ptp_netdev_ops;
+	ndev->netdev_ops = &dm9051_netdev_ops;
 	ndev->ethtool_ops = &dm9051_ethtool_ops;//&dm9051_ptpd_ethtool_ops;
 
 	/* Set default features */

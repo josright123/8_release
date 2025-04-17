@@ -49,13 +49,23 @@
 
 #define DM9051_1588_TS_BULK_SIZE 8
 
+/* ethtool_ops
+ */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
 int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info); //kt612
 #else
 int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info); //kt66
 #endif
+
+/* netdev_ops
+ */
+int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
+
 int dm9051_ptp_set_timestamp_mode(struct board_info *db,
 					 struct hwtstamp_config *config);
+int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr);
+int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr);
+
 int dm9051_ptp_one_step(struct sk_buff *skb);
 int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db);
 //extern const struct ethtool_ops dm9051_ptpd_ethtool_ops;

@@ -384,8 +384,8 @@ struct board_info
 	struct ptp_clock                *ptp_clock;
 	struct ptp_clock_info 			ptp_caps;
 
-	unsigned int                    ptp_tx_flags;
-	u8								ptp_mode;	//_15888_ //0: Not PTP, 1: one-step, 2: two-step
+	//unsigned int                    ptp_tx_flags;
+	u8				ptp_mode; //1: one-step, 2: two-step, 3: xxx, others: Not PTP //_15888_
 
 	unsigned int					tcr_wr;
 	s64								pre_rate;

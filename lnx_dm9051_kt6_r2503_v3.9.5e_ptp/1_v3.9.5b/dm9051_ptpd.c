@@ -35,6 +35,52 @@ static u8 get_ptp_message_type(struct sk_buff *skb) {
     return ptp_hdr[0];
 }
 
+// show ptp message typee
+//static void types_log(char *head, u8 message_type) {
+//    switch (message_type) {
+//	case 0:
+//		printk("%s: PTP Sync message\n", head);
+//		break;
+//	case 1:
+//		printk("%s: PTP Delay_Req message\n", head);
+//		break;
+//	case 2:
+//		printk("%s: PTP Path Delay_Req message\n", head);
+//		break;
+//	case 3:
+//		printk("%s: PTP Path Delay_Resp message\n", head);
+//		break;
+//	case 8:
+//		printk("%s: PTP Follow_Up message\n", head);
+//		break;
+//	case 9:
+//		printk("%s: PTP Delay_Resp message\n", head);
+//		break;
+//	case 0xA:
+//		printk("%s: PTP Path Delay_Resp_Follow_Up message\n", head);
+//		break;
+//	case 0xB:
+//		printk("%s: PTP Announce message\n", head);
+//		break;
+//	case 0xC:
+//		printk("%s: PTP Signaling message\n", head);
+//		break;
+//	case 0xD:
+//		printk("%s: PTP Management message\n", head);
+//		break;
+//        default:
+//		printk(KERN_INFO "%s: Unknown PTP Message Type: 0x%02X\n", head, message_type);
+//		break;
+//    }
+//}
+
+//void show_ptp_types_log(char *head, struct sk_buff *skb)
+//{
+//    types_log(head, get_ptp_message_type(skb));
+//}
+
+/* ethtool_ops
+ * tell timestamp info and types */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
 int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
 #else
@@ -70,6 +116,29 @@ int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
 
 
 	return 0;
+}
+
+/* netdev_ops 
+ * tell support ptp */
+int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
+{
+	//struct board_info *db = to_dm9051_board(ndev);
+    //struct hwtstamp_config config;
+
+	switch(cmd) {
+		case SIOCGHWTSTAMP:
+			//printk("Process SIOCGHWTSTAMP\n");
+			//db->ptp_on = 1;
+			return dm9051_ptp_get_ts_config(ndev, rq);
+		case SIOCSHWTSTAMP:
+			//printk("Process SIOCSHWTSTAMP\n");
+			//db->ptp_on = 1;
+			return dm9051_ptp_set_ts_config(ndev, rq);
+		default:
+			printk("dm9051_netdev_ioctl cmd = 0x%X\n", cmd);
+			//db->ptp_on = 0;
+			return -EOPNOTSUPP;
+	}
 }
 
 int dm9051_ptp_set_timestamp_mode(struct board_info *db,
@@ -161,6 +230,55 @@ int dm9051_ptp_set_timestamp_mode(struct board_info *db,
 	return 0;
 }
 
+/**
+ * dm9051_ptp_get_ts_config - get hardware time stamping config
+ * @netdev:
+ * @ifreq:
+ *
+ * Get the hwtstamp_config settings to return to the user. Rather than attempt
+ * to deconstruct the settings from the registers, just return a shadow copy
+ * of the last known settings.
+ **/
+
+int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr)
+{
+	struct board_info *db = netdev_priv(netdev);
+	struct hwtstamp_config *config = &db->tstamp_config;
+        
+	return copy_to_user(ifr->ifr_data, config, sizeof(*config)) ?
+		-EFAULT : 0;
+
+}
+
+/**
+ * dm9051_ptp_set_ts_config - set hardware time stamping config
+ * @netdev:
+ * @ifreq:
+ *
+ **/
+int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
+{
+	struct board_info *db = netdev_priv(netdev);
+	struct hwtstamp_config config;
+	int err;
+
+        //dm_printk("[in %s()]", __FUNCTION__);
+
+	if (copy_from_user(&config, ifr->ifr_data, sizeof(config)))
+		return -EFAULT;
+
+	err = dm9051_ptp_set_timestamp_mode(db, &config);
+	if (err)
+		return err;
+
+	/* save these settings for future reference */
+	memcpy(&db->tstamp_config, &config,
+	       sizeof(db->tstamp_config));
+
+	return copy_to_user(ifr->ifr_data, &config, sizeof(config)) ?
+		-EFAULT : 0;
+}
+
 /*
  * return -
  * 0: not PTP packet
@@ -175,9 +293,7 @@ int dm9051_ptp_one_step(struct sk_buff *skb)
 	u8 msgtype;
 
 	/* No need to parse packet if PTP TS is not involved */
-	if (likely(!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))) {
-		return 0;	// Not PTP packet
-	}else{
+	if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
 		//printk("Check PTP Message\n");
 		/* Identify and return whether PTP one step sync is being processed */
 		ptp_class = ptp_classify_raw(skb);
@@ -208,109 +324,14 @@ no:
 	return 0;
 }
 
-#define PP_HTONS(x) ((u16)((((x) & (u16)0x00ffU) << 8) | (((x) & (u16)0xff00U) >> 8)))
-
-u16 lwip_htons(u16 n)
-{
-  return PP_HTONS(n);
-}
-
-int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
-{
-	int ret = 0;
-	u8 message_type;
-	static int sync5 = 3; //5;
-	static int delayReq5 = 3; //5;
-
-		ret = dm9051_nsr_poll(db);	//TX completed
-		if (ret){
-			printk("nsr_polling timeout\n");
-			return ret;
-		}
-//if (db->ptp_tx_flags = skb_shinfo(skb)->tx_flags) {
-if (likely((skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))) { //[.dm9051_ptp_one_step]
-		message_type = get_ptp_message_type(skb) & 0x0f; //_15888_, and 0x0f
-
-		if ((message_type == 0 && sync5) || (message_type == 1 && delayReq5)) {
-		    u8 *packet_data;
-		    struct udphdr *p_udp_hdr;
-		    u8 *ptp_hdr;
-		    int i, j, rlen, splen, rowsize = 32;
-		    char line[120];
-
-		    packet_data = (u8 *) skb->data;
-		    p_udp_hdr = udp_hdr(skb);
-		    ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
-		    if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {  //[.ptp .general event/or .message event]
-			
-			    //printk("udp src port %d, dst port %d\n", p_udp_hdr->source, p_udp_hdr->dest);
-			    printk("udp src port %d, dst port %d (hton)\n", lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest));
-			    printk("message_type is %02x\n", message_type);
-			    //do {
-			    /* show tx packet */
-				
-				//rlen = skb->len;
-				printk(" TX LEN= %3d\n", skb->len);
-				for (i = 0; i < skb->len; i += rlen) {
-					//rlen = print_line(packet_data+i, min(16, skb->len - i));
-					rlen =  skb->len - i;
-					if (rlen >= rowsize) rlen = rowsize;
-
-					splen = 0;
-					splen += sprintf(line + splen, " %3d", i);
-					for (j = 0; j < rlen; j++) {
-						if (!(j % 8)) splen += sprintf(line + splen, " ");
-						if (!(j % 16)) splen += sprintf(line + splen, " ");
-						//printk(" %02x", packet_data[i+j]);
-						splen += sprintf(line + splen, " %02x", packet_data[i+j]);
-					}
-					//printk("\n");
-					//splen += sprintf(line + splen, "\n");
-					printk("%s\n", line);
-				}
-			    //} while(0);
-		    }
-		}
-
-		switch(message_type) {
-			case 0:	//Sync
-				//remark3-slave - none sync
-				if (sync5) {
-					
-					printk("%d TX Sync Timestamp\n", sync5--);
-				}
-				/*Spenser - Don't report HW timestamp to skb if one-step,
-				 * otherwise master role will be not continue send Sync Message.
-				*/
-				if (db->ptp_mode == 2)	//two-step
-					dm9051_ptp_tx_hwtstamp(db, skb); //_15888_ // Report HW Timestamp
-				break;
-			case 1:	//Delay Req
-				//remark6-slave
-				//printk("Tx Delay_Req Timestamp\n");
-				if (delayReq5) {
-					
-					printk("%d Tx Delay_Req Timestamp\n", delayReq5--);
-				}
-				
-				dm9051_ptp_tx_hwtstamp(db, skb); //_15888_ // Report HW Timestamp
-				//printk("Tx Delay_Req Timestamp...\n");
-				break;
-			default:
-				break;
-		}
-}
-//}
-
-	return ret;
-}
-
 unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db)
 {
 	unsigned int tcr = TCR_TXREQ; // TCR register value
-	db->ptp_tx_flags = skb_shinfo(skb)->tx_flags;
 
-	if (db->ptp_tx_flags) {
+//	db->ptp_tx_flags = _skb_shinfo(skb)->tx_flags;
+//	if (db->ptp_tx_flags) 
+//	if (_skb_shinfo(skb)->tx_flags) 
+	if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
 		switch(db->ptp_mode){
 			case 1:
 				//printk("One Step...\n");
@@ -327,6 +348,106 @@ unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db)
 		}
 	}
 	return tcr;
+}
+
+#define PP_HTONS(x) ((u16)((((x) & (u16)0x00ffU) << 8) | (((x) & (u16)0xff00U) >> 8)))
+
+u16 lwip_htons(u16 n)
+{
+  return PP_HTONS(n);
+}
+
+int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
+{
+	int ret = 0;
+	static int sync5 = 3; //5;
+	static int delayReq5 = 3; //5;
+
+	if (db->ptp_on)
+	{
+		u8 message_type;
+		ret = dm9051_nsr_poll(db);	//TX completed
+		if (ret){
+			printk("nsr_polling timeout\n");
+			return ret;
+		}
+
+		//if (db->ptp_tx_flags = _skb_shinfo(skb)->tx_flags)
+		if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+				message_type = get_ptp_message_type(skb) & 0x0f; //_15888_, and 0x0f
+
+				if ((message_type == 0 && sync5) || (message_type == 1 && delayReq5)) {
+				    u8 *packet_data;
+				    struct udphdr *p_udp_hdr;
+				    u8 *ptp_hdr;
+				    int i, j, rlen, splen, rowsize = 32;
+				    char line[120];
+
+				    packet_data = (u8 *) skb->data;
+				    p_udp_hdr = udp_hdr(skb);
+				    ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
+				    if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {  //[.ptp .general event/or .message event]
+					
+					    //printk("udp src port %d, dst port %d\n", p_udp_hdr->source, p_udp_hdr->dest);
+					    printk("udp src port %d, dst port %d (hton)\n", lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest));
+					    printk("message_type is %02x\n", message_type);
+					    //do {
+					    /* show tx packet */
+						
+						//rlen = skb->len;
+						printk(" TX LEN= %3d\n", skb->len);
+						for (i = 0; i < skb->len; i += rlen) {
+							//rlen = print_line(packet_data+i, min(16, skb->len - i));
+							rlen =  skb->len - i;
+							if (rlen >= rowsize) rlen = rowsize;
+
+							splen = 0;
+							splen += sprintf(line + splen, " %3d", i);
+							for (j = 0; j < rlen; j++) {
+								if (!(j % 8)) splen += sprintf(line + splen, " ");
+								if (!(j % 16)) splen += sprintf(line + splen, " ");
+								//printk(" %02x", packet_data[i+j]);
+								splen += sprintf(line + splen, " %02x", packet_data[i+j]);
+							}
+							//printk("\n");
+							//splen += sprintf(line + splen, "\n");
+							printk("%s\n", line);
+						}
+					    //} while(0);
+				    }
+				}
+
+				switch(message_type) {
+					case 0:	//Sync
+						//remark3-slave - none sync
+						if (sync5) {
+							
+							printk("%d TX Sync Timestamp\n", sync5--);
+						}
+						/*Spenser - Don't report HW timestamp to skb if one-step,
+						 * otherwise master role will be not continue send Sync Message.
+						*/
+						if (db->ptp_mode == 2)	//two-step
+							dm9051_ptp_tx_hwtstamp(db, skb); //_15888_ // Report HW Timestamp
+						break;
+					case 1:	//Delay Req
+						//remark6-slave
+						//printk("Tx Delay_Req Timestamp\n");
+						if (delayReq5) {
+							
+							printk("%d Tx Delay_Req Timestamp\n", delayReq5--);
+						}
+						
+						dm9051_ptp_tx_hwtstamp(db, skb); //_15888_ // Report HW Timestamp
+						//printk("Tx Delay_Req Timestamp...\n");
+						break;
+					default:
+						break;
+				}
+		}
+	}
+
+	return ret;
 }
 
 void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
@@ -418,7 +539,6 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 #endif
 
 
-	//printk("<== dm9051_ptp_tx_hwtstamp out\r\n");
 }
 
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTSbyte)

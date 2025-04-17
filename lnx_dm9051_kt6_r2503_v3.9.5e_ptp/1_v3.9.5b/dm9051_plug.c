@@ -166,61 +166,6 @@ int TX_OPS_CONTI(struct board_info *db, u8 *buff, unsigned int len)
 //    }
 //    return false;
 //}
-
-// show ptp message typee
-static void types_log(char *head, u8 message_type) {
-    switch (message_type) {
-	case 0:
-		printk("%s: PTP Sync message\n", head);
-		break;
-	case 1:
-		printk("%s: PTP Delay_Req message\n", head);
-		break;
-	case 2:
-		printk("%s: PTP Path Delay_Req message\n", head);
-		break;
-	case 3:
-		printk("%s: PTP Path Delay_Resp message\n", head);
-		break;
-	case 8:
-		printk("%s: PTP Follow_Up message\n", head);
-		break;
-	case 9:
-		printk("%s: PTP Delay_Resp message\n", head);
-		break;
-	case 0xA:
-		printk("%s: PTP Path Delay_Resp_Follow_Up message\n", head);
-		break;
-	case 0xB:
-		printk("%s: PTP Announce message\n", head);
-		break;
-	case 0xC:
-		printk("%s: PTP Signaling message\n", head);
-		break;
-	case 0xD:
-		printk("%s: PTP Management message\n", head);
-		break;
-        default:
-		printk(KERN_INFO "%s: Unknown PTP Message Type: 0x%02X\n", head, message_type);
-		break;
-    }
-}
-
-u8 get_ptp_message_type(struct sk_buff *skb) {
-    struct udphdr *p_udp_hdr;
-    u8 *ptp_hdr;
-
-    p_udp_hdr = udp_hdr(skb);
-    ptp_hdr = (u8 *)p_udp_hdr + sizeof(struct udphdr);
-
-	printk("ptp_hdr[0] is %02x\n", ptp_hdr[0]);
-    return ptp_hdr[0];
-}
-
-void show_ptp_types_log(char *head, struct sk_buff *skb)
-{
-    types_log(head, get_ptp_message_type(skb));
-}
 #endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, Plug-in"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
