@@ -1800,10 +1800,7 @@ static int dm9051_loop_rx(struct board_info *db)
 		if (rx_break(rxbyte, ndev->features))
 		{
 			if (trap_rxb(db, &rxbyte)) {
-				ret = dm9051_all_restart(db);
-				if (ret)
-					return ret;
-			
+				dm9051_all_restart(db);
 				return -EINVAL;
 			}
 			break;
@@ -1817,10 +1814,7 @@ static int dm9051_loop_rx(struct board_info *db)
 		/* rx_head_takelen check */
 		ret = rx_head_break(db);
 		if (ret) {
-			ret = dm9051_all_restart(db);
-			if (ret)
-				return ret;
-
+			dm9051_all_restart(db);
 			return -EINVAL;
 		}
 
@@ -1945,7 +1939,7 @@ static int dm9051_loop_tx(struct board_info *db)
 				ret = dm9051_single_tx(db, skb->data, len + pad, len); //'skb->len'
 				dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 				dev_kfree_skb(skb);
-				if (ret < 0)
+				if (ret) //.NOT (ret < 0)
 				{
 					db->bc.tx_err_counter++;
 					return 0;
@@ -1991,13 +1985,14 @@ out_unlock:
 static void dm9051_tx_delay(struct work_struct *work)
 {
 	struct board_info *db = container_of(work, struct board_info, tx_work);
-	int result;
 
 	mutex_lock(&db->spi_lockm);
 
-	result = dm9051_loop_tx(db);
-	if (result < 0)
-		netdev_err(db->ndev, "transmit packet error\n");
+	dm9051_loop_tx(db);
+//	int result;
+//	result = 
+//	if (result < 0)
+//		netdev_err(db->ndev, "transmit packet error\n");
 
 	mutex_unlock(&db->spi_lockm);
 }
@@ -2006,16 +2001,18 @@ static void dm9051_tx_delay(struct work_struct *work)
 
 static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 {
-	int result, result_tx;
+	int result; //, result_tx;
 
 	do
 	{
 		result = dm9051_loop_rx(db); /* threaded rx */
 		if (result < 0)
 			return result; //result; //goto out_unlock;
-		result_tx = dm9051_loop_tx(db); /* more tx better performance */
-		if (result_tx < 0)
-			return result_tx; //result_tx; //goto out_unlock;
+
+		dm9051_loop_tx(db); /* more tx better performance */
+//		result_tx = 
+//		if (result_tx < 0)
+//			return result_tx; //result_tx; //goto out_unlock;
 	} while (result > 0);
 
 	return 0;
@@ -2067,10 +2064,10 @@ static void dm9051_rx_int2_plat(int voidirq, void *pw) //.dm9051_(macro)_rx_tx_p
 	if (result)
 		goto out_unlock;
 
-	//.dm9051_rx_plat_loop(db);
-	result = dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
-	if (result < 0)
-		goto out_unlock;
+	dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
+	//result = 
+	//if (result < 0)
+	//	goto out_unlock;
 
 	dm9051_enable_interrupt(db);
 #else //[TEMP.]	
@@ -2370,7 +2367,7 @@ static netdev_tx_t dm9051_start_xmit(struct sk_buff *skb, struct net_device *nde
 
 #if 0
 	//printk("dm9051_start_xmit...\n");
-	db->ptp_tx_flags = skb_shinfo(skb)->tx_flags; ---------- in dm9051_single_tx()
+	db->ptp_tx_flags = skb_shinfo(skb)->tx_flags; ---------- in _dm9051_single_tx()
 	if (db->ptp_tx_flags & SKBTX_HW_TSTAMP) ---------------- no need
 		db->ptp_tx_flags |= SKBTX_IN_PROGRESS; ------------- no need
 #endif
