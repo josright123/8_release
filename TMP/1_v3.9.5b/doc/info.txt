@@ -1,0 +1,13 @@
+[ 2205.821970] dm9051 spi0.1: Power-on chip MAC address: 00:60:6e:00:01:04
+[ 2205.821974] dm9051 spi0.1: Power-on chip MAC address.e: 00:60:6e:00:01:04
+[ 2205.828811] dm9051_ndo_set_features
+[ 2205.828816] _ops [Disabling TX/RX checksum]
+[ 2205.853906] dm9051_open
+[ 2205.853932] dm9051_all_start
+[ 2205.865965] dm9051_core_reset
+[ 2205.868785] _reset [_core_reset] dm9051_phyread(0), 3100
+[ 2205.869524] _reset [_core_reset] dm9051_phyread(3), b8a0
+[ 2205.869970] _reset [_core_reset] dm9051_phyread(dscsr), f210
+[ 2205.869974] _reset [_core_reset] PHY addr DOES 1
+[ 2205.881971] want dm9051_ndo_set_features, in dm9051_core_reset
+[ 2205.886898] dm9051 spi0.1 eth1: Link is Down
