@@ -1913,7 +1913,8 @@ static int dm9051_loop_tx(struct board_info *db)
 
 #ifdef DMPLUG_CONTI
 			ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
-			dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+			if (db->ptp_on)
+				dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 			dev_kfree_skb(skb);
 			if (ret < 0)
 			{
@@ -1937,7 +1938,8 @@ static int dm9051_loop_tx(struct board_info *db)
 				#endif
 
 				ret = dm9051_single_tx(db, skb->data, len + pad, len); //'skb->len'
-				dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+				if (db->ptp_on)
+					dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 				dev_kfree_skb(skb);
 				if (ret) //.NOT (ret < 0)
 				{

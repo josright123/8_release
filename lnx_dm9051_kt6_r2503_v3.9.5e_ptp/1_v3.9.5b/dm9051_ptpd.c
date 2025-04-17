@@ -222,7 +222,6 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 	static int sync5 = 3; //5;
 	static int delayReq5 = 3; //5;
 
-	if (db->ptp_on) {
 		ret = dm9051_nsr_poll(db);	//TX completed
 		if (ret){
 			printk("nsr_polling timeout\n");
@@ -302,7 +301,6 @@ if (likely((skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))) { //[.dm9051_ptp_one_
 		}
 }
 //}
-	}
 
 	return ret;
 }
