@@ -931,13 +931,11 @@ static unsigned int dm9051_init_intcr_value(struct board_info *db)
 	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || get_dts_irqf(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
 }
 
-static int dm9051_core_reset(struct board_info *db)
+static int dm9051_ncr_reset(struct board_info *db)
 {
 	int ret;
 
-	printk("dm9051_core_reset\n");
-
-	db->bc.fifo_rst_counter++;
+	printk("_ncr_reset\n");
 
 	ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
 	if (ret)
@@ -945,12 +943,34 @@ static int dm9051_core_reset(struct board_info *db)
 
 	dm9051_ncr_poll(db);
 
+	return 0;
+}
+static int dm9051_phy_reset(struct board_info *db)
+{
+	int ret;
+
+	printk("_phy_reset\n");
+
+//	ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
+//	if (ret)
+//		return ret;
+
+//	dm9051_ncr_poll(db);
+
 #if 1
 	/* PHY reset */
 	ret = PHY_RST(db);
 	if (ret)
 		return ret;
 #endif
+	return 0;
+}
+
+static int dm9051_core_init(struct board_info *db)
+{
+	int ret;
+
+//	db->bc.fifo_rst_counter++;
 
 	ret = BUS_SETUP(db); //reserved customization
 	if (ret)
@@ -988,16 +1008,6 @@ static int dm9051_core_reset(struct board_info *db)
 		if (ret)
 			return ret;
 	#endif
-
-#ifdef DMPLUG_PTP
-//#ifdef DMCONF_OPEN_EXTRA
-//#endif
-	if (db->ptp_on) {
-		//_15888_ 
-		u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
-		printk("Pre-RateReg value = 0x%08X\n", rate_reg);
-	}
-#endif
 
 	return ret; /* ~return dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db)) */
 }
@@ -1426,7 +1436,14 @@ static int dm9051_all_start(struct board_info *db)
 	 */
 	msleep(1);
 
-	return dm9051_core_reset(db);
+	ret = dm9051_ncr_reset(db);
+	if (ret)
+		return ret;
+	ret = dm9051_phy_reset(db);
+	if (ret)
+		return ret;
+
+	return dm9051_core_init(db);
 }
 
 static int dm9051_all_stop(struct board_info *db)
@@ -1453,32 +1470,57 @@ static int dm9051_all_stop(struct board_info *db)
 	return dm9051_set_reg(db, DM9051_RCR, RCR_RX_DISABLE);
 }
 
+#if 1
 /* fifo reset while rx error found
  */
-static int dm9051_all_restart(struct board_info *db)
+/*static*/ int dm9051_all_restart(struct board_info *db) //todo
 {
-	struct net_device *ndev = db->ndev;
+	return 0;
+}
+
+/* to reset while link change up
+ */
+/*static*/ int dm9051_all_upstart(struct board_info *db) //todo
+{
+//	int ret;
+
+//	ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
+//	if (ret)
+//		return ret;
+
+//	dm9051_ncr_poll(db);
+
+//	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
+//	if (ret)
+//		return ret;
+
+//	ret = dm9051_enable_interrupt(db);
+//	if (ret)
+//		return ret;
+
+//	return dm9051_subconcl_and_rerxctrl(db);
+	return 0;
+}
+#endif
+
+/* all reinit while rx error found
+ */
+static int dm9051_all_reinit(struct board_info *db)
+{
 	int ret;
 
 //	mutex_unlock(&db->spi_lockm);
 //	phy_stop(db->phydev);
 //	mutex_lock(&db->spi_lockm);
 
-	ret = dm9051_core_reset(db);
+	ret = dm9051_core_init(db);
 	if (ret)
 		return ret;
 
-	mutex_unlock(&db->spi_lockm);
+//	mutex_unlock(&db->spi_lockm);
 //	phy_start(db->phydev);
-	phy_start_aneg(db->phydev);
-	mutex_lock(&db->spi_lockm);
-
-	printk("dm9.Show rxstatus_Er & rxlen_Er %d, RST_c %d\n",
-		   db->bc.status_err_counter + db->bc.large_err_counter,
-		   db->bc.fifo_rst_counter);
-	netdev_dbg(ndev, " rxstatus_Er & rxlen_Er %d, RST_c %d\n",
-			   db->bc.status_err_counter + db->bc.large_err_counter,
-			   db->bc.fifo_rst_counter);
+//	phy_start_aneg(db->phydev);
+//	mutex_lock(&db->spi_lockm);
 
 	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
 	if (ret)
@@ -1491,28 +1533,18 @@ static int dm9051_all_restart(struct board_info *db)
 	return dm9051_subconcl_and_rerxctrl(db);
 }
 
-/* linkup to reset while rx error found
- */
-static int dm9051_all_upstart(struct board_info *db)
+static void dm9051_all_restart_sum(struct board_info *db)
 {
-	int ret;
-	printk("_all_upstart\n");
+	struct net_device *ndev = db->ndev;
 
-	ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
-	if (ret)
-		return ret;
-
-	dm9051_ncr_poll(db);
-
-	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
-	if (ret)
-		return ret;
-
-	ret = dm9051_enable_interrupt(db);
-	if (ret)
-		return ret;
-
-	return dm9051_subconcl_and_rerxctrl(db);
+	db->bc.fifo_rst_counter++;
+	printk("dm9.Show rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+	   db->bc.status_err_counter + db->bc.large_err_counter,
+	   db->bc.fifo_rst_counter);
+	netdev_dbg(ndev, " rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+	   db->bc.status_err_counter + db->bc.large_err_counter,
+	   db->bc.fifo_rst_counter);
+	printk("_[_all_restart] rxb work around done\n");
 }
 
 int dm9051_subconcl_and_rerxctrl(struct board_info *db)
@@ -1760,10 +1792,16 @@ static int dm9051_loop_rx(struct board_info *db)
 		if (rx_break(rxbyte, ndev->features))
 		{
 			if (trap_rxb(db, &rxbyte)) {
-				ret = dm9051_all_restart(db); //...
+				ret = dm9051_ncr_reset(db);
 				if (ret)
 					return ret;
-				printk("_[_all_restart] rxb work around done\n");
+				ret = dm9051_phy_reset(db);
+				if (ret)
+					return ret;
+				ret = dm9051_all_reinit(db); //rxb_restart ...
+				if (ret)
+					return ret;
+				dm9051_all_restart_sum(db);
 				return -EINVAL;
 			}
 			break;
@@ -1777,10 +1815,16 @@ static int dm9051_loop_rx(struct board_info *db)
 		/* rx_head_takelen check */
 		ret = rx_head_break(db);
 		if (ret) {
-			ret = dm9051_all_restart(db);
+			ret = dm9051_ncr_reset(db);
 			if (ret)
 				return ret;
-			printk("_[_all_restart] rxhead work around done\n");
+			ret = dm9051_phy_reset(db);
+			if (ret)
+				return ret;
+			ret = dm9051_all_reinit(db); //head_restart
+			if (ret)
+				return ret;
+			dm9051_all_restart_sum(db);
 			return -EINVAL;
 		}
 
@@ -2167,6 +2211,16 @@ static int dm9051_open(struct net_device *ndev)
 	if (ret)
 		goto open_end;
 
+#ifdef DMPLUG_PTP
+//#ifdef DMCONF_OPEN_EXTRA
+//#endif
+	if (db->ptp_on) {
+		//_15888_ 
+		u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
+		printk("Pre-RateReg value = 0x%08X\n", rate_reg);
+	}
+#endif
+
 	#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
 	#endif
@@ -2180,11 +2234,11 @@ static int dm9051_open(struct net_device *ndev)
 
 	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
 	if (ret)
-		return open_end;
+		goto open_end;
 
 	ret = dm9051_enable_interrupt(db);
 	if (ret)
-		return open_end;
+		goto open_end;
 
 //.	phy_support_sym_pause(db->phydev);
 //.	phy_start(db->phydev);
@@ -2230,17 +2284,12 @@ open_end:
 static int dm9051_stop(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
-	struct spi_device *spi = db->spidev;
 	int ret;
 
-	dev_info(&spi->dev, "dm9051_stop\n");
+	dev_info(&db->spidev->dev, "dm9051_stop\n");
 	printk("\n");
 
-//	mutex_lock(&db->spi_lockm);
-	ret = dm9051_all_stop(db);
-//	mutex_unlock(&db->spi_lockm);
-	if (ret)
-		return ret;
+	phy_stop(db->phydev);
 
 	/* schedule delay work */
 	#ifdef DMPLUG_INT
@@ -2254,12 +2303,8 @@ static int dm9051_stop(struct net_device *ndev)
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
 
-//	mutex_lock(&db->spi_lockm);
-	phy_stop(db->phydev);
-//	mutex_unlock(&db->spi_lockm);
 
 	#ifdef DMPLUG_INT
-	/* when (threadedcfg.interrupt_supp == THREADED_INT) */
 	END_FREE_IRQ(ndev);
 	#endif
 
@@ -2267,8 +2312,59 @@ static int dm9051_stop(struct net_device *ndev)
 
 	skb_queue_purge(&db->txq);
 
-	return 0;
+
+	#if MI_FIX
+	mutex_lock(&db->spi_lockm);
+	#endif
+
+	ret = dm9051_all_stop(db);
+
+	#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+	#endif
+
+	return ret;
 }
+//static int dm9051_stop001(struct net_device *ndev)
+//{
+//	struct board_info *db = to_dm9051_board(ndev);
+//	int ret;
+
+//	dev_info(&db->spidev->dev, "dm9051_stop\n");
+//	printk("\n");
+
+////	mutex_lock(&db->spi_lockm);
+//	ret = dm9051_all_stop(db);
+////	mutex_unlock(&db->spi_lockm);
+//	if (ret)
+//		return ret;
+
+//	/* schedule delay work */
+//	#ifdef DMPLUG_INT
+//	#ifdef INT_TWO_STEP
+//		cancel_delayed_work_sync(&db->irq_servicep); //.if (_dm9051_cmode_int)
+//	#endif //INT_TWO_STEP
+//	#else //DMPLUG_INT
+//		cancel_delayed_work_sync(&db->irq_workp); //.if (!_dm9051_cmode_int)
+//	#endif 
+
+//	flush_work(&db->tx_work);
+//	flush_work(&db->rxctrl_work);
+
+////	mutex_lock(&db->spi_lockm);
+//	phy_stop(db->phydev);
+////	mutex_unlock(&db->spi_lockm);
+
+//	#ifdef DMPLUG_INT
+//	END_FREE_IRQ(ndev);
+//	#endif
+
+//	netif_stop_queue(ndev);
+
+//	skb_queue_purge(&db->txq);
+
+//	return 0;
+//}
 
 /* event: play a schedule starter in condition
  */
@@ -2522,6 +2618,7 @@ static int dm9051_mdio_register(struct board_info *db)
 static void dm9051_handle_link_change(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
+	int ret;
 
 	#if MI_FIX
 	mutex_lock(&db->spi_lockm);
@@ -2529,7 +2626,6 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 printk("\n");
 printk("LOCK_MUTEX\n");
 
-//dev_info(&db->spidev->dev, "link_change.mutex.in / evaluation\n");
 	phy_print_status(db->phydev);
 
 	/* only write pause settings to mac. since mac and phy are integrated
@@ -2537,21 +2633,30 @@ printk("LOCK_MUTEX\n");
 	 */
 	if (db->phydev->link)
 	{
-#if 1
-netdev_info(db->phydev->attached_dev, "DO ALL_RESTART, link_change.mutex.in / link-is-up do RST\n"); //dm9051_open
-#endif
 		if (db->phydev->pause)
 		{
 			db->pause.rx_pause = true;
 			db->pause.tx_pause = true;
 		}
+	#if 1
+		printk("_all_upstart\n");
+
+		ret = dm9051_ncr_reset(db);
+		if (ret)
+			goto u_end;
+
+		ret = dm9051_all_reinit(db); //up_restart
+		if (ret)
+			goto u_end;
+
+//=
+//		ret = dm9051_all_upstart(db);
+//		if (ret)
+//			goto u_end;
+	#endif
 		dm9051_update_fcr(db);
-		//dev_info(&db->spidev->dev, "link_change.mutex.out / lpa on %02u n_automdix count on %02u, evaluation ptp_on: %d\n", db->stop_automdix_flag, db->n_automdix, db->ptp_on);
-
-//		dm9051_dump_registers(db);
-
-		dm9051_all_upstart(db);
 	}
+u_end:
 printk("UNLOCK_MUTEX\n");
 	#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
@@ -2638,9 +2743,9 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	ret = BUS_SETUP(db); /* first, reserved customization */
-	if (ret)
-		return ret;
+//	ret = _BUS_SETUP(db); /* first, reserved customization */
+//	if (ret)
+//		return ret;
 
 	SHOW_OPTION_MODE(spi);
 
