@@ -2770,6 +2770,10 @@ static int dm9051_drv_remove(struct spi_device *spi)
 	struct board_info *db = to_dm9051_board(ndev);
 
 	phy_disconnect(db->phydev);
+
+//	#ifdef DMPLUG_PTP
+//	dm9051_ptp_stop(db); //_15888_ todo
+//	#endif
 	return 0;
 }
 #else
@@ -2780,6 +2784,10 @@ static void dm9051_drv_remove(struct spi_device *spi)
 	struct board_info *db = to_dm9051_board(ndev);
 
 	phy_disconnect(db->phydev);
+
+//	#ifdef DMPLUG_PTP
+//	dm9051_ptp_stop(db); //_15888_ todo
+//	#endif
 }
 #endif
 

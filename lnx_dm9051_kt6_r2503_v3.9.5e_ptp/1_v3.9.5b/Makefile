@@ -38,15 +38,12 @@ save:
 clean:
 	rm -rf *.o *~ core .depend .*.cmd *.mod.c .tmp_versions .*.o.d *.symvers *.order *.bak *.mod
 
-install:
-ins:
+ins install :
 	sudo insmod dm9051a.ko
 
-remove:
-rm:
-	sudo rmmod dm9051a
+rm remove :
 #	sudo ifconfig eth1 down
-#	sudo rmmod dm9051a
+	sudo rmmod dm9051a
 
 ls:
 	lsmod | grep dm9
@@ -79,9 +76,7 @@ second:
 	modinfo dm9051a
 	sudo ifconfig eth1
 
-reinstall:
-test:
-tst1:
+test test1 reinstall :
 	#(modprobe -r dm9051)
 	# install -c -m 0644 dm9051.ko $(MODULE_INSTALDIR)
 	# depmod -a -e
@@ -89,13 +84,13 @@ tst1:
 	sudo rmmod dm9051a
 	sudo insmod dm9051a.ko
 	sudo ifconfig eth1
-	
-eth:
-eth1:
+
+eth eth1:
 	sudo ifconfig eth1
 
 ping1:
 	ping 192.168.6.1 -s 32750
+
 ping3:
 	ping 10.0.0.3 -s 32750
 
