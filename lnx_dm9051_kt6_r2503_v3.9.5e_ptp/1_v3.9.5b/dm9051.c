@@ -1748,6 +1748,7 @@ static int rx_head_break(struct board_info *db)
 	return 0;
 }
 
+#ifdef DMPLUG_PTP
 static int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
 {
 	//_15888_
@@ -1774,6 +1775,7 @@ static int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
 	}}
 	return 0;
 }
+#endif
 
 /* read packets from the fifo memory
  * return value,
@@ -1789,7 +1791,6 @@ static int dm9051_loop_rx(struct board_info *db)
 	struct sk_buff *skb;
 	u8 *rdptr;
 	int scanrr = 0;
-	u8 rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
 
 	do
 	{
@@ -1819,9 +1820,11 @@ static int dm9051_loop_rx(struct board_info *db)
 		}
 
 		/* rx_tstamp */
-		ret = dm9051_read_ptp_tstamp_mem(db, rxTSbyte);
+		#ifdef DMPLUG_PTP
+		ret = dm9051_read_ptp_tstamp_mem(db, db->rxTSbyte);
 		if (ret)
 			return ret;
+		#endif
 
 		rxlen = le16_to_cpu(db->rxhdr.rxlen);
 		padlen = (dm9051_modedata->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
@@ -1845,8 +1848,9 @@ static int dm9051_loop_rx(struct board_info *db)
 
 		skb->protocol = eth_type_trans(skb, db->ndev);
 		//_15888_, 
-		if(db->ptp_on)
-			dm9051_ptp_rx_hwtstamp(db, skb, rxTSbyte);
+		#ifdef DMPLUG_PTP
+		dm9051_ptp_rx_hwtstamp(db, skb, db->rxTSbyte);
+		#endif
 
 		if (ndev->features & NETIF_F_RXCSUM)
 			skb_checksum_none_assert(skb);
@@ -1908,13 +1912,18 @@ static int dm9051_loop_tx(struct board_info *db)
 
 			ntx++;
 			len  = skb->len;
+
+			#ifdef DMPLUG_PTP
 			db->ptp_mode = dm9051_ptp_one_step(skb); //_15888_,
 			db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
+			#endif
 
 #ifdef DMPLUG_CONTI
 			ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
+			#ifdef DMPLUG_PTP
 			if (db->ptp_on)
 				dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+			#endif
 			dev_kfree_skb(skb);
 			if (ret < 0)
 			{
@@ -1938,8 +1947,10 @@ static int dm9051_loop_tx(struct board_info *db)
 				#endif
 
 				ret = dm9051_single_tx(db, skb->data, len + pad, len); //'skb->len'
+				#ifdef DMPLUG_PTP
 				if (db->ptp_on)
 					dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+				#endif
 				dev_kfree_skb(skb);
 				if (ret) //.NOT (ret < 0)
 				{
@@ -2468,6 +2479,7 @@ static struct net_device_stats *dm9051_get_stats(struct net_device *ndev)
 	return &ndev->stats;
 }
 
+#ifdef DMPLUG_PTP
 /**
  * dm9051_ptp_get_ts_config - get hardware time stamping config
  * @netdev:
@@ -2538,6 +2550,7 @@ static int dm9051_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cm
 			return -EOPNOTSUPP;
 	}
 }
+#endif
 
 const struct net_device_ops dm9051_netdev_ops = { //ignored
 	.ndo_open = dm9051_open,
@@ -2559,7 +2572,9 @@ static const struct net_device_ops dm9051_ptp_netdev_ops = {
 	.ndo_set_mac_address = dm9051_set_mac_address,
 	.ndo_set_features = dm9051_ndo_set_features,
 	.ndo_get_stats = dm9051_get_stats,
+	#ifdef DMPLUG_PTP
 	.ndo_eth_ioctl = dm9051_netdev_ioctl, //_15888_
+	#endif
 };
 
 static void dm9051_operation_clear(struct board_info *db)

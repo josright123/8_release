@@ -423,51 +423,53 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTSbyte)
 {
-	//u8 temp[12];
-	u16 ns_hi, ns_lo, s_hi, s_lo;
-	//u32 prttsyn_stat, hi, lo,
-	u32 sec;
-	u64 ns;
-	//int i;
-	struct skb_shared_hwtstamps *shhwtstamps = NULL;
+	if(db->ptp_on) {
+		//u8 temp[12];
+		u16 ns_hi, ns_lo, s_hi, s_lo;
+		//u32 prttsyn_stat, hi, lo,
+		u32 sec;
+		u64 ns;
+		//int i;
+		struct skb_shared_hwtstamps *shhwtstamps = NULL;
 
-	//printk("==> dm9051_ptp_rx_hwtstamp in\r\n");
-	/* Since we cannot turn off the Rx timestamp logic if the device is
-	 * doing Tx timestamping, check if Rx timestamping is configured.
-	 */
-
-
-#if 0
-	printk(" REAL RX TSTAMP hwtstamp= %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n",
-	       rxTSbyte[0], rxTSbyte[1],rxTSbyte[2],rxTSbyte[3],rxTSbyte[4],rxTSbyte[5],rxTSbyte[6],rxTSbyte[7]);
-#endif
-
-	//dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x02); //Read RX Time Stamp Clock Register offset 0x62, value 0x02
+		//printk("==> dm9051_ptp_rx_hwtstamp in\r\n");
+		/* Since we cannot turn off the Rx timestamp logic if the device is
+		 * doing Tx timestamping, check if Rx timestamping is configured.
+		 */
 
 
-	ns_lo = rxTSbyte[7] | (rxTSbyte[6] << 8);
-	ns_hi = rxTSbyte[5] | (rxTSbyte[4] << 8);
+	#if 0
+		printk(" REAL RX TSTAMP hwtstamp= %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n",
+		       rxTSbyte[0], rxTSbyte[1],rxTSbyte[2],rxTSbyte[3],rxTSbyte[4],rxTSbyte[5],rxTSbyte[6],rxTSbyte[7]);
+	#endif
 
-	s_lo = rxTSbyte[3] | (rxTSbyte[2] << 8);
-	s_hi = rxTSbyte[1] | (rxTSbyte[0] << 8);
+		//dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x02); //Read RX Time Stamp Clock Register offset 0x62, value 0x02
 
-	sec = s_lo;
-	sec |= s_hi << 16;
 
-	ns = ns_lo;
-	ns |= ns_hi  << 16;
+		ns_lo = rxTSbyte[7] | (rxTSbyte[6] << 8);
+		ns_hi = rxTSbyte[5] | (rxTSbyte[4] << 8);
 
-	ns += ((u64)sec) * 1000000000ULL;
+		s_lo = rxTSbyte[3] | (rxTSbyte[2] << 8);
+		s_hi = rxTSbyte[1] | (rxTSbyte[0] << 8);
 
-	//printk("dm9051_ptp_rx_hwtstamp ns_lo=%x, ns_hi=%x s_lo=%x s_hi=%x \r\n", ns_lo, ns_hi, s_lo, s_hi);
+		sec = s_lo;
+		sec |= s_hi << 16;
 
-	shhwtstamps = skb_hwtstamps(skb);
-	memset(shhwtstamps, 0, sizeof(*shhwtstamps));
-	shhwtstamps->hwtstamp = ns_to_ktime(ns);
+		ns = ns_lo;
+		ns |= ns_hi  << 16;
 
-	//printk("Report RX Timestamp to skb = %lld\n", shhwtstamps->hwtstamp);
-	//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x08); //Clear RX Time Stamp Clock Register offset 0x60, value 0x08
-	//printk("<== dm9051_ptp_rx_hwtstamp out\r\n");
+		ns += ((u64)sec) * 1000000000ULL;
+
+		//printk("dm9051_ptp_rx_hwtstamp ns_lo=%x, ns_hi=%x s_lo=%x s_hi=%x \r\n", ns_lo, ns_hi, s_lo, s_hi);
+
+		shhwtstamps = skb_hwtstamps(skb);
+		memset(shhwtstamps, 0, sizeof(*shhwtstamps));
+		shhwtstamps->hwtstamp = ns_to_ktime(ns);
+
+		//printk("Report RX Timestamp to skb = %lld\n", shhwtstamps->hwtstamp);
+		//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x08); //Clear RX Time Stamp Clock Register offset 0x60, value 0x08
+		//printk("<== dm9051_ptp_rx_hwtstamp out\r\n");
+	}
 }
 
 /*s64*/ u32 dm9051_get_rate_reg(struct board_info *db) {

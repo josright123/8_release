@@ -376,10 +376,10 @@ struct board_info
 	unsigned int n_automdix; //= 0;
 	unsigned int stop_automdix_flag; //= 0
 	unsigned int mdi; //= 0x0830;
-	//u16 automdix_flag[3];
-	char automdix_log[3][66];
+	char automdix_log[3][66]; //u16 automdix_flag[3];
 
 //_15888_
+	/* if defined DMPLUG_PTP. begin ... */
 	int                             ptp_on; 	//_15888_
 	struct ptp_clock                *ptp_clock;
 	struct ptp_clock_info 			ptp_caps;
@@ -390,6 +390,8 @@ struct board_info
 	unsigned int					tcr_wr;
 	s64								pre_rate;
 	struct hwtstamp_config          tstamp_config;
+	u8 rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
+	/* if defined DMPLUG_PTP. end ... */
 };
 #endif
 
