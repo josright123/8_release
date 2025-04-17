@@ -176,13 +176,13 @@ void SHOW_MODE(struct spi_device *spi) //SHOW_INT_MODE
 			dev_info(&spi->dev, "Interrupt: Two_step\n");
 		#endif
 	#else
-		int i;
 		dev_info(&spi->dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);
-		dev_info(&spi->dev, "Operation: Polling operate count %d\n", csched.nTargetMaxNum);
-		for (i = 0; i < csched.nTargetMaxNum; i++)
-		{
-			dev_info(&spi->dev, "Operation: Polling operate delayF[%d]= %lu\n", i, csched.delayF[i]);
-		}
+		//int i;
+		//dev_info(&spi->dev, "Operation: Polling operate count %d\n", csched.nTargetMaxNum);
+		//for (i = 0; i < csched.nTargetMaxNum; i++)
+		//{
+		//	dev_info(&spi->dev, "Operation: Polling operate delayF[%d]= %lu\n", i, csched.delayF[i]);
+		//}
 	#endif
 }
 

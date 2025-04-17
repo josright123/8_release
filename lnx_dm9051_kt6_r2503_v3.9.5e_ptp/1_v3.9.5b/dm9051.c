@@ -117,13 +117,13 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi)
 	printk("\n");
 	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 	dev_info(dev, "LXR: %s, BUILD: %s\n", utsname()->release, utsname()->release); //dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]); /* Driver configuration test_info */
-	dev_info(dev, "Kernel Version (compile-time): %s\n", UTS_RELEASE);
+	//dev_info(dev, "Kernel Version (compile-time): %s\n", UTS_RELEASE);
 #ifdef DMCONF_AARCH_64
 	dev_info(dev, "TX: %s blk %lu\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
-	dev_info(dev, "RX: %s blk %lu\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
+	dev_info(dev, "RX: %s blk %lu\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk);
 #else
 	dev_info(dev, "TX: %s blk %u\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
-	dev_info(dev, "RX: %s blk %u\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
+	dev_info(dev, "RX: %s blk %u\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk);
 #endif
 }
 
@@ -906,7 +906,7 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 	}
 	else
 	{
-		printk("_ndo set and write [Disabling TX/RX checksum]\n");
+		//printk("_ndo set and write [Disabling TX/RX checksum]\n");
 		db->csum_gen_val = 0x0; //dm9051_set_reg(db, 0x31, 0x0);
 		db->csum_rcv_val = 0x0; //dm9051_set_reg(db, 0x32, 0x0);
 	}
@@ -986,8 +986,8 @@ static int dm9051_core_init(struct board_info *db)
 		return ret;
 
 	// Checksum Offload
-	printk("dm9051_set [write TX/RX checksum] wr 0x31 0x%02x wr 0x32 0x%02x, in _core_reset\n",
-		db->csum_gen_val, db->csum_rcv_val);
+	//printk("dm9051_set [write TX/RX checksum] wr 0x31 0x%02x wr 0x32 0x%02x, in _core_reset\n",
+	//	db->csum_gen_val, db->csum_rcv_val);
 	ret = regmap_write(db->regmap_dm, 0x31, db->csum_gen_val);
 	if (ret)
 		return ret;
@@ -1201,9 +1201,9 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 	if (ret < 0)
 		return ret;
 
-	dev_info(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
-			 addr[0], addr[1], addr[2],
-			 addr[3], addr[4], addr[5]);
+	//dev_info(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+	//		 addr[0], addr[1], addr[2],
+	//		 addr[3], addr[4], addr[5]);
 
 	if (!is_valid_ether_addr(addr))
 	{
@@ -1220,7 +1220,7 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 		if (ret < 0)
 			return ret;
 
-		dev_info(&db->spidev->dev, "Use random MAC address.e: %02x:%02x:%02x:%02x:%02x:%02x\n",
+		dev_info(&db->spidev->dev, "Use random MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
 				 addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	}
 
@@ -1230,7 +1230,7 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 	ether_addr_copy(ndev->dev_addr, addr);
 #endif
 
-	dev_info(&db->spidev->dev, "Power-on chip MAC address.e: %02x:%02x:%02x:%02x:%02x:%02x\n",
+	dev_info(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
 			 addr[0], addr[1], addr[2],
 			 addr[3], addr[4], addr[5]);
 	return 0;
@@ -1545,13 +1545,13 @@ void dm9051_all_restart_sum(struct board_info *db)
 	struct net_device *ndev = db->ndev;
 
 	db->bc.fifo_rst_counter++;
-	printk("dm9.Show rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+	printk("List: dm9.Show rxstatus_Er & rxlen_Er %d, RST_c %d\n",
 	   db->bc.status_err_counter + db->bc.large_err_counter,
 	   db->bc.fifo_rst_counter);
-	netdev_dbg(ndev, " rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+	netdev_dbg(ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
 	   db->bc.status_err_counter + db->bc.large_err_counter,
 	   db->bc.fifo_rst_counter);
-	printk("_[_all_restart] rxb work around done\n");
+	//printk("_[_all_restart] rxb work around done\n");
 }
 
 int dm9051_subconcl_and_rerxctrl(struct board_info *db)
@@ -1723,12 +1723,17 @@ static int rx_head_break(struct board_info *db)
 	rxlen = le16_to_cpu(db->rxhdr.rxlen);
 	if (db->rxhdr.status & err_bits || rxlen > DM9051_PKT_MAX)
 	{
-		printk("dm9.Monitor headbyte/status/rxlen %2x %2x %04x\n",
-			   db->rxhdr.headbyte,
-			   db->rxhdr.status,
-			   db->rxhdr.rxlen);
-		netdev_dbg(ndev, "rxhdr-byte (%02x)\n",
-				   db->rxhdr.headbyte);
+		if (rxlen > DM9051_PKT_MAX)
+			printk("Err: dm9.Monitor headbyte/status/rxlen %2x %2x %04x\n",
+				   db->rxhdr.headbyte,
+				   db->rxhdr.status,
+				   db->rxhdr.rxlen);
+		if (db->rxhdr.status & err_bits) {
+			printk("Err: rxhdr-byte (%02x)\n",
+					   db->rxhdr.headbyte);
+			netdev_dbg(ndev, "Err: rxhdr-byte (%02x)\n",
+					   db->rxhdr.headbyte);
+		}
 
 		if (db->rxhdr.status & RSR_ERR_BITS)
 		{
@@ -2546,8 +2551,18 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 	#if MI_FIX
 	mutex_lock(&db->spi_lockm);
 	#endif
+
+	if (db->phydev->link)
+	{
 printk("\n");
 printk("LOCK_MUTEX\n");
+
+		if (db->phydev->pause)
+		{
+			db->pause.rx_pause = true;
+			db->pause.tx_pause = true;
+		}
+	}
 
 	phy_print_status(db->phydev);
 
@@ -2556,20 +2571,16 @@ printk("LOCK_MUTEX\n");
 	 */
 	if (db->phydev->link)
 	{
-		if (db->phydev->pause)
-		{
-			db->pause.rx_pause = true;
-			db->pause.tx_pause = true;
-		}
-
 		ret = dm9051_all_upstart(db);
 		if (ret)
 			goto u_end;
 
 		dm9051_update_fcr(db);
-	}
 u_end:
 printk("UNLOCK_MUTEX\n");
+printk("\n");
+	}
+
 	#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
 	#endif
@@ -2701,9 +2712,9 @@ static int dm9051_drv_remove(struct spi_device *spi)
 
 	phy_disconnect(db->phydev);
 
-//	#ifdef DMPLUG_PTP
-//	dm9051_ptp_stop(db); //_15888_ todo
-//	#endif
+	#ifdef DMPLUG_PTP
+	dm9051_ptp_stop(db); //_15888_ todo
+	#endif
 	return 0;
 }
 #else
@@ -2715,9 +2726,9 @@ static void dm9051_drv_remove(struct spi_device *spi)
 
 	phy_disconnect(db->phydev);
 
-//	#ifdef DMPLUG_PTP
-//	dm9051_ptp_stop(db); //_15888_ todo
-//	#endif
+	#ifdef DMPLUG_PTP
+	dm9051_ptp_stop(db); //_15888_ todo
+	#endif
 }
 #endif
 

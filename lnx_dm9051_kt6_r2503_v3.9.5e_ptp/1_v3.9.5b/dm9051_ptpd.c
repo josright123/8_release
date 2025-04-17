@@ -1287,6 +1287,16 @@ void dm9051_ptp_init(struct board_info *db)
 	dm9051_set_reg(db, DM9051_1588_1_STEP_CHK, 0x00);
 
 }
+
+void dm9051_ptp_stop(struct board_info *db)
+{
+
+	if (db->ptp_clock) {
+		ptp_clock_unregister(db->ptp_clock);
+		db->ptp_clock = NULL;
+		printk("dm9051_ptp_stop remove PTP clock!!!\r\n");
+	}
+}
 #endif //DMPLUG_PTP
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, ptpd"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");

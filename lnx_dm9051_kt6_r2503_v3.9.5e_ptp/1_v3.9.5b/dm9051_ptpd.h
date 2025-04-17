@@ -88,5 +88,6 @@ int ptp_9051_feature_enable(struct ptp_clock_info *ptp,
 int ptp_9051_verify_pin(struct ptp_clock_info *ptp, unsigned int pin,
     enum ptp_pin_function func, unsigned int chan);
 void dm9051_ptp_init(struct board_info *db);
+void dm9051_ptp_stop(struct board_info *db);
 
 #endif //_DM9051_PTPD_H_
