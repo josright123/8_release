@@ -16,6 +16,8 @@
  */
 /*#define DMCONF_DIV_HLPR_32 */	//(32-bit division helper, __aeabi_ldivmod())
 /*#define DMCONF_AARCH_64 */ //(64-bit OS)
+/*#define DMCONF_BMCR_WR */ //(bmcr-work around)
+/*#define DMCONF_MRR_WR */ //(mrr-work around)
 
 /* Macro for already known platforms
  */ 
@@ -27,6 +29,16 @@
 #define PLUG_CFG64
 #ifdef PLUG_CFG64
 #define DMCONF_AARCH_64 //(64-bit OS)
+#endif
+
+#define PLUG_BMCR
+#ifdef PLUG_BMCR
+#define DMCONF_BMCR_WR //(bmcr-work around)
+#endif
+
+#define PLUG_MRR
+#ifdef PLUG_MRR
+#define DMCONF_MRR_WR //(mrr-work around)
 #endif
 
 /* Device identification */
@@ -375,22 +387,26 @@ struct board_info
 	
 	unsigned int n_automdix; //= 0;
 	unsigned int stop_automdix_flag; //= 0
-	unsigned int mdi; //= 0x0830;
 	char automdix_log[3][66]; //u16 automdix_flag[3];
 
-//_15888_
+	unsigned int tcr_wr;
+	unsigned int bmsr;
+	unsigned int lpa;
+	unsigned int mdi; //= 0x0830;
+
+	/* ptpc */
 	/* if defined DMPLUG_PTP. begin ... */
-	int                             ptp_on; 	//_15888_
-	struct ptp_clock                *ptp_clock;
-	struct ptp_clock_info 			ptp_caps;
+	#if 1 //0
+	int			ptp_on; //_15888_
+	struct ptp_clock        *ptp_clock;
+	struct ptp_clock_info 	ptp_caps;
 
-	//unsigned int                    ptp_tx_flags;
-	u8				ptp_mode; //1: one-step, 2: two-step, 3: xxx, others: Not PTP //_15888_
-
-	unsigned int					tcr_wr;
-	s64								pre_rate;
-	struct hwtstamp_config          tstamp_config;
-	u8 rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
+	u8			ptp_mode; //1: one-step, 2: two-step, 3: xxx, others: Not PTP //_15888_
+	s64			pre_rate;
+	struct hwtstamp_config	tstamp_config;
+	u8              	rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
+	#endif
+	//unsigned int          ptp_tx_flags;
 	/* if defined DMPLUG_PTP. end ... */
 };
 #endif
@@ -418,7 +434,7 @@ void dm9051_all_restart_sum(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 /* amdix functions */
-void amdix_link_change_up(struct board_info *db, unsigned int bmsr, unsigned int val);
+void amdix_link_change_up(struct board_info *db, unsigned int bmsr);
 
 #ifdef MAIN_DATA
 /* Driver configuration structure */

@@ -186,5 +186,5 @@ void SHOW_MODE(struct spi_device *spi) //SHOW_INT_MODE
 	#endif
 }
 
-MODULE_DESCRIPTION("Davicom DM9051 driver, Open"); //MODULE_DESCRIPTION("Davicom DM9051A Open");
+MODULE_DESCRIPTION("Davicom DM9051 network SPI driver"); //MODULE_DESCRIPTION("Davicom DM9051A Open");
 MODULE_LICENSE("GPL");

@@ -152,6 +152,8 @@ extern const struct eng_sched csched;
 
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb); //used in the plug section
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
+int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
+						   size_t len);
 
 //void SHOW_INT_MODE(struct spi_device *spi);
 //void SHOW_POLL_MODE(struct spi_device *spi);
@@ -225,9 +227,8 @@ void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
 #endif
 
 #ifdef DMPLUG_PTP
-//#warning "dm9051 PTP"
-//#info  "dm9051 PTP" //"This is an informational : dm9051 PTP"
 #pragma message("dm9051 PTP")
+//#warning "dm9051 PTP"
 #endif
 
 /* INT and INT two_step */

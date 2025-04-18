@@ -301,7 +301,7 @@ static int dm9051_read_mem_rxb(struct board_info *db, unsigned int reg, void *bu
 	return ret;
 }
 
-static int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
+int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 						   size_t len)
 {
 	int ret;
@@ -660,6 +660,7 @@ static int PHY_RST(struct board_info *db)
 	return 0;
 }
 
+#ifdef DMCONF_BMCR_WR
 /*void set_log_addr(struct board_info *db, char *p)
   {
   }*/
@@ -696,33 +697,37 @@ static void show_log_addr(char *head, struct board_info *db)
 	if (db->automdix_log[2][0])
 		printk("<%s> %s\n", head, &db->automdix_log[2][1]);
 }
-void amdix_link_change_up(struct board_info *db, unsigned int bmsr, unsigned int val)
+void amdix_log_reset(struct board_info *db)
 {
-	if (!(bmsr & BIT(2)) && (val & BIT(2))) {
+	db->n_automdix = 0; //log-reset
+	db->stop_automdix_flag = 0;
+	db->automdix_log[0][0] = 0;
+	db->automdix_log[1][0] = 0;
+	db->automdix_log[2][0] = 0;
+}
+void amdix_link_change_up(struct board_info *db, unsigned int bmsr)
+{
+	if (!(bmsr & BIT(2)) && (db->bmsr & BIT(2))) {
 		//[show]
-		show_log_addr("link", db); //.if (!db->stop_automdix_flag).
+		show_log_addr("hist", db); //.if (!db->stop_automdix_flag).
 		//[message]
-		printk("<from_phylib. on %02u to %02u, current[bmsr] %04x>, found reach link\n", db->stop_automdix_flag, db->n_automdix, val);
+		printk("<link_phylib. on %02u to %02u, current[bmsr] %04x>, lpa %04x found reach link\n", db->stop_automdix_flag, db->n_automdix, db->bmsr, db->lpa);
 		//[clear]
 		printk("[link] clear log...");
-		db->n_automdix = 0; //log-reset
-		db->stop_automdix_flag = 0;
-		db->automdix_log[0][0] = 0;
-		db->automdix_log[1][0] = 0;
-		db->automdix_log[2][0] = 0;
+		amdix_log_reset(db);
 	}
 }
 
-static int amdix_link_change(struct board_info *db, unsigned int val)
+static int amdix_link_change(struct board_info *db)
 {
 	static unsigned int bmsr = 0xffff;
 
-	/* bmcr(link) change */
-	if (val != bmsr) {		
+	/* bmsr(link) change */
+	if (db->bmsr != bmsr) {		
 		/* link change to up */
-		amdix_link_change_up(db, bmsr, val);
+		amdix_link_change_up(db, bmsr);
 
-		bmsr = val;
+		bmsr = db->bmsr;
 		return 1;
 	}
 	return 0;
@@ -730,48 +735,41 @@ static int amdix_link_change(struct board_info *db, unsigned int val)
 
 // dm9051_phyread.EXTEND
 static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
-								   unsigned int reg, unsigned int *val)
+								   unsigned int *val)
 {
-	int ret = dm9051_phyread(db, reg, val);
+	int ret;
+
+	ret = dm9051_phyread(db, MII_LPA, val);
 	if (ret)
 		return ret;
+	db->lpa = *val;
+
+	ret = dm9051_phyread(db, MII_BMSR, val);
+	if (ret)
+		return ret;
+	db->bmsr = *val;
 
 	/* check log */
 	do
 	{
-//		static unsigned int bmsr = 0xffff;
-//		if (*val != bmsr)
-//		{
-//			/* link change to up */
-//			amdix_link_change_up(db, *val);
-//			/* updation save */
-//			bmsr = *val;
-//		}
-//		else
-		
-		if (!amdix_link_change(db, *val))
+		if (!amdix_link_change(db))
 		{
-			if (!(*val & BIT(2))) {
-				unsigned int vval;
+			if (!(db->bmsr & BIT(2))) {
 				//static unsigned int n_automdix = 0;
 				//static unsigned int mdi = 0x0830;
-				//#define TOGG_INTVL		1
-				//#define TOGG_TOT_SHOW	5
 				db->n_automdix++;
 				
 				if (db->stop_automdix_flag) {
-					printk("<conti_phylib. on %02u to %02u, current[bmsr] %04x> stop automdix\n", db->stop_automdix_flag, db->n_automdix, *val);
-					//sprintf(db->bc.head, "%2d", db->n_automdix);
-					//dm9051_dump_reg2s(db, 0x74, 0x75);
+					printk("<cont_phylib. on %02u to %02u, current[bmsr] %04x> lpa %04x stop automdix\n", db->stop_automdix_flag, db->n_automdix, db->bmsr, db->lpa);
 					break;
 				}
 
-				ret = dm9051_phyread(db, 5, &vval);
-				if (ret)
-					return ret;
+				//ret = dm9051_phyread(db, 5, &vval);
+				//if (ret)
+				//	return ret;
 				
-				if (vval) {
-					printk("<from_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> STOPPING... automdix\n", db->stop_automdix_flag, db->n_automdix, vval);
+				if (db->lpa) {
+					printk("<fund_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> STOPPING... automdix\n", db->stop_automdix_flag, db->n_automdix, db->lpa);
 					db->stop_automdix_flag = db->n_automdix; //db->stop_automdix_flag = 1; //.
 //					break; //(STOP avoid below possible more once toggle...)
 				}
@@ -785,7 +783,7 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 							printk("\n");
 					}
 					if (db->n_automdix <= TOGG_TOT_SHOW 
-						&& !(*val & BIT(6))) printk("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", addr, *val);
+						&& !(db->bmsr & BIT(6))) printk("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", addr, db->bmsr);
 
 					ret = dm9051_phywrite(db, 20, db->mdi);
 					if (ret)
@@ -802,6 +800,7 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 
 	return ret;
 }
+#endif
 
 static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 {
@@ -817,9 +816,11 @@ static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 		mutex_lock(&db->spi_lockm);
 		#endif
 
-		if (regnum == 1)
-			ret = dm9051_phyread_log_bmsr(db, addr, regnum, &val);
+#ifdef DMCONF_BMCR_WR
+		if (regnum == MII_BMSR)
+			ret = dm9051_phyread_log_bmsr(db, addr, &val);
 		else
+#endif
 			ret = dm9051_phyread(db, regnum, &val);
 
 		#if MI_FIX
@@ -861,12 +862,6 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 				//printk("\n");
 				printk("_[mii_bus] mdio write : power down (warn)\n");
 			}
-
-			db->n_automdix = 0; //log-reset
-			db->stop_automdix_flag = 0;
-			db->automdix_log[0][0] = 0;
-			db->automdix_log[1][0] = 0;
-			db->automdix_log[2][0] = 0;
 		}
 		ret = dm9051_phywrite(db, regnum, val);
 
@@ -1409,8 +1404,11 @@ static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_op
 	.get_strings = dm9051_get_strings,
 	.get_sset_count = dm9051_get_sset_count,
 	.get_ethtool_stats = dm9051_get_ethtool_stats,
+/* ptpc */
+#if 1 //0
 #ifdef DMPLUG_PTP
 	.get_ts_info = dm9051_ts_info, //_15888_,
+#endif
 #endif
 };
 
@@ -1717,8 +1715,14 @@ static int rx_head_break(struct board_info *db)
 
 	//_15888_
 	u8 err_bits = RSR_ERR_BITS;
+	
+	/* ptpc */
+	#if 1 //0
+	#ifdef DMPLUG_PTP
 	if (db->ptp_on) 
 		err_bits &= ~(RSR_LCS | RSR_PLE | RSR_AE); //(0x93);
+	#endif
+	#endif
 
 	rxlen = le16_to_cpu(db->rxhdr.rxlen);
 	if (db->rxhdr.status & err_bits || rxlen > DM9051_PKT_MAX)
@@ -1751,35 +1755,6 @@ static int rx_head_break(struct board_info *db)
 	}
 	return 0;
 }
-
-#ifdef DMPLUG_PTP
-static int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
-{
-	//_15888_
-	if (db->ptp_on) {
-	if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-		struct net_device *ndev = db->ndev;
-		int ret;
-		//printk("Had RX Timestamp... rxstatus = 0x%x\n", db->rxhdr.status);
-		if(db->rxhdr.status & RSR_RXTS_LEN) {	// 8 bytes Timestamp
-			ret = dm9051_read_mem(db, DM_SPI_MRCMD, rxTSbyte, 8);
-			if (ret) {
-				netdev_dbg(ndev, "Read TimeStamp error: %02x\n", ret);
-				return ret;
-			}
-		}else{
-			/* 4bytes, dm9051a NOT supported 
-			 */
-			ret = dm9051_read_mem(db, DM_SPI_MRCMD, rxTSbyte, 4);
-			if (ret) {
-				netdev_dbg(ndev, "Read TimeStamp error: %02x\n", ret);
-				return ret;
-			}
-		}			
-	}}
-	return 0;
-}
-#endif
 
 /* read packets from the fifo memory
  * return value,
@@ -1822,12 +1797,15 @@ static int dm9051_loop_rx(struct board_info *db)
 			dm9051_all_restart(db);
 			return -EINVAL;
 		}
-
-		/* rx_tstamp */
+		
+		/* ptpc */
+		#if 1 //0
 		#ifdef DMPLUG_PTP
+		/* rx_tstamp */
 		ret = dm9051_read_ptp_tstamp_mem(db, db->rxTSbyte);
 		if (ret)
 			return ret;
+		#endif
 		#endif
 
 		rxlen = le16_to_cpu(db->rxhdr.rxlen);
@@ -1852,8 +1830,11 @@ static int dm9051_loop_rx(struct board_info *db)
 
 		skb->protocol = eth_type_trans(skb, db->ndev);
 
+		/* ptpc */
+		#if 1 //0
 		#ifdef DMPLUG_PTP
 		dm9051_ptp_rx_hwtstamp(db, skb, db->rxTSbyte); //_15888_, 
+		#endif
 		#endif
 
 		if (ndev->features & NETIF_F_RXCSUM)
@@ -1917,15 +1898,24 @@ static int dm9051_loop_tx(struct board_info *db)
 			ntx++;
 			len  = skb->len;
 
+			/* ptpc */
+			#if 1 //0
 			#ifdef DMPLUG_PTP
 			db->ptp_mode = dm9051_ptp_one_step(skb); //_15888_,
 			db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
 			#endif
-
+			#endif
+			
+			//	if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
+			//	{ //as below:
+			//	}
 #ifdef DMPLUG_CONTI
 			ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
+			/* ptpc */
+			#if 1 //0
 			#ifdef DMPLUG_PTP
 			dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+			#endif
 			#endif
 			dev_kfree_skb(skb);
 			if (ret < 0)
@@ -1950,8 +1940,11 @@ static int dm9051_loop_tx(struct board_info *db)
 				#endif
 
 				ret = dm9051_single_tx(db, skb->data, len + pad, len); //'skb->len'
+				/* ptpc */
+				#if 1 //0
 				#ifdef DMPLUG_PTP
 				dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+				#endif
 				#endif
 				dev_kfree_skb(skb);
 				if (ret) //.NOT (ret < 0)
@@ -2193,10 +2186,9 @@ static int dm9051_open(struct net_device *ndev)
 	int ret;
 	
 	printk("\n");
-//	dev_info(&spi->dev, "dm9051_open\n");//.
-//	dev_info(&spi->dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);//.
 	netdev_info(db->phydev->attached_dev, "dm9051_open\n");
 	netdev_info(db->phydev->attached_dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);
+	//amdix_log_reset(db); (to be determined)
 
 	db->imr_all = IMR_PAR | IMR_PRM;
 	db->lcr_all = LMCR_MODE1;
@@ -2219,14 +2211,15 @@ static int dm9051_open(struct net_device *ndev)
 	if (ret)
 		goto open_end;
 
+/* ptpc */
+#if 1 //0
 #ifdef DMPLUG_PTP
-//#ifdef DMCONF_OPEN_EXTRA
-//#endif
 	if (db->ptp_on) {
 		//_15888_ 
 		u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
 		printk("Pre-RateReg value = 0x%08X\n", rate_reg);
 	}
+#endif
 #endif
 
 	#if MI_FIX
@@ -2261,6 +2254,9 @@ static int dm9051_open(struct net_device *ndev)
 
 	netif_wake_queue(ndev);
 
+//	if (!DM9051_OPEN_POLLING()) //POLLING will place into dm9051_plug.c (then eliminate dm9051_open.c)
+//	{ //as below:
+//	}
 	ret = DM9051_OPEN_REQUEST(db);
 	if (ret < 0) {
 		#if MI_FIX
@@ -2490,8 +2486,11 @@ static const struct net_device_ops dm9051_netdev_ops = {
 	.ndo_set_mac_address = dm9051_set_mac_address,
 	.ndo_set_features = dm9051_ndo_set_features,
 	.ndo_get_stats = dm9051_get_stats,
+	/* ptpc */
+	#if 1 //0
 	#ifdef DMPLUG_PTP
 	.ndo_eth_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
+	#endif
 	#endif
 };
 
@@ -2515,7 +2514,15 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->automdix_log[1][0] = 0;
 	db->automdix_log[2][0] = 0;
 	db->mdi = 0x0830;
+
+/* ptpc */
+#if 1 //0
+#ifdef DMPLUG_PTP
 	db->ptp_on = 0;
+#endif
+#endif
+	
+	db->tcr_wr = TCR_TXREQ; //pre-defined
 }
 
 static int dm9051_mdio_register(struct board_info *db)
@@ -2571,9 +2578,11 @@ printk("LOCK_MUTEX\n");
 	 */
 	if (db->phydev->link)
 	{
+#ifdef DMCONF_MRR_WR
 		ret = dm9051_all_upstart(db);
 		if (ret)
 			goto u_end;
+#endif
 
 		dm9051_update_fcr(db);
 u_end:
@@ -2694,10 +2703,13 @@ static int dm9051_probe(struct spi_device *spi)
 		return dev_err_probe(dev, ret, "device register failed");
 	}
 
+	/* ptpc */
+	#if 1 //0
 	#ifdef DMPLUG_PTP
-	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
 	//db->ptp_on = 1;
+	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
 	dm9051_ptp_init(db); //_15888_
+	#endif
 	#endif
 
 	return 0;
@@ -2712,8 +2724,11 @@ static int dm9051_drv_remove(struct spi_device *spi)
 
 	phy_disconnect(db->phydev);
 
+	/* ptpc */
+	#if 1 //0
 	#ifdef DMPLUG_PTP
 	dm9051_ptp_stop(db); //_15888_ todo
+	#endif
 	#endif
 	return 0;
 }
@@ -2726,8 +2741,11 @@ static void dm9051_drv_remove(struct spi_device *spi)
 
 	phy_disconnect(db->phydev);
 
+	/* ptpc */
+	#if 1 //0
 	#ifdef DMPLUG_PTP
 	dm9051_ptp_stop(db); //_15888_ todo
+	#endif
 	#endif
 }
 #endif

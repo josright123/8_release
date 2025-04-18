@@ -23,7 +23,131 @@
 #include "dm9051_plug.h"
 #include "dm9051_ptpd.h"
 
+/* ptpc */
+#if 0 //1 //0
 #ifdef DMPLUG_PTP
+#endif
+#endif
+
+#ifdef DMPLUG_PTP
+
+int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
+{
+	//_15888_
+	if (db->ptp_on) {
+	if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+		struct net_device *ndev = db->ndev;
+		int ret;
+		//printk("Had RX Timestamp... rxstatus = 0x%x\n", db->rxhdr.status);
+		if(db->rxhdr.status & RSR_RXTS_LEN) {	// 8 bytes Timestamp
+			ret = dm9051_read_mem(db, DM_SPI_MRCMD, rxTSbyte, 8);
+			if (ret) {
+				netdev_dbg(ndev, "Read TimeStamp error: %02x\n", ret);
+				return ret;
+			}
+		}else{
+			/* 4bytes, dm9051a NOT supported 
+			 */
+			ret = dm9051_read_mem(db, DM_SPI_MRCMD, rxTSbyte, 4);
+			if (ret) {
+				netdev_dbg(ndev, "Read TimeStamp error: %02x\n", ret);
+				return ret;
+			}
+		}			
+	}}
+	return 0;
+}
+
+void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
+{
+	//struct sk_buff *skb = db->ptp_tx_skb;
+	struct skb_shared_hwtstamps shhwtstamps;
+	//u64 regval;
+	u8 temp[9];
+	u16 ns_hi, ns_lo, s_hi, s_lo;
+	u32 sec;
+	u64 ns;
+	//int i;
+	//unsigned int uIntTemp = 0;
+
+
+	memset(&temp, 0, sizeof(temp));
+
+	//printk("==================================> TX_hwtstamp FROM in\r\n");
+
+	//Spenser - Read TX timestamp from REG_68H
+	//remark6-slave
+
+//.	mutex_lock(&db->spi_lockm);
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);	// Reset Register 68H Index
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);	// dummy reset to workaround unsync
+	dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x01); //Read TX Time Stamp Clock Register offset 0x62, value 0x01
+
+	regmap_noinc_read(db->regmap_dm, DM9051_1588_TS, temp, 8);	//Spenser -  Read HW Timestamp from DM9051A REG_68H
+	// for (i=0; i< 8; i++) {
+	// 	regmap_read(db->regmap_dm, DM9051_1588_TS, &uIntTemp);
+	// 	temp[i] = (u8)(uIntTemp & 0xFF);
+	// }
+//.	mutex_unlock(&db->spi_lockm);
+
+#if 0
+	if (!uIntTemp) {
+		printk("HW Timestamp read fail\n");
+	}else{
+		printk("HW Timestamp read OK\n");
+	}
+#endif
+#ifdef _DE_TIMESTAMP
+	printk(" TXTXTXTXTX hwtstamp 0x68 = %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x \r\n",
+	       temp[0], temp[1],temp[2],temp[3],temp[4],temp[5],temp[6],temp[7]);
+#endif
+	//printk("==================================> TX_hwtstamp FROM OUT\r\n");
+	ns_lo = temp[0] | (temp[1] << 8);
+	ns_hi = temp[2] | (temp[3] << 8);
+
+	s_lo = temp[4] | (temp[5] << 8);
+	s_hi = temp[6] | (temp[7] << 8);
+
+	sec = s_lo;
+	sec |= s_hi << 16;
+
+	ns = ns_lo;
+	ns |= ns_hi  << 16;
+
+#ifdef DE_TIMESTAMP
+	//remark4-slave
+	//printk(" TXTXTXTXTX hwtstamp sec = %x, ns = %x \r\n", sec, (u32)ns);
+
+#endif
+
+
+	ns += ((u64)sec) * 1000000000ULL;
+
+
+	memset(&shhwtstamps, 0, sizeof(shhwtstamps));
+	shhwtstamps.hwtstamp = ns_to_ktime(ns);
+	//skb_complete_tx_timestamp(skb, &shhwtstamps);
+	//remark5-slave
+	//printk("---Report TX HW Timestamp\n");
+	skb_tstamp_tx(skb, &shhwtstamps);	//Report HW Timestamp
+	//remark5-slave
+	//printk("Report TX HW Timestamp---\n");
+
+//Spenser - doesn't trigger GP1 this time.
+#if 0
+	if(skb->len == 86){
+		if (skb->data[42] == 0x00){
+			printk("++++++ master => Sync or Follow_up packet  (slave => Delay Reqest packet sequestid = %x %x )!!!!! +++++ \r\n", skb->data[73], skb->data[74]);
+			printk(" TXTXTXTXTX hwtstamp 0x68 = %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x \r\n", temp[0], temp[1], temp[2], temp[3], temp[4], temp[5], temp[6], temp[7]);
+			//dm9051_GP1_setup(db, temp);
+			schedule_work(&db->ptp_extts0_work);
+		}
+
+	}
+#endif
+
+
+}
 
 static u8 get_ptp_message_type(struct sk_buff *skb) {
     struct udphdr *p_udp_hdr;
@@ -448,97 +572,6 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 	}
 
 	return ret;
-}
-
-void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
-{
-	//struct sk_buff *skb = db->ptp_tx_skb;
-	struct skb_shared_hwtstamps shhwtstamps;
-	//u64 regval;
-	u8 temp[9];
-	u16 ns_hi, ns_lo, s_hi, s_lo;
-	u32 sec;
-	u64 ns;
-	//int i;
-	//unsigned int uIntTemp = 0;
-
-
-	memset(&temp, 0, sizeof(temp));
-
-	//printk("==================================> TX_hwtstamp FROM in\r\n");
-
-	//Spenser - Read TX timestamp from REG_68H
-	//remark6-slave
-
-//.	mutex_lock(&db->spi_lockm);
-	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);	// Reset Register 68H Index
-	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);	// dummy reset to workaround unsync
-	dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x01); //Read TX Time Stamp Clock Register offset 0x62, value 0x01
-
-	regmap_noinc_read(db->regmap_dm, DM9051_1588_TS, temp, 8);	//Spenser -  Read HW Timestamp from DM9051A REG_68H
-	// for (i=0; i< 8; i++) {
-	// 	regmap_read(db->regmap_dm, DM9051_1588_TS, &uIntTemp);
-	// 	temp[i] = (u8)(uIntTemp & 0xFF);
-	// }
-//.	mutex_unlock(&db->spi_lockm);
-
-#if 0
-	if (!uIntTemp) {
-		printk("HW Timestamp read fail\n");
-	}else{
-		printk("HW Timestamp read OK\n");
-	}
-#endif
-#ifdef _DE_TIMESTAMP
-	printk(" TXTXTXTXTX hwtstamp 0x68 = %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x \r\n",
-	       temp[0], temp[1],temp[2],temp[3],temp[4],temp[5],temp[6],temp[7]);
-#endif
-	//printk("==================================> TX_hwtstamp FROM OUT\r\n");
-	ns_lo = temp[0] | (temp[1] << 8);
-	ns_hi = temp[2] | (temp[3] << 8);
-
-	s_lo = temp[4] | (temp[5] << 8);
-	s_hi = temp[6] | (temp[7] << 8);
-
-	sec = s_lo;
-	sec |= s_hi << 16;
-
-	ns = ns_lo;
-	ns |= ns_hi  << 16;
-
-#ifdef DE_TIMESTAMP
-	//remark4-slave
-	//printk(" TXTXTXTXTX hwtstamp sec = %x, ns = %x \r\n", sec, (u32)ns);
-
-#endif
-
-
-	ns += ((u64)sec) * 1000000000ULL;
-
-
-	memset(&shhwtstamps, 0, sizeof(shhwtstamps));
-	shhwtstamps.hwtstamp = ns_to_ktime(ns);
-	//skb_complete_tx_timestamp(skb, &shhwtstamps);
-	//remark5-slave
-	//printk("---Report TX HW Timestamp\n");
-	skb_tstamp_tx(skb, &shhwtstamps);	//Report HW Timestamp
-	//remark5-slave
-	//printk("Report TX HW Timestamp---\n");
-
-//Spenser - doesn't trigger GP1 this time.
-#if 0
-	if(skb->len == 86){
-		if (skb->data[42] == 0x00){
-			printk("++++++ master => Sync or Follow_up packet  (slave => Delay Reqest packet sequestid = %x %x )!!!!! +++++ \r\n", skb->data[73], skb->data[74]);
-			printk(" TXTXTXTXTX hwtstamp 0x68 = %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x \r\n", temp[0], temp[1], temp[2], temp[3], temp[4], temp[5], temp[6], temp[7]);
-			//dm9051_GP1_setup(db, temp);
-			schedule_work(&db->ptp_extts0_work);
-		}
-
-	}
-#endif
-
-
 }
 
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTSbyte)

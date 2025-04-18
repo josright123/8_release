@@ -702,7 +702,7 @@ void amdix_link_change_up(struct board_info *db, unsigned int bmsr, unsigned int
 		//[show]
 		show_log_addr("link", db); //.if (!db->stop_automdix_flag).
 		//[message]
-		printk("<from_phylib. on %02u to %02u, current[bmsr] %04x>, found reach link\n", db->stop_automdix_flag, db->n_automdix, val);
+		printk("<from_phylib.  on %02u to %02u, current[bmsr] %04x>, found reach link\n", db->stop_automdix_flag, db->n_automdix, val);
 		//[clear]
 		printk("[link] clear log...");
 		db->n_automdix = 0; //log-reset
@@ -760,7 +760,7 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 				db->n_automdix++;
 				
 				if (db->stop_automdix_flag) {
-					printk("<conti_phylib. on %02u to %02u, current[bmsr] %04x> stop automdix\n", db->stop_automdix_flag, db->n_automdix, *val);
+					printk("<cont_phylib.  on %02u to %02u, current[bmsr] %04x> lpa %x stop automdix\n", db->stop_automdix_flag, db->n_automdix, *val, );
 					//sprintf(db->bc.head, "%2d", db->n_automdix);
 					//dm9051_dump_reg2s(db, 0x74, 0x75);
 					break;
@@ -771,7 +771,7 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 					return ret;
 				
 				if (vval) {
-					printk("<from_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> STOPPING... automdix\n", db->stop_automdix_flag, db->n_automdix, vval);
+					printk("<from_phylib.  on %02u to %02u, _mdio_read.bmsr[lpa] %04x> STOPPING... automdix\n", db->stop_automdix_flag, db->n_automdix, vval);
 					db->stop_automdix_flag = db->n_automdix; //db->stop_automdix_flag = 1; //.
 //					break; //(STOP avoid below possible more once toggle...)
 				}
