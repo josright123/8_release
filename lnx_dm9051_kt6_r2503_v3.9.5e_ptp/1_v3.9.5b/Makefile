@@ -15,6 +15,7 @@ obj-m	:=	dm9051a.o
 #dm9051a-objs := dm9051.o dm9051_open.o (dm9051_plug.o(dm9051_conti.o)) (dm9051_ptpd.o) (dm9051_crypt.o)
 #dm9051a-objs := dm9051.o dm9051_open.o dm9051_ptpd.o
 dm9051a-objs := dm9051.o dm9051_open.o dm9051_ptpd.o
+# dm9051_plug.o
 #
 #dm9051a-objs := _dm9051_monitor.o
 #dm9051a-objs := dm9051.o dm9051_proc.o
@@ -61,10 +62,10 @@ if:
 	ifconfig eth1
 cat:
 	cat /proc/interrupts
-	
+
 ifpin pin pin1:
 	ping 192.168.1.254 -I eth1 -s 128
-ifp p:
+ifp p p1:
 	ping 192.168.6.1 -I eth1 -s 64
 #	ping 192.168.6.1 -I eth1 -s 64
 
