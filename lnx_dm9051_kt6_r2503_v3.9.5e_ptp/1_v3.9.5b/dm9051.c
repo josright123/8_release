@@ -705,6 +705,7 @@ void amdix_log_reset(struct board_info *db)
 	db->automdix_log[1][0] = 0;
 	db->automdix_log[2][0] = 0;
 }
+#if 0
 void amdix_link_change_up(struct board_info *db, unsigned int bmsr)
 {
 	if (!(bmsr & BIT(2)) && (db->bmsr & BIT(2))) {
@@ -717,15 +718,39 @@ void amdix_link_change_up(struct board_info *db, unsigned int bmsr)
 		amdix_log_reset(db);
 	}
 }
+#endif
 
-static int amdix_link_change(struct board_info *db)
+void amdix_bmsr_change_up(struct board_info *db, unsigned int bmsr)
 {
-	static unsigned int bmsr = 0xffff;
+	if (!(bmsr & BIT(2))) {
+		show_log_addr("hist", db);
+		printk("<link_phylib. on %02u to %02u, current lpa %04x [bmsr] %04x to %04x found reach link\n", db->stop_automdix_flag,
+			db->n_automdix, db->lpa, bmsr, db->bmsr);
+		printk("[link] clear log...");
+		amdix_log_reset(db);
+	}
+}
 
-	/* bmsr(link) change */
+static int amdix_bmsr_change(struct board_info *db)
+{
+	static unsigned int bmsr = 0x0000; //0xffff;
+
+#if 1
+		/* bmsr (change linkup) */
+		if (db->bmsr & BIT(2)) {
+			amdix_bmsr_change_up(db, bmsr);
+		}
+#endif
+
+	/* bmsr (change) */
 	if (db->bmsr != bmsr) {		
-		/* link change to up */
-		amdix_link_change_up(db, bmsr);
+		if (bmsr & BIT(2))
+			;
+		else {
+			printk("??? [NO write toggle]\n");
+#if 0
+#endif
+		}
 
 		bmsr = db->bmsr;
 		return 1;
@@ -734,7 +759,7 @@ static int amdix_link_change(struct board_info *db)
 }
 
 // dm9051_phyread.EXTEND
-static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
+static int dm9051_phyread_nt_bmsr(struct board_info *db, int addr,
 								   unsigned int *val)
 {
 	int ret;
@@ -749,10 +774,10 @@ static int dm9051_phyread_log_bmsr(struct board_info *db, int addr,
 		return ret;
 	db->bmsr = *val;
 
-	/* check log */
+	/* nt log */
 	do
 	{
-		if (!amdix_link_change(db))
+		if (!amdix_bmsr_change(db))
 		{
 			if (!(db->bmsr & BIT(2))) {
 				//static unsigned int n_automdix = 0;
@@ -818,7 +843,7 @@ static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 
 #ifdef DMCONF_BMCR_WR
 		if (regnum == MII_BMSR)
-			ret = dm9051_phyread_log_bmsr(db, addr, &val);
+			ret = dm9051_phyread_nt_bmsr(db, addr, &val);
 		else
 #endif
 			ret = dm9051_phyread(db, regnum, &val);
@@ -1467,7 +1492,6 @@ static int dm9051_all_stop(struct board_info *db)
 	return dm9051_set_reg(db, DM9051_RCR, RCR_RX_DISABLE);
 }
 
-#if 1
 /* fifo reset while rx error found
  */
 static int dm9051_all_restart(struct board_info *db) //todo
@@ -1490,6 +1514,7 @@ static int dm9051_all_restart(struct board_info *db) //todo
 
 /* to reset while link change up
  */
+#ifdef DMCONF_MRR_WR
 static int dm9051_all_upstart(struct board_info *db) //todo
 {
 	int ret;
@@ -1506,7 +1531,7 @@ static int dm9051_all_upstart(struct board_info *db) //todo
 
 	return 0;
 }
-#endif
+#endif //DMCONF_MRR_WR
 
 /* all reinit while rx error found
  */
@@ -2553,7 +2578,6 @@ static int dm9051_mdio_register(struct board_info *db)
 static void dm9051_handle_link_change(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
-	int ret;
 
 	#if MI_FIX
 	mutex_lock(&db->spi_lockm);
@@ -2579,13 +2603,17 @@ printk("LOCK_MUTEX\n");
 	if (db->phydev->link)
 	{
 #ifdef DMCONF_MRR_WR
-		ret = dm9051_all_upstart(db);
-		if (ret)
-			goto u_end;
-#endif
-
+		do {
+			int ret = dm9051_all_upstart(db);
+			if (ret)
+				goto u_end;
+		} while(0);
 		dm9051_update_fcr(db);
 u_end:
+#else
+		dm9051_update_fcr(db);
+#endif
+
 printk("UNLOCK_MUTEX\n");
 printk("\n");
 	}
@@ -2628,8 +2656,6 @@ static int dm9051_probe(struct spi_device *spi)
 	db->msg_enable = 0;
 	db->spidev = spi;
 	db->ndev = ndev;
-	//.by ptp4l run command
-	//db->ptp_on = 1;		//Enable PTP must disable checksum_offload
 
 	ndev->netdev_ops = &dm9051_netdev_ops;
 	ndev->ethtool_ops = &dm9051_ethtool_ops;//&dm9051_ptpd_ethtool_ops;
@@ -2706,7 +2732,9 @@ static int dm9051_probe(struct spi_device *spi)
 	/* ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	//db->ptp_on = 1;
+	//.by ptp4l run command
+	//db->ptp_on = 1;		//Enable PTP must disable checksum_offload
+	db->ptp_on = 1;
 	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
 	dm9051_ptp_init(db); //_15888_
 	#endif

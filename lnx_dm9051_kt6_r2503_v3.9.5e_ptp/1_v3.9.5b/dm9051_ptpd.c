@@ -645,12 +645,13 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTS
 
 static struct ptp_clock_info ptp_dm9051a_info = {
     .owner = THIS_MODULE,
-    .name = "DM9051A PTP",
-    .max_adj = 50000000,
+    .name = "DM9051A 512-PTP",
+    .max_adj = 51200000,
     .n_alarm = 0,
     .n_ext_ts = 0,
-    .n_per_out = 0,
-    .pps = 0,
+    .n_per_out = 0, //n_periodic_outputs
+    //.n_pins = 0, //1; //n_programable_pins	
+    .pps = 0, //1, //0,
     .adjfine = ptp_9051_adjfine,
     .adjtime = ptp_9051_adjtime,
     .gettime64 = ptp_9051_gettime,
@@ -1327,7 +1328,7 @@ void dm9051_ptp_stop(struct board_info *db)
 	if (db->ptp_clock) {
 		ptp_clock_unregister(db->ptp_clock);
 		db->ptp_clock = NULL;
-		printk("dm9051_ptp_stop remove PTP clock!!!\r\n");
+		printk("_[ptp] remove: PTP clock!\r\n");
 	}
 }
 #endif //DMPLUG_PTP

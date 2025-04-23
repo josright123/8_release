@@ -63,6 +63,8 @@ cat:
 	cat /proc/interrupts
 pin:
 	ping 192.168.6.1 -I eth1 -s 64
+pin1:
+	ping 192.168.1.254 -I eth1 -s 64
 
 first:
 	sudo ifconfig eth0 down
