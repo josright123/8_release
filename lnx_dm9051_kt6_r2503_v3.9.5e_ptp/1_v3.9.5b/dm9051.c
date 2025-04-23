@@ -661,58 +661,73 @@ static int PHY_RST(struct board_info *db)
 }
 
 #ifdef DMCONF_BMCR_WR
+static int dm9051_phy_reset(struct board_info *db);
+
 /*void set_log_addr(struct board_info *db, char *p)
   {
   }*/
 char *get_log_addr(struct board_info *db)
 {
-	//int i;
 	if (!db->automdix_log[0][0]) {
-		db->automdix_log[0][0] = 1;
-		return &db->automdix_log[0][1];
+		//db->automdix_log[0][0] = 1;
+ //printk("[get log addr 0]\n");
+		return &db->automdix_log[0][0]; //&db->automdix_log[0][1];
 	}
 	if (!db->automdix_log[1][0]) {
-		db->automdix_log[1][0] = 1;
-		return &db->automdix_log[1][1];
+		//db->automdix_log[1][0] = 1;
+ //printk("[get log addr 1]\n");
+		return &db->automdix_log[1][0]; //&db->automdix_log[1][1];
 	}
 	if (!db->automdix_log[2][0]) {
-		db->automdix_log[2][0] = 1;
-		return &db->automdix_log[2][1];
+		//db->automdix_log[2][0] = 1;
+ //printk("[get log addr 2]\n");
+		return &db->automdix_log[2][0]; //&db->automdix_log[2][1];
 	}
-	
+
+ //printk("[get log addr 2ov]\n");
+	db->automdix_log[0][0] = db->automdix_log[1][0];
 	strcpy(&db->automdix_log[0][1], &db->automdix_log[1][1]);
+	db->automdix_log[1][0] = db->automdix_log[2][0];
 	strcpy(&db->automdix_log[1][1], &db->automdix_log[2][1]);
-	return &db->automdix_log[2][1];
+	
+	return &db->automdix_log[2][0];
+	//int i;
 	//for () {
 	//}
+}
+static void show_log_data(char *head, char *data)
+{
+		printk("<%s> %s\n", head, &data[1]);
 }
 static void show_log_addr(char *head, struct board_info *db)
 {
 	if (db->automdix_log[0][0]) {
 		printk("\n");
-		printk("<%s> %s\n", head, &db->automdix_log[0][1]);
+		show_log_data(head, &db->automdix_log[0][0]); //printk("<%s> %s\n", head, &db->automdix_log[0][1]);
 	}
 	if (db->automdix_log[1][0])
-		printk("<%s> %s\n", head, &db->automdix_log[1][1]);
+		show_log_data(head, &db->automdix_log[1][0]); //printk("<%s> %s\n", head, &db->automdix_log[1][1]);
 	if (db->automdix_log[2][0])
-		printk("<%s> %s\n", head, &db->automdix_log[2][1]);
+		show_log_data(head, &db->automdix_log[2][0]); //printk("<%s> %s\n", head, &db->automdix_log[2][1]);
 }
 void amdix_log_reset(struct board_info *db)
 {
 	db->n_automdix = 0; //log-reset
-	db->stop_automdix_flag = 0;
 	db->automdix_log[0][0] = 0;
 	db->automdix_log[1][0] = 0;
 	db->automdix_log[2][0] = 0;
+
+	db->stop_automdix_flag = 0;
 }
 #if 0
 void amdix_link_change_up(struct board_info *db, unsigned int bmsr)
 {
 	if (!(bmsr & BIT(2)) && (db->bmsr & BIT(2))) {
 		//[show]
-		show_log_addr("hist", db); //.if (!db->stop_automdix_flag).
+		show_log_addr("hist", db);
 		//[message]
-		printk("<link_phylib. on %02u to %02u, current[bmsr] %04x>, lpa %04x found reach link\n", db->stop_automdix_flag, db->n_automdix, db->bmsr, db->lpa);
+		printk("<link_phylib. on %02u to %02u>, current lpa %04x [bmsr] %04x to %04x found reach link\n", db->_stop_automdix_flag,
+			db->n_automdix, db->lpa, bmsr, db->bmsr);
 		//[clear]
 		printk("[link] clear log...");
 		amdix_log_reset(db);
@@ -724,7 +739,7 @@ void amdix_bmsr_change_up(struct board_info *db, unsigned int bmsr)
 {
 	if (!(bmsr & BIT(2))) {
 		show_log_addr("hist", db);
-		printk("<link_phylib. on %02u to %02u, current lpa %04x [bmsr] %04x to %04x found reach link\n", db->stop_automdix_flag,
+		printk("<link_phylib. on %02u to %02u>, current lpa %04x [bmsr] %04x to %04x found reach link\n", db->stop_automdix_flag,
 			db->n_automdix, db->lpa, bmsr, db->bmsr);
 		printk("[link] clear log...");
 		amdix_log_reset(db);
@@ -736,19 +751,33 @@ static int amdix_bmsr_change(struct board_info *db)
 	static unsigned int bmsr = 0x0000; //0xffff;
 
 #if 1
-		/* bmsr (change linkup) */
-		if (db->bmsr & BIT(2)) {
-			amdix_bmsr_change_up(db, bmsr);
-		}
+	/* bmsr (change linkup) */
+	if (db->bmsr & BIT(2)) {
+		amdix_bmsr_change_up(db, bmsr);
+	}
 #endif
 
 	/* bmsr (change) */
 	if (db->bmsr != bmsr) {		
-		if (bmsr & BIT(2))
+		if (db->bmsr & BIT(2))
 			;
 		else {
-			printk("??? [NO write toggle]\n");
+			//printk("??? [NO write obsevation]\n");
+			/* NO write obsevation */
+			//printk("??? <may up to down> %02u _First quicking an enter amdix ... lpa %04x bmsr from %04x to %04x\n",
+			//		db->n_automdix, db->lpa, bmsr, db->bmsr);
+
 #if 0
+			/* NO write obsevation */
+			/* ------------------- */
+			int ret;
+			db->mdi ^= 0x0020;
+			printk("??? <may up to down> %02u [lpa] %04x _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]",
+					db->n_automdix, db->lpa, 20, db->mdi); 
+			
+			ret = dm9051_phywrite(db, 20, db->mdi);
+			if (ret)
+				printk("warn: phywrite reg %d [val %04x], fail\n", 20, db->mdi);
 #endif
 		}
 
@@ -758,8 +787,7 @@ static int amdix_bmsr_change(struct board_info *db)
 	return 0;
 }
 
-// dm9051_phyread.EXTEND
-static int dm9051_phyread_nt_bmsr(struct board_info *db, int addr,
+static int dm9051_phyread_nt_bmsr(struct board_info *db,
 								   unsigned int *val)
 {
 	int ret;
@@ -775,18 +803,123 @@ static int dm9051_phyread_nt_bmsr(struct board_info *db, int addr,
 	db->bmsr = *val;
 
 	/* nt log */
+#if 1
 	do
 	{
 		if (!amdix_bmsr_change(db))
+		{
+			if (!(db->bmsr & BIT(2))) {
+
+				do {
+					if (db->stop_automdix_flag) {
+					#if 1
+						/* lpa changeto 0x0000 */
+						if (!db->lpa) {
+							db->stop_automdix_flag = 0;
+							break;
+						}
+					#endif
+						if (!(db->n_automdix %10)) {
+							printk("%2u [lpa %04x]\n", db->n_automdix, db->lpa);
+							break;
+						}
+						return 0;
+					}
+					if (db->lpa) {
+						printk("<fund_phylib. on %02u to %02u, rd.bmsr %04x [lpa] %04x> STOPPING... amdix\n", db->stop_automdix_flag,
+							db->n_automdix, db->bmsr, db->lpa);
+						db->stop_automdix_flag = db->n_automdix;
+						//printk("(STOP avoid below possible more once toggle...)\n");
+						return 0; //break; //(STOP avoid below possible more once toggle...)
+					}
+				} while(0);
+
+				db->n_automdix++;
+				do {
+			#if 1
+						char *p = get_log_addr(db);
+					db->mdi ^= 0x0020;
+
+					do {
+						/* store list */
+						//sprintf(p, "from_phylib. %02u [lpa] %04x _mon_phywr[_AutoMDIX_] reg %d [val %04x]",
+						//		db->n_automdix, db->lpa, 20, db->mdi);
+						//snprintf(p, sizeof(automdix_log[0]), "from_phylib. %02u [lpa] %04x _mon_phywr[_AutoMDIX_] reg %d [val %04x]",
+						//		db->n_automdix, db->lpa, 20, db->mdi);
+						p[0] = db->n_automdix;
+						memset(&p[1], 0, AMDIX_LOG_BUFSIZE);
+						snprintf(&p[1], AMDIX_LOG_BUFSIZE-1, "in_case phylib. %02u [lpa] %04x phy[AutoMDIX] reg %d [val %04x]",
+								db->n_automdix, db->lpa, 20, db->mdi);
+					} while(0);
+
+					/* NO write obsevation */
+					//ret = dm9051_phywrite(db, 20, db->mdi);
+					//if (ret)
+					//	return ret;
+			#endif
+
+					if ((db->n_automdix % NUM_TRIGGER) <= NUM_BMSR_DOWN_SHOW) {
+						if ((db->n_automdix % NUM_TRIGGER) == 1) //only first.
+							printk("\n"); //printk("(re-cycle)(first).mdix\n");
+//						show_log_data("bmsr down", p);
+					}
+
+			#if 1
+					/* phy reset insteaded */
+					if (!(db->n_automdix % NUM_TRIGGER)) {
+						printk("( bmsr down per %d).phy reset insteaded: %u\n", NUM_TRIGGER, db->n_automdix);
+						ret = dm9051_phy_reset(db);
+						if (ret)
+							return ret;
+					}
+			#endif
+				} while(0);
+			}
+		}
+	} while (0);
+#endif
+
+	return ret;			
+}
+
+// dm9051_phyread.EXTEND
+#if 0
+//static 
+int dm9051_phyread_log_bmsr(struct board_info *db,
+								   unsigned int *val)
+{
+	int ret;
+
+	ret = dm9051_phyread(db, MII_LPA, val);
+	if (ret)
+		return ret;
+	db->lpa = *val;
+
+	ret = dm9051_phyread(db, MII_BMSR, val);
+	if (ret)
+		return ret;
+	db->bmsr = *val;
+
+	/* check log */
+	do
+	{
+		if (!amdix_link_change(db))
 		{
 			if (!(db->bmsr & BIT(2))) {
 				//static unsigned int n_automdix = 0;
 				//static unsigned int mdi = 0x0830;
 				db->n_automdix++;
 				
-				if (db->stop_automdix_flag) {
-					printk("<cont_phylib. on %02u to %02u, current[bmsr] %04x> lpa %04x stop automdix\n", db->stop_automdix_flag, db->n_automdix, db->bmsr, db->lpa);
+				if (db->_stop_automdix_flag) {
+#if 1
+					printk("[lpa %04x]\n", db->lpa);
 					break;
+#else
+					printk("[lpa %04x] Go ..\n", db->lpa);
+					/* Too many Go .., 
+					 * Want rst something ...
+					 */
+#endif
 				}
 
 				//ret = dm9051_phyread(db, 5, &vval);
@@ -794,9 +927,14 @@ static int dm9051_phyread_nt_bmsr(struct board_info *db, int addr,
 				//	return ret;
 				
 				if (db->lpa) {
-					printk("<fund_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> STOPPING... automdix\n", db->stop_automdix_flag, db->n_automdix, db->lpa);
-					db->stop_automdix_flag = db->n_automdix; //db->stop_automdix_flag = 1; //.
-//					break; //(STOP avoid below possible more once toggle...)
+					printk("<fund_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> STOPPING... automdix\n", db->_stop_automdix_flag,
+						db->n_automdix, db->lpa);
+					db->_stop_automdix_flag = db->n_automdix;
+#if 1
+					printk("(STOP avoid below possible more once toggle...)\n");
+					break; //(STOP avoid below possible more once toggle...)
+#endif
+					//break; //(NOT STOP
 				}
 
 				if (!(db->n_automdix % TOGG_INTVL)) {
@@ -808,7 +946,7 @@ static int dm9051_phyread_nt_bmsr(struct board_info *db, int addr,
 							printk("\n");
 					}
 					if (db->n_automdix <= TOGG_TOT_SHOW 
-						&& !(db->bmsr & BIT(6))) printk("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", addr, db->bmsr);
+						&& !(db->bmsr & BIT(6))) printk("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", DM9051_PHY_ADDR, db->bmsr);
 
 					ret = dm9051_phywrite(db, 20, db->mdi);
 					if (ret)
@@ -816,7 +954,8 @@ static int dm9051_phyread_nt_bmsr(struct board_info *db, int addr,
 
 					/* store to showlist */
 					p = get_log_addr(db);
-					sprintf(p, "from_phylib. %02u _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]", db->n_automdix, 20, db->mdi); //= set_log_addr(db, p, ...);
+					sprintf(&p[1], "from_phylib. %02u [lpa] %04x _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]",
+							db->n_automdix, db->lpa, 20, db->mdi); //= set_log_addr(db, p, ...);
 				}
 				break;
 			}
@@ -825,6 +964,7 @@ static int dm9051_phyread_nt_bmsr(struct board_info *db, int addr,
 
 	return ret;
 }
+#endif //0
 #endif
 
 static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
@@ -843,7 +983,7 @@ static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 
 #ifdef DMCONF_BMCR_WR
 		if (regnum == MII_BMSR)
-			ret = dm9051_phyread_nt_bmsr(db, addr, &val);
+			ret = dm9051_phyread_nt_bmsr(db, &val);
 		else
 #endif
 			ret = dm9051_phyread(db, regnum, &val);
@@ -874,20 +1014,21 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 		if (regnum == 0x0d || regnum == 0x0e) //unknown of dm9051a
 			return 0;
 
-		if (mdio_write_count <= 15)
-			printk("[dm9051_mdio_write, count %2d] dm9051_phywr(%d), %04x\n", mdio_write_count++, regnum, val);
-
 		mutex_lock(&db->spi_lockm);
 		#endif
 
 		/* [dbg] mdio.wr BMCR */
-		if (regnum == 0)
-		{
-			if (val & 0x800) {
+		do {
+			/* NOT next with printk for dm9051_phywr(regnum, val) */
+			if ((regnum == 0) && (val & 0x800)) {
+				printk("[mdio write] phywr(%d) %04x: power down (warn)\n", regnum, val);
 				//printk("\n");
-				printk("_[mii_bus] mdio write : power down (warn)\n");
+				break;
 			}
-		}
+
+			if (mdio_write_count <= 9)
+				printk("[count%d] phywr(%d) %04x\n", mdio_write_count++, regnum, val);
+		} while(0);
 		ret = dm9051_phywrite(db, regnum, val);
 
 		#if MI_FIX
@@ -1676,17 +1817,22 @@ static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 	do
 	{
 		static unsigned int inval_rxb[TIMES_TO_RST] = {0};
-		u8 *bf = (u8 *)prxbyte;
 		int n = 0;
 		unsigned int i;
 		char pbff[80];
 
-		printk("_.eval   bf] %02x %02x\n", bf[0], bf[1]);
-		printk("_.eval rxbs] %02lx %02lx\n", SCAN_BL(*prxbyte), SCAN_BH(*prxbyte));
+		//u8 *bf = (u8 *)prxbyte;
+		//printk("_.eval   bf] %02x %02x\n", bf[0], bf[1]);
+		//printk("_.eval rxbs] %02lx %02lx\n", SCAN_BL(*prxbyte), SCAN_BH(*prxbyte));
 
 		inval_rxb[db->bc.evaluate_rxb_counter] = SCAN_BH(*prxbyte);
 		db->bc.evaluate_rxb_counter++;
 
+  if (db->bc.evaluate_rxb_counter == 1) {
+	sprintf(db->bc.head, "rxb 1st %d", db->bc.evaluate_rxb_counter); 
+	dm9051_dump_reg2s(db, 0x74, 0x75);
+	dm9051_dump_reg2s(db, 0x24, 0x25);
+  }
 		n += sprintf(pbff + n, "_[eval_rxb %2d]", db->bc.evaluate_rxb_counter);
 		for (i = 0; i < db->bc.evaluate_rxb_counter; i++)
 		{
@@ -1727,10 +1873,10 @@ static int rx_break(unsigned int rxbyte, netdev_features_t features)
 		// dm9051_dumpblk..
 		//  continue
 		//}
-		DM9051_RX_BREAK(((SCAN_BH(rxbyte) & 0x03) == DM9051_PKT_RDY), return 0, return -EINVAL);
+		DM9051_RX_BREAK(((SCAN_BH(rxbyte) & 0x03) == DM9051_PKT_RDY), return 0, printk("YES checksum check\n"); return -EINVAL);
 	}
 	else
-		DM9051_RX_BREAK((SCAN_BH(rxbyte) == DM9051_PKT_RDY), return 0, return -EINVAL);
+		DM9051_RX_BREAK((SCAN_BH(rxbyte) == DM9051_PKT_RDY), return 0, /*printk("NO checksum check\n");*/ return -EINVAL);
 }
 
 static int rx_head_break(struct board_info *db)
@@ -1744,40 +1890,66 @@ static int rx_head_break(struct board_info *db)
 	/* ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	if (db->ptp_on) 
-		err_bits &= ~(RSR_LCS | RSR_PLE | RSR_AE); //(0x93);
+	static int before_slave_ptp_packets = 5;
+//	if (db->ptp_on) 
+	//err_bits &= ~(RSR_LCS | RSR_PLE | RSR_AE); //(0x93);
+	err_bits &= ~RSR_PTP_BITS;
 	#endif
 	#endif
 
 	rxlen = le16_to_cpu(db->rxhdr.rxlen);
 	if (db->rxhdr.status & err_bits || rxlen > DM9051_PKT_MAX)
 	{
-		if (rxlen > DM9051_PKT_MAX)
-			printk("Err: dm9.Monitor headbyte/status/rxlen %2x %2x %04x\n",
-				   db->rxhdr.headbyte,
-				   db->rxhdr.status,
-				   db->rxhdr.rxlen);
-		if (db->rxhdr.status & err_bits) {
+		printk("Err: [dm9.Monitor headbyte/status/rxlen %2x %2x %04x]\n",
+			   db->rxhdr.headbyte,
+			   db->rxhdr.status,
+			   db->rxhdr.rxlen);
+
+		if (db->rxhdr.headbyte != 0 &&  db->rxhdr.headbyte != 0x01) {
 			printk("Err: rxhdr-byte (%02x)\n",
 					   db->rxhdr.headbyte);
 			netdev_dbg(ndev, "Err: rxhdr-byte (%02x)\n",
 					   db->rxhdr.headbyte);
 		}
 
-		if (db->rxhdr.status & RSR_ERR_BITS)
+		//if (db->rxhdr.status & RSR_ERR_BITS)
+		if (db->rxhdr.status & err_bits)
 		{
 			db->bc.status_err_counter++;
+		}
+		else
+		//if (rxlen > DM9051_PKT_MAX)
+		{
+			db->bc.large_err_counter++;
+		}
+		
+		
+		if (db->rxhdr.status & err_bits) {
+			printk("check rxstatus-error (%02x)\n",
+					   db->rxhdr.status);
 			netdev_dbg(ndev, "check rxstatus-error (%02x)\n",
 					   db->rxhdr.status);
 		}
-		else
-		{
-			db->bc.large_err_counter++;
+		
+		if (rxlen > DM9051_PKT_MAX) {
+			printk("check rxlen large-error (%d > %d)\n",
+					   rxlen, DM9051_PKT_MAX);
 			netdev_dbg(ndev, "check rxlen large-error (%d > %d)\n",
 					   rxlen, DM9051_PKT_MAX);
 		}
+
 		return 1;
 	}
+
+	/* ptpc */
+	#if 1 //0
+	#ifdef DMPLUG_PTP
+	if (before_slave_ptp_packets && (!db->ptp_on) && (db->rxhdr.status & RSR_PTP_BITS)) {
+		printk("%d. User raw state, ptp packet received!\n", before_slave_ptp_packets--);
+	}
+	#endif
+	#endif
+
 	return 0;
 }
 
@@ -1805,6 +1977,11 @@ static int dm9051_loop_rx(struct board_info *db)
 		if (rx_break(rxbyte, ndev->features))
 		{
 			if (trap_rxb(db, &rxbyte)) {
+				  //if (db->bc.evaluate_rxb_counter == 1) {
+					sprintf(db->bc.head, "rxb last"); //(, db->bc.evaluate_rxb_counter); 
+					dm9051_dump_reg2s(db, 0x74, 0x75);
+					dm9051_dump_reg2s(db, 0x24, 0x25);
+				  //}
 				dm9051_all_restart(db);
 				return -EINVAL;
 			}
@@ -1888,6 +2065,24 @@ struct sk_buff *dm9051_tx_skb_protect(struct sk_buff *skb)
 }
 #endif
 
+struct sk_buff *CVT_PACKET(struct board_info *db, struct sk_buff *skb)
+{
+	unsigned int len  = skb->len;
+	unsigned int pad = (dm9051_modedata->skb_wb_mode && (len & 1)) ? 1 : 0; //'~wb'
+
+	#ifdef DM9051_SKB_PROTECT
+	if (pad) {
+		skb = dm9051_tx_skb_protect(skb); /* protection */
+		if (!skb) {
+			dev_info(&db->spidev->dev, "dm9051 wb_mode get DM9051_SKB_PROTECT error!\n");
+			//break;
+		}
+	}
+	#endif
+
+	return skb; //ret = dm9051_single_tx(db, skb->data, len + pad, len); //'skb->len'
+}
+
 static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int buff_len, unsigned int len)
 {
 	int ret;
@@ -1900,11 +2095,7 @@ static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int buff_l
 	if (ret)
 		return ret;
 
-	ret = dm9051_set_regs(db, DM9051_TXPLL, &len, 2);
-	if (ret < 0)
-		return ret;
-
-	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //TCR_TXREQ
+	return dm9051_set_regs(db, DM9051_TXPLL, &len, 2);
 }
 #endif
 
@@ -1917,11 +2108,10 @@ static int dm9051_loop_tx(struct board_info *db)
 	{
 		struct sk_buff *skb = skb_dequeue(&db->txq);
 		if (skb) {
-			unsigned int len;
-			int ret;
+			unsigned int len  = skb->len;
+			int ret = 0;
 
 			ntx++;
-			len  = skb->len;
 
 			/* ptpc */
 			#if 1 //0
@@ -1930,57 +2120,46 @@ static int dm9051_loop_tx(struct board_info *db)
 			db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
 			#endif
 			#endif
+
+			do {
 			
-			//	if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
-			//	{ //as below:
-			//	}
-#ifdef DMPLUG_CONTI
-			ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
+				//if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
+				//{ //as below:
+				//}
+#ifndef DMPLUG_CONTI
+				skb = CVT_PACKET(db, skb);
+				if (!skb) {
+					db->bc.tx_err_counter++;
+					return 0;
+				}
+
+				ret = dm9051_single_tx(db, skb->data, skb->len, len); //'skb->len', len
+#else
+				ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
+#endif
+				if (ret)
+					break;
+
+				//printk("dm9051_loop_tx %d len %d, tcr_wr %02x\n", ntx, skb->len, db->tcr_wr);
+				ret = dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
+			} while(0);
+
+			dev_kfree_skb(skb);
+			if (ret)
+			{
+				db->bc.tx_err_counter++;
+				return 0;
+			}
+
 			/* ptpc */
 			#if 1 //0
 			#ifdef DMPLUG_PTP
 			dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 			#endif
 			#endif
-			dev_kfree_skb(skb);
-			if (ret < 0)
-			{
-				db->bc.tx_err_counter++;
-				return 0;
-			}
+
 			ndev->stats.tx_bytes += len;
 			ndev->stats.tx_packets++;
-#else
-			do {
-				unsigned int pad = (dm9051_modedata->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
-
-				#ifdef DM9051_SKB_PROTECT
-				if (pad) {
-					skb = dm9051_tx_skb_protect(skb); /* protection */
-					if (!skb) {
-						dev_info(&db->spidev->dev, "dm9051 wb_mode get DM9051_SKB_PROTECT error!\n");
-						break;
-					}
-				}
-				#endif
-
-				ret = dm9051_single_tx(db, skb->data, len + pad, len); //'skb->len'
-				/* ptpc */
-				#if 1 //0
-				#ifdef DMPLUG_PTP
-				dm9051_hwtstamp_to_skb(skb, db); //_15888_,
-				#endif
-				#endif
-				dev_kfree_skb(skb);
-				if (ret) //.NOT (ret < 0)
-				{
-					db->bc.tx_err_counter++;
-					return 0;
-				}
-				ndev->stats.tx_bytes += len;
-				ndev->stats.tx_packets++;
-			} while(0);
-#endif
 		}
 
 		if (netif_queue_stopped(ndev) &&
@@ -2315,8 +2494,8 @@ static int dm9051_stop(struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	int ret;
 
+	//printk("\n");
 	dev_info(&db->spidev->dev, "dm9051_stop\n");
-	printk("\n");
 
 	phy_stop(db->phydev);
 
@@ -2543,6 +2722,7 @@ static void dm9051_operation_clear(struct board_info *db)
 /* ptpc */
 #if 1 //0
 #ifdef DMPLUG_PTP
+	db->ptp_enable = 0;
 	db->ptp_on = 0;
 #endif
 #endif
@@ -2656,6 +2836,8 @@ static int dm9051_probe(struct spi_device *spi)
 	db->msg_enable = 0;
 	db->spidev = spi;
 	db->ndev = ndev;
+	//.by ptp4l run command
+	//db->ptp_on = 1;		//Enable PTP must disable checksum_offload
 
 	ndev->netdev_ops = &dm9051_netdev_ops;
 	ndev->ethtool_ops = &dm9051_ethtool_ops;//&dm9051_ptpd_ethtool_ops;
@@ -2732,9 +2914,8 @@ static int dm9051_probe(struct spi_device *spi)
 	/* ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	//.by ptp4l run command
-	//db->ptp_on = 1;		//Enable PTP must disable checksum_offload
-	db->ptp_on = 1;
+	//db->ptp_on = 1;
+	db->ptp_enable = 1;
 	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
 	dm9051_ptp_init(db); //_15888_
 	#endif
@@ -2766,6 +2947,10 @@ static void dm9051_drv_remove(struct spi_device *spi)
 	struct device *dev = &spi->dev;
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct board_info *db = to_dm9051_board(ndev);
+
+	sprintf(db->bc.head, "drv remove");
+	dm9051_dump_reg2s(db, DM9051_PIDL, DM9051_PIDH);
+	dm9051_dump_reg2s(db, DM9051_VIDL, DM9051_VIDH);
 
 	phy_disconnect(db->phydev);
 

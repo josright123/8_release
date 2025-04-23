@@ -36,7 +36,7 @@
 #define DMCONF_BMCR_WR //(bmcr-work around)
 #endif
 
-#define PLUG_MRR
+//#define PLUG_MRR
 #ifdef PLUG_MRR
 #define DMCONF_MRR_WR //(mrr-work around)
 #endif
@@ -127,12 +127,6 @@
 #define RSR_AE			BIT(2)
 #define RSR_CE			BIT(1)
 #define RSR_FOE			BIT(0)
-//_15888_,
-// PTP use the same bit, timestamp is available
-#define RSR_RXTS_EN       BIT(5)
-// PTP use the same bit: 1 => 8-bytes, 0 => 4-bytes, for timestamp length
-#define RSR_RXTS_LEN    	BIT(2)
-//_15888_,
 #define	RSR_ERR_BITS		(RSR_RF | RSR_LCS | RSR_RWTO | RSR_PLE | \
 				 RSR_AE | RSR_CE | RSR_FOE)
 //#define	RSR_ERR_BITS		(RSR_RF | RSR_LCS | RSR_RWTO | 
@@ -267,6 +261,8 @@ struct eng_config {
 
 #define MI_FIX                          1
 
+#define AMDIX_LOG_BUFSIZE		72
+
 #if 1 //sticked fixed here is better!
 #include "dm9051_plug.h" //for definition of 'INT_TWO_STEP'
 
@@ -385,9 +381,9 @@ struct board_info
 	unsigned int csum_gen_val;
 	unsigned int csum_rcv_val;
 	
-	unsigned int n_automdix; //= 0;
-	unsigned int stop_automdix_flag; //= 0
-	char automdix_log[3][66]; //u16 automdix_flag[3];
+	unsigned int n_automdix;
+	unsigned int stop_automdix_flag;
+	char automdix_log[3][AMDIX_LOG_BUFSIZE]; //u16 automdix_flag[3];
 
 	unsigned int tcr_wr;
 	unsigned int bmsr;
@@ -397,6 +393,7 @@ struct board_info
 	/* ptpc */
 	/* if defined DMPLUG_PTP. begin ... */
 	#if 1 //0
+	int			ptp_enable;
 	int			ptp_on; //_15888_
 	struct ptp_clock        *ptp_clock;
 	struct ptp_clock_info 	ptp_caps;
@@ -411,11 +408,14 @@ struct board_info
 };
 #endif
 
-#define TOGG_INTVL		1
-#define TOGG_TOT_SHOW	5
+//#define TOGG_INTVL	1
+//#define TOGG_TOT_SHOW	5
+#define NUM_TRIGGER			25
+#define	NUM_BMSR_DOWN_SHOW	5
 
 int get_dts_irqf(struct board_info *db);
 
+void dm9051_dump_data(struct board_info *db, u8 *packet_data, int packet_len);
 void dm9051_dump_reg2(struct board_info *db, unsigned int reg1, unsigned int reg2);
 void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
 void dm9051_dump_reg3(struct board_info *db, unsigned int reg1, unsigned int reg2, unsigned int reg3);

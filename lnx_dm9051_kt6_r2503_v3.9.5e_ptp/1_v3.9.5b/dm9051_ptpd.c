@@ -34,7 +34,8 @@
 int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
 {
 	//_15888_
-	if (db->ptp_on) {
+	//if (db->ptp_on) {
+	if (db->ptp_enable) {
 	if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
 		struct net_device *ndev = db->ndev;
 		int ret;
@@ -55,6 +56,7 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
 			}
 		}			
 	}}
+	//}
 	return 0;
 }
 
@@ -129,7 +131,7 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	//skb_complete_tx_timestamp(skb, &shhwtstamps);
 	//remark5-slave
 	//printk("---Report TX HW Timestamp\n");
-	skb_tstamp_tx(skb, &shhwtstamps);	//Report HW Timestamp
+	skb_tstamp_tx(skb, &shhwtstamps); //For tx time stamp //Report HW Timestamp
 	//remark5-slave
 	//printk("Report TX HW Timestamp---\n");
 
@@ -455,22 +457,36 @@ unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db)
 //	db->ptp_tx_flags = _skb_shinfo(skb)->tx_flags;
 //	if (db->ptp_tx_flags) 
 //	if (_skb_shinfo(skb)->tx_flags) 
-	if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+
+	//if (likely(skb_shinfo(skb)->tx_flags)) {		
+	//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+	  if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+
+//		if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
+//			printk("skb_shinfo(skb)->tx_flags %x SKBTX_HW_TSTAMP (%x) same\n",
+//				skb_shinfo(skb)->tx_flags, SKBTX_HW_TSTAMP);
+//		else
+//			printk("skb_shinfo(skb)->tx_flags %x NOT SKBTX_HW_TSTAMP (%x) but send onestep\n",
+//				skb_shinfo(skb)->tx_flags, SKBTX_HW_TSTAMP);
+
 		switch(db->ptp_mode){
 			case 1:
-				//printk("One Step...\n");
 				//Stone add for one-step Sync packet insert time stamp! 2024-08-14!
 				tcr = (TCR_TS_EN | TCR_TXREQ | TCR_DIS_JABBER_TIMER);
+//				printk("(TCR_TS_EN | TCR_TXREQ | TCR_DIS_JABBER_TIMER)\n");
 				break;
 			case 2:
 			case 3:
 				tcr = (TCR_TS_EN | TCR_TXREQ);
+//				printk("(TCR_TS_EN | TCR_TXREQ)\n");
 				break;
 			default:
 				//printk("Not PTP packet\n");
 				break;
 		}
-	}
+	  }
+	//}
+	//}
 	return tcr;
 }
 
@@ -487,8 +503,7 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 	static int sync5 = 3; //5;
 	static int delayReq5 = 3; //5;
 
-	if (db->ptp_on)
-	{
+	if (db->ptp_on) { //NOT by db->ptp-enable
 		u8 message_type;
 		ret = dm9051_nsr_poll(db);	//TX completed
 		if (ret){
@@ -501,42 +516,20 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 				message_type = get_ptp_message_type(skb) & 0x0f; //_15888_, and 0x0f
 
 				if ((message_type == 0 && sync5) || (message_type == 1 && delayReq5)) {
-				    u8 *packet_data;
 				    struct udphdr *p_udp_hdr;
 				    u8 *ptp_hdr;
-				    int i, j, rlen, splen, rowsize = 32;
-				    char line[120];
 
-				    packet_data = (u8 *) skb->data;
 				    p_udp_hdr = udp_hdr(skb);
 				    ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
 				    if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {  //[.ptp .general event/or .message event]
 					
-					    //printk("udp src port %d, dst port %d\n", p_udp_hdr->source, p_udp_hdr->dest);
-					    printk("udp src port %d, dst port %d (hton)\n", lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest));
-					    printk("message_type is %02x\n", message_type);
+						printk("\n");
+					    printk("%d udp src port %d, dst port %d (hton)\n", delayReq5, lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest));
+					    printk("%d message_type is %02x\n", delayReq5, message_type);
 					    //do {
-					    /* show tx packet */
-						
-						//rlen = skb->len;
-						printk(" TX LEN= %3d\n", skb->len);
-						for (i = 0; i < skb->len; i += rlen) {
-							//rlen = print_line(packet_data+i, min(16, skb->len - i));
-							rlen =  skb->len - i;
-							if (rlen >= rowsize) rlen = rowsize;
-
-							splen = 0;
-							splen += sprintf(line + splen, " %3d", i);
-							for (j = 0; j < rlen; j++) {
-								if (!(j % 8)) splen += sprintf(line + splen, " ");
-								if (!(j % 16)) splen += sprintf(line + splen, " ");
-								//printk(" %02x", packet_data[i+j]);
-								splen += sprintf(line + splen, " %02x", packet_data[i+j]);
-							}
-							//printk("\n");
-							//splen += sprintf(line + splen, "\n");
-							printk("%s\n", line);
-						}
+					    /* dump tx packet */
+						sprintf(db->bc.head, " TX LEN= %3d\n", skb->len);
+						dm9051_dump_data(db, skb->data, skb->len);
 					    //} while(0);
 				    }
 				}
@@ -559,7 +552,7 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 						//printk("Tx Delay_Req Timestamp\n");
 						if (delayReq5) {
 							
-							printk("%d Tx Delay_Req Timestamp\n", delayReq5--);
+							delayReq5--; //printk("%d Tx Delay_Req Timestamp\n", delayReq5--);
 						}
 						
 						dm9051_ptp_tx_hwtstamp(db, skb); //_15888_ // Report HW Timestamp
@@ -576,14 +569,13 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTSbyte)
 {
-	if(db->ptp_on) {
+	if(db->ptp_on) { //NOT by db->ptp-enable
 		//u8 temp[12];
 		u16 ns_hi, ns_lo, s_hi, s_lo;
 		//u32 prttsyn_stat, hi, lo,
 		u32 sec;
 		u64 ns;
 		//int i;
-		struct skb_shared_hwtstamps *shhwtstamps = NULL;
 
 		//printk("==> dm9051_ptp_rx_hwtstamp in\r\n");
 		/* Since we cannot turn off the Rx timestamp logic if the device is
@@ -615,9 +607,12 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTS
 
 		//printk("dm9051_ptp_rx_hwtstamp ns_lo=%x, ns_hi=%x s_lo=%x s_hi=%x \r\n", ns_lo, ns_hi, s_lo, s_hi);
 
-		shhwtstamps = skb_hwtstamps(skb);
-		memset(shhwtstamps, 0, sizeof(*shhwtstamps));
-		shhwtstamps->hwtstamp = ns_to_ktime(ns);
+		do {
+			struct skb_shared_hwtstamps *shhwtstamps =
+				skb_hwtstamps(skb); //for the rx tstamp
+			memset(shhwtstamps, 0, sizeof(*shhwtstamps));
+			shhwtstamps->hwtstamp = ns_to_ktime(ns);
+		} while(0);
 
 		//printk("Report RX Timestamp to skb = %lld\n", shhwtstamps->hwtstamp);
 		//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x08); //Clear RX Time Stamp Clock Register offset 0x60, value 0x08
@@ -645,8 +640,8 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTS
 
 static struct ptp_clock_info ptp_dm9051a_info = {
     .owner = THIS_MODULE,
-    .name = "DM9051A 512-PTP",
-    .max_adj = 51200000,
+    .name = "DM9051A PTP",
+    .max_adj = 50000000,
     .n_alarm = 0,
     .n_ext_ts = 0,
     .n_per_out = 0, //n_periodic_outputs
@@ -1304,7 +1299,7 @@ void dm9051_ptp_init(struct board_info *db)
 	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00); //Enable PTP function Register offset 0x60, value 0x00
 	
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, 0x01); //Enable PTP clock function Register offset 0x61, value 0x01
-	
+//db->ptp_enable;
 	
 	//Setup GP1 to edge trigger output!
 	//Register 0x60 to 0x0 (GP page (bit 1), PTP Function(bit 0))
@@ -1324,11 +1319,14 @@ void dm9051_ptp_init(struct board_info *db)
 
 void dm9051_ptp_stop(struct board_info *db)
 {
+	/* Disable PTP for if switch to standard version from PLUG_PTP version*/
+	//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x01); //Disable PTP function Register offset 0x60, value 0x01
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, 0x02); //Disable PTP clock function Register offset 0x61, value 0x02
 
 	if (db->ptp_clock) {
 		ptp_clock_unregister(db->ptp_clock);
 		db->ptp_clock = NULL;
-		printk("_[ptp] remove: PTP clock!\r\n");
+		printk("_[ptp] remove: PTP clock!!!\r\n");
 	}
 }
 #endif //DMPLUG_PTP

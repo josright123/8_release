@@ -27,6 +27,15 @@
 #define DM9051_1588_GPIO_DTA_H 0x6F
 
 // bits defines
+// 06H RX Status Reg
+// BIT(5),PTP use the same bit, timestamp is available
+// BIT(3),PTP use the same bit, this is odd parity rx TimeStamp
+// BIT(2),PTP use the same bit: 1 => 8-bytes, 0 => 4-bytes, for timestamp length
+#define RSR_RXTS_EN		BIT(5)
+#define RSR_RXTS_PARITY		BIT(3)
+#define RSR_RXTS_LEN		BIT(2)
+#define	RSR_PTP_BITS		(RSR_RXTS_EN | RSR_RXTS_PARITY | RSR_RXTS_LEN)
+
 // 61H Clock Control Reg
 #define DM9051_CCR_IDX_RST BIT(7)
 #define DM9051_CCR_RATE_CTL BIT(6)

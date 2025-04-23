@@ -22,6 +22,30 @@
 #include "dm9051.h"
 #include "dm9051_plug.h"
 
+void dm9051_dump_data(struct board_info *db, u8 *packet_data, int packet_len)
+{
+	int i, j, rowsize = 32;
+	int splen; //index of start row
+	int rlen; //remain/row length 
+	char line[120];
+
+	printk("%s\n", db->bc.head);
+	for (i = 0; i < packet_len; i += rlen) {
+		//rlen = print_line(packet_data+i, min(rowsize, skb->len - i)); ...
+		rlen =  packet_len - i;
+		if (rlen >= rowsize) rlen = rowsize;
+
+		splen = 0;
+		splen += sprintf(line + splen, " %3d", i);
+		for (j = 0; j < rlen; j++) {
+			if (!(j % 8)) splen += sprintf(line + splen, " ");
+			if (!(j % 16)) splen += sprintf(line + splen, " ");
+			splen += sprintf(line + splen, " %02x", packet_data[i+j]);
+		}
+		printk("%s\n", line);
+	}
+}
+
 //static void dm9051_dump_reg(struct board_info *db, unsigned int reg)
 //{
 //	unsigned int val;

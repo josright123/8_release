@@ -140,11 +140,7 @@ int TX_OPS_CONTI(struct board_info *db, u8 *buff, unsigned int len)
 	if (ret)
 		return ret;
 
-	ret = dm9051_write_mem_cache(db, buff, tx_xxbst); //'tx_xxbst'
-	if (ret)
-		return ret;
-
-	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //TCR_TXREQ
+	return dm9051_write_mem_cache(db, buff, tx_xxbst); //'tx_xxbst'
 }
 #endif
 
