@@ -2065,24 +2065,6 @@ struct sk_buff *dm9051_tx_skb_protect(struct sk_buff *skb)
 }
 #endif
 
-struct sk_buff *CVT_PACKET(struct board_info *db, struct sk_buff *skb)
-{
-	unsigned int len  = skb->len;
-	unsigned int pad = (dm9051_modedata->skb_wb_mode && (len & 1)) ? 1 : 0; //'~wb'
-
-	#ifdef DM9051_SKB_PROTECT
-	if (pad) {
-		skb = dm9051_tx_skb_protect(skb); /* protection */
-		if (!skb) {
-			dev_info(&db->spidev->dev, "dm9051 wb_mode get DM9051_SKB_PROTECT error!\n");
-			//break;
-		}
-	}
-	#endif
-
-	return skb; //ret = dm9051_single_tx(db, skb->data, len + pad, len); //'skb->len'
-}
-
 static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int buff_len, unsigned int len)
 {
 	int ret;
@@ -2106,18 +2088,25 @@ int TX_PACKET(struct board_info *db, struct sk_buff *skb, unsigned int data_len)
 		//if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
 		//{ //as below:
 		//}
-	#ifndef DMPLUG_CONTI
-		skb = CVT_PACKET(db, skb);
-		if (!skb) {
-			//db->bc.tx_err_counter++;
-			//return 0;
-			return -ENOMEM;
-		}
+#ifndef DMPLUG_CONTI
+		unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
+		unsigned int buff_len = data_len + pad;
 
-		ret = dm9051_single_tx(db, skb->data, skb->len, data_len); //'skb->len', len
-	#else
-		ret = TX_OPS_CONTI(db, skb->data, data_len); //skb->len //'double_wb'
-	#endif
+		#ifdef DM9051_SKB_PROTECT
+		if (pad) {
+			skb = dm9051_tx_skb_protect(skb); /* protection */ //'~wb'
+			if (!skb) {
+				dev_info(&db->spidev->dev, "dm9051 wb_mode get DM9051_SKB_PROTECT error!\n");
+				return -ENOMEM;
+			}
+			//printk("new skb->len %d, data_len+pad %d (pad %d)\n", skb->len, skb->len + pad, pad);
+		}
+		#endif
+
+		ret = dm9051_single_tx(db, skb->data, buff_len, data_len); //~'skb->len'
+#else
+		ret = TX_OPS_CONTI(db, skb->data, data_len); //'double_wb'
+#endif
 		if (ret)
 			break;
 

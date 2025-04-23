@@ -37,7 +37,7 @@
 #define DMPLUG_PTP //(ptp 1588)
 #endif
 
-//#define PLUG_ENABLE_INT
+#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT 39)
 #endif
