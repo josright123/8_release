@@ -2099,6 +2099,35 @@ static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int buff_l
 }
 #endif
 
+int TX_PACKET(struct board_info *db, struct sk_buff *skb, unsigned int data_len)
+{
+	int ret;
+	do {
+		//if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
+		//{ //as below:
+		//}
+	#ifndef DMPLUG_CONTI
+		skb = CVT_PACKET(db, skb);
+		if (!skb) {
+			//db->bc.tx_err_counter++;
+			//return 0;
+			return -ENOMEM;
+		}
+
+		ret = dm9051_single_tx(db, skb->data, skb->len, data_len); //'skb->len', len
+	#else
+		ret = TX_OPS_CONTI(db, skb->data, data_len); //skb->len //'double_wb'
+	#endif
+		if (ret)
+			break;
+
+		ret = dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
+	} while(0);
+
+	dev_kfree_skb(skb);
+	return ret;
+}
+
 static int dm9051_loop_tx(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
@@ -2108,8 +2137,8 @@ static int dm9051_loop_tx(struct board_info *db)
 	{
 		struct sk_buff *skb = skb_dequeue(&db->txq);
 		if (skb) {
-			unsigned int len  = skb->len;
-			int ret = 0;
+			unsigned int data_len  = skb->len;
+			int ret;
 
 			ntx++;
 
@@ -2121,32 +2150,8 @@ static int dm9051_loop_tx(struct board_info *db)
 			#endif
 			#endif
 
-			do {
-			
-				//if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
-				//{ //as below:
-				//}
-#ifndef DMPLUG_CONTI
-				skb = CVT_PACKET(db, skb);
-				if (!skb) {
-					db->bc.tx_err_counter++;
-					return 0;
-				}
-
-				ret = dm9051_single_tx(db, skb->data, skb->len, len); //'skb->len', len
-#else
-				ret = TX_OPS_CONTI(db, skb->data, skb->len); //'double_wb'
-#endif
-				if (ret)
-					break;
-
-				//printk("dm9051_loop_tx %d len %d, tcr_wr %02x\n", ntx, skb->len, db->tcr_wr);
-				ret = dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
-			} while(0);
-
-			dev_kfree_skb(skb);
-			if (ret)
-			{
+			ret = TX_PACKET(db, skb, data_len);
+			if (ret) {
 				db->bc.tx_err_counter++;
 				return 0;
 			}
@@ -2158,7 +2163,7 @@ static int dm9051_loop_tx(struct board_info *db)
 			#endif
 			#endif
 
-			ndev->stats.tx_bytes += len;
+			ndev->stats.tx_bytes += data_len;
 			ndev->stats.tx_packets++;
 		}
 
