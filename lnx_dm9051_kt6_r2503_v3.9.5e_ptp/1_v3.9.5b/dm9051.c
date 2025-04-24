@@ -2086,9 +2086,16 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 	return skb;
 }
 
-static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int buff_len, unsigned int len)
+static int dm9051_single_tx(struct board_info *db, struct sk_buff *skb) //, u8 *buff, unsigned int buff_len, unsigned int len)
 {
+	unsigned int data_len = skb->len;
+	unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
+	unsigned int buff_len = data_len + pad;
 	int ret;
+
+	skb = EXPAND_SKB(skb, pad);
+	if (!skb)
+		return -ENOMEM;
 
 	ret = dm9051_nsr_poll(db);
 	if (ret)
@@ -2109,19 +2116,11 @@ int TX_PACKET(struct board_info *db, struct sk_buff *skb, unsigned int data_len)
 		//if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
 		//{ //as below:
 		//}
-#ifndef DMPLUG_CONTI
-		unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
-		unsigned int buff_len = data_len + pad;
-
-		skb = EXPAND_SKB(skb, pad);
-		if (!skb) {
-			db->bc.tx_err_counter++;
-			return -ENOMEM;
-		}
-
-		ret = dm9051_single_tx(db, skb->data, buff_len, data_len); //~'skb->len'
+		ret = 
+#ifdef DMPLUG_CONTI
+			TX_OPS_CONTI(db, skb); //skb->data, data_len); //'double_wb'
 #else
-		ret = TX_OPS_CONTI(db, skb->data, data_len); //'double_wb'
+			dm9051_single_tx(db, skb); //skb->data, buff_len, data_len); //~'skb->len'
 #endif
 		if (ret)
 			break;

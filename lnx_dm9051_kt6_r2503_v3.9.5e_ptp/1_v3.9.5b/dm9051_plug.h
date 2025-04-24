@@ -186,7 +186,7 @@ void END_FREE_IRQ(struct net_device *ndev);
  */
 
 int TX_SET_CONTI(struct board_info *db);
-int TX_OPS_CONTI(struct board_info *db, u8 *buff, unsigned int len);
+int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb); //, u8 *buff, unsigned int len);
 
 /*
  * Encrypt Protection Driver version: 

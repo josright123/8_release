@@ -122,14 +122,16 @@ int TX_SET_CONTI(struct board_info *db)
  *   0 - succeed
  *  -ETIMEDOUT - timeout error
  */
-int TX_OPS_CONTI(struct board_info *db, u8 *buff, unsigned int len)
+int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb) //, u8 *buff, unsigned int len)
 {
+	//u8 *buff = skb->data;
+	//unsigned int len = skb->len;
+	const unsigned int tx_xxhead = 4;
+	unsigned int tx_xxbst = ((skb->len + 3) / 4) * 4;
+	u8 th[4];
 	int ret;
 
-	const unsigned int tx_xxhead = 4;
-	unsigned int tx_xxbst = ((len + 3) / 4) * 4;
-	u8 th[4];
-	dm9051_create_tx_head(th, len);
+	dm9051_create_tx_head(th, skb->len);
 
 	if (!tx_free_poll_timeout(db, tx_xxhead + tx_xxbst, 1, econf->tx_timeout_us))
 	{					// 2100 <- 20
@@ -140,7 +142,7 @@ int TX_OPS_CONTI(struct board_info *db, u8 *buff, unsigned int len)
 	if (ret)
 		return ret;
 
-	return dm9051_write_mem_cache(db, buff, tx_xxbst); //'tx_xxbst'
+	return dm9051_write_mem_cache(db, skb->data, tx_xxbst); //'tx_xxbst'
 }
 #endif
 
