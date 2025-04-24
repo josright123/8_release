@@ -2114,8 +2114,10 @@ int TX_PACKET(struct board_info *db, struct sk_buff *skb, unsigned int data_len)
 		unsigned int buff_len = data_len + pad;
 
 		skb = EXPAND_SKB(skb, pad);
-		if (!skb)
+		if (!skb) {
+			db->bc.tx_err_counter++;
 			return -ENOMEM;
+		}
 
 		ret = dm9051_single_tx(db, skb->data, buff_len, data_len); //~'skb->len'
 #else
@@ -2126,6 +2128,14 @@ int TX_PACKET(struct board_info *db, struct sk_buff *skb, unsigned int data_len)
 
 		ret = dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
 	} while(0);
+
+	if (ret)
+		db->bc.tx_err_counter++;
+	else {
+		struct net_device *ndev = db->ndev;
+		ndev->stats.tx_bytes += data_len;
+		ndev->stats.tx_packets++;
+	}
 
 	dev_kfree_skb(skb);
 	return ret;
@@ -2140,7 +2150,6 @@ static int dm9051_loop_tx(struct board_info *db)
 	{
 		struct sk_buff *skb = skb_dequeue(&db->txq);
 		if (skb) {
-			unsigned int data_len  = skb->len;
 			int ret;
 
 			ntx++;
@@ -2153,10 +2162,12 @@ static int dm9051_loop_tx(struct board_info *db)
 			#endif
 			#endif
 
-			ret = TX_PACKET(db, skb, data_len);
+			ret = TX_PACKET(db, skb, skb->len);
 			if (ret) {
-				db->bc.tx_err_counter++;
-				return 0;
+				if (netif_queue_stopped(ndev) &&
+					(skb_queue_len(&db->txq) < DM9051_TX_QUE_LO_WATER))
+					netif_wake_queue(ndev);
+				return ntx;
 			}
 
 			/* 6.1 tx ptpc */
@@ -2165,9 +2176,6 @@ static int dm9051_loop_tx(struct board_info *db)
 			dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 			#endif
 			#endif
-
-			ndev->stats.tx_bytes += data_len;
-			ndev->stats.tx_packets++;
 		}
 
 		if (netif_queue_stopped(ndev) &&
