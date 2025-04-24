@@ -1148,14 +1148,14 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	}else{
 		dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_RATE);
 	}
-	//mutex_unlock(&db->spi_lockm);
 
 #if 0	//SPenser - Read rate Register for check
 
 	u32 rate_reg = dm9051_get_rate_reg(db);
 	printk("RateReg value = 0x%08X\n", rate_reg);
-#endif
-	
+#endif	
+	//mutex_unlock(&db->spi_lockm);
+
 	//printk("ptp_9051_adjfine...\n");
 	
 	return 0;

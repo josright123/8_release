@@ -2071,6 +2071,21 @@ struct sk_buff *dm9051_tx_skb_protect(struct sk_buff *skb)
 }
 #endif
 
+static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
+{
+	#ifdef DM9051_SKB_PROTECT
+	if (pad) {
+		skb = dm9051_tx_skb_protect(skb); /* protection */ //'~wb'
+		if (!skb) {
+			dev_info(&db->spidev->dev, "dm9051 wb_mode get DM9051_SKB_PROTECT error!\n");
+			return NULL; //-ENOMEM;
+		}
+		//printk("new skb->len %d, data_len+pad %d (pad %d)\n", skb->len, skb->len + pad, pad);
+	}
+	#endif
+	return skb;
+}
+
 static int dm9051_single_tx(struct board_info *db, u8 *buff, unsigned int buff_len, unsigned int len)
 {
 	int ret;
@@ -2098,16 +2113,9 @@ int TX_PACKET(struct board_info *db, struct sk_buff *skb, unsigned int data_len)
 		unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
 		unsigned int buff_len = data_len + pad;
 
-		#ifdef DM9051_SKB_PROTECT
-		if (pad) {
-			skb = dm9051_tx_skb_protect(skb); /* protection */ //'~wb'
-			if (!skb) {
-				dev_info(&db->spidev->dev, "dm9051 wb_mode get DM9051_SKB_PROTECT error!\n");
-				return -ENOMEM;
-			}
-			//printk("new skb->len %d, data_len+pad %d (pad %d)\n", skb->len, skb->len + pad, pad);
-		}
-		#endif
+		skb = EXPAND_SKB(skb, pad);
+		if (!skb)
+			return -ENOMEM;
 
 		ret = dm9051_single_tx(db, skb->data, buff_len, data_len); //~'skb->len'
 #else
