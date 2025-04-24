@@ -416,6 +416,44 @@ int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
 		-EFAULT : 0;
 }
 
+static unsigned int ptp_packet_classify(struct sk_buff *skb)
+{
+	unsigned int ptp_class;
+
+	/* Early return if no hardware timestamp is involved */
+	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+		//printk("dm9051_ptp, no hardware timestamp involved\n");
+		return PTP_CLASS_NONE; //PTP_NOT_PTP;
+	}
+ 
+	/* Validate skb length */
+	if (skb->len < sizeof(struct ptp_header)) {
+		printk("dm9051_ptp, packet too short for PTP header\n");
+		return PTP_CLASS_NONE; //PTP_NOT_PTP;
+	}
+    
+	/* Classify and parse PTP packet */
+	ptp_class = ptp_classify_raw(skb);
+	if (ptp_class == PTP_CLASS_NONE)
+		return PTP_CLASS_NONE; //PTP_NOT_PTP;
+
+	return ptp_class;
+}
+
+//static struct ptp_header *ptp_packet_hdr(struct sk_buff *skb, unsigned int ptp_class)
+//{
+//	return ptp_parse_header(skb, ptp_class);
+//}
+
+static int is_ptp_sync_packet(struct ptp_header *hdr, unsigned int ptp_class)
+{
+	u8 msgtype = ptp_get_msgtype(hdr, ptp_class);
+	return (msgtype == PTP_MSGTYPE_SYNC) ? 1 : 0;
+//	if (msgtype != PTP_MSGTYPE_SYNC)
+//		return 0; //PTP_NOT_SYNC;
+//	return 1;
+}
+
 /**
  * dm9051_ptp_one_step - Determine if a PTP packet is one-step or two-step sync
  * @skb: The socket buffer containing the PTP packet
@@ -426,41 +464,35 @@ int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
  * PTP_TWO_STEP: Two-step sync message
  * PTP_NOT_SYNC: Not a sync message but other PTP message
  */
-enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb)
+enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb, struct board_info *db)
 {
-	struct ptp_header *hdr;
 	unsigned int ptp_class;
-	u8 msgtype;
+	struct ptp_header *hdr;
 
-	/* Early return if no hardware timestamp is involved */
-	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-		//printk("dm9051_ptp, no hardware timestamp involved\n");
-		return PTP_NOT_PTP;
-	}
- 
-	/* Validate skb length */
-	if (skb->len < sizeof(struct ptp_header)) {
-		printk("dm9051_ptp, packet too short for PTP header\n");
-		return PTP_NOT_PTP;
-	}
-    
-	/* Classify and parse PTP packet */
-	ptp_class = ptp_classify_raw(skb);
+	db->ptp_packet = 0;
+	db->ptp_sync = 0;
+	
+	ptp_class = ptp_packet_classify(skb);
 	if (ptp_class == PTP_CLASS_NONE)
 		return PTP_NOT_PTP;
 
+	//hdr = ptp_packet_hdr(skb, ptp_class);
 	hdr = ptp_parse_header(skb, ptp_class);
 	if (!hdr)
 		return PTP_NOT_PTP;
+
+	db->ptp_packet = 1;
 
 	/* if this is a sync message */
 	/* or if this is a delay-request message */
 	/* Sync one step chip-insert-tstamp (master do)
 	 * DelayReq one-step chip-NOT-insert-tstamp (slave do)
 	 */
-	msgtype = ptp_get_msgtype(hdr, ptp_class);
-	if (msgtype != PTP_MSGTYPE_SYNC)
+	if (!is_ptp_sync_packet(hdr, ptp_class))
 		return PTP_NOT_SYNC;
+
+	db->ptp_sync = 1;
+	db->ptp_step = (u8)(hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
 
 	/* Determine if one-step or two-step sync */
 	return (hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
@@ -1278,8 +1310,9 @@ int ptp_9051_settime(struct ptp_clock_info *ptp,
 
 struct board_info *db = container_of(ptp, struct board_info,
 			 ptp_caps);
+mutex_lock(&db->spi_lockm);
 printk("...ptp_9051_settime\n");
-			 
+
 dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)(ts->tv_nsec & 0xff));             // Write register 0x68
 dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_nsec >> 8) & 0xff));      // Write register 0x68
 dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_nsec >> 16) & 0xff));     // Write register 0x68
@@ -1291,6 +1324,7 @@ dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_sec >> 16) & 0xff));     //
 dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)((ts->tv_sec >> 24) & 0xff));     // Write register 0x68
 
 dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_WRITE);
+mutex_unlock(&db->spi_lockm);
 
 
 return 0;

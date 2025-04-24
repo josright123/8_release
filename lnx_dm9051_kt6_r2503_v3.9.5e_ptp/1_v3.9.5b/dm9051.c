@@ -1887,7 +1887,7 @@ static int rx_head_break(struct board_info *db)
 	//_15888_
 	u8 err_bits = RSR_ERR_BITS;
 	
-	/* ptpc */
+	/* 7 rxhead ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	static int before_slave_ptp_packets = 5;
@@ -1941,7 +1941,7 @@ static int rx_head_break(struct board_info *db)
 		return 1;
 	}
 
-	/* ptpc */
+	/* -rxhead ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	if (before_slave_ptp_packets && (!db->ptp_on) && (db->rxhdr.status & RSR_PTP_BITS)) {
@@ -2000,7 +2000,7 @@ static int dm9051_loop_rx(struct board_info *db)
 			return -EINVAL;
 		}
 		
-		/* ptpc */
+		/* 7.1 ptpc */
 		#if 1 //0
 		#ifdef DMPLUG_PTP
 		/* receive rx_tstamp */
@@ -2032,7 +2032,7 @@ static int dm9051_loop_rx(struct board_info *db)
 
 		skb->protocol = eth_type_trans(skb, db->ndev);
 
-		/* ptpc */
+		/* 7.2 ptpc */
 		#if 1 //0
 		#ifdef DMPLUG_PTP
 	//So when NOT T1/T4, we can skip tell an empty (virtual) tstamp
@@ -2140,7 +2140,7 @@ static int dm9051_loop_tx(struct board_info *db)
 			/* 6 tx ptpc */
 			#if 1 //0
 			#ifdef DMPLUG_PTP
-			db->ptp_mode = (int) dm9051_ptp_one_step(skb); //_15888_,
+			db->ptp_mode = (u8) dm9051_ptp_one_step(skb, db); //_15888_,
 			db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
 			#endif
 			#endif

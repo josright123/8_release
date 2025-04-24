@@ -83,7 +83,7 @@ enum ptp_sync_type {
     PTP_NOT_SYNC = 3      /* Not a sync message but other PTP message */
 };
 
-enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb);
+enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb, struct board_info *db);
 int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db);
 //extern const struct ethtool_ops dm9051_ptpd_ethtool_ops;
 
