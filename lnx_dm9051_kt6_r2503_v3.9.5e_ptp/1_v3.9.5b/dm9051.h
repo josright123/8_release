@@ -390,7 +390,7 @@ struct board_info
 	unsigned int lpa;
 	unsigned int mdi; //= 0x0830;
 
-	/* ptpc */
+	/* 1 ptpc */
 	/* if defined DMPLUG_PTP. begin ... */
 	#if 1 //0
 	int			ptp_enable;

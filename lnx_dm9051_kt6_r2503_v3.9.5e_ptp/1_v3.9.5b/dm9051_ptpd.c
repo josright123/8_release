@@ -62,7 +62,6 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
 
 void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
-	//struct sk_buff *skb = db->ptp_tx_skb;
 	struct skb_shared_hwtstamps shhwtstamps;
 	//u64 regval;
 	u8 temp[9];
@@ -131,7 +130,7 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	//skb_complete_tx_timestamp(skb, &shhwtstamps);
 	//remark5-slave
 	//printk("---Report TX HW Timestamp\n");
-	skb_tstamp_tx(skb, &shhwtstamps); //For tx time stamp //Report HW Timestamp
+	skb_tstamp_tx(skb, &shhwtstamps); //For report T3 HW tx tstamp
 	//remark5-slave
 	//printk("Report TX HW Timestamp---\n");
 
@@ -435,7 +434,7 @@ enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb)
 
 	/* Early return if no hardware timestamp is involved */
 	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-		printk("dm9051_ptp, no hardware timestamp involved\n");
+		//printk("dm9051_ptp, no hardware timestamp involved\n");
 		return PTP_NOT_PTP;
 	}
  
@@ -454,7 +453,11 @@ enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb)
 	if (!hdr)
 		return PTP_NOT_PTP;
 
-	/* Check if this is a sync message */
+	/* if this is a sync message */
+	/* or if this is a delay-request message */
+	/* Sync one step chip-insert-tstamp (master do)
+	 * DelayReq one-step chip-NOT-insert-tstamp (slave do)
+	 */
 	msgtype = ptp_get_msgtype(hdr, ptp_class);
 	if (msgtype != PTP_MSGTYPE_SYNC)
 		return PTP_NOT_SYNC;
@@ -482,18 +485,21 @@ unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db)
 //			printk("skb_shinfo(skb)->tx_flags %x NOT SKBTX_HW_TSTAMP (%x) but send onestep\n",
 //				skb_shinfo(skb)->tx_flags, SKBTX_HW_TSTAMP);
 
+		/* Sync one step chip-insert-tstamp (master do)
+		 * DelayReq one-step chip-NOT-insert-tstamp (slave do)
+		 */
 		switch(db->ptp_mode){
-			case 1:
+			case PTP_ONE_STEP: //1:
 				//Stone add for one-step Sync packet insert time stamp! 2024-08-14!
 				tcr = (TCR_TS_EN | TCR_TXREQ | TCR_DIS_JABBER_TIMER);
 //				printk("(TCR_TS_EN | TCR_TXREQ | TCR_DIS_JABBER_TIMER)\n");
 				break;
-			case 2:
-			case 3:
+			case PTP_TWO_STEP: //2:
+			case PTP_NOT_SYNC: //3:
 				tcr = (TCR_TS_EN | TCR_TXREQ);
 //				printk("(TCR_TS_EN | TCR_TXREQ)\n");
 				break;
-			default:
+			default: //PTP_NOT_PTP
 				//printk("Not PTP packet\n");
 				break;
 		}
@@ -570,6 +576,18 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
     }
 
     /* Process PTP message based on type */
+    /* TxSync one step chip-insert-tstamp, and NOT report HW tstamp to master4l 
+     * (master do)
+     * TxSync two step chip-NOT-tstamp, but report HW timestamp to master4l 
+     * (master do/ master4l go ahead to do followup)
+     * TxDelayReq one-step/two-step chip-NOT-insert-tstamp 
+     * (slave do)
+     * TxDelayReq one-step/two-step report HW timestamp to slave4l 
+     * (slave do)
+     * TxDelayResp CAN had T4 on recv DelayReq to be added with DelayResp feedback 
+     * to slave4l 
+     * (master do)
+     */
     switch (message_type) {
         case PTP_MSGTYPE_SYNC:
             if (sync5) {
@@ -642,7 +660,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTS
 
 		do {
 			struct skb_shared_hwtstamps *shhwtstamps =
-				skb_hwtstamps(skb); //for the rx tstamp
+			skb_hwtstamps(skb); //for pass T2 the HW rx tstamp
 			memset(shhwtstamps, 0, sizeof(*shhwtstamps));
 			shhwtstamps->hwtstamp = ns_to_ktime(ns);
 		} while(0);
@@ -1314,8 +1332,8 @@ void dm9051_ptp_init(struct board_info *db)
 		db->ptp_clock = NULL;
 		dev_err(&db->spidev->dev, "ptp_clock_register failed\n");
 	}  else if (db->ptp_clock) {
-		printk("ptp_clock_register added PHC on %s\n",
-		       db->ndev->name);
+		printk("ptp_clock_register added PHC, index %d on %s\n",
+		       ptp_clock_index(db->ptp_clock), db->ndev->name);
 		
 	}
 	//db->ptp_flags |= IGB_PTP_ENABLED;	// Spenser - no used

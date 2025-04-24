@@ -1570,7 +1570,7 @@ static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_op
 	.get_strings = dm9051_get_strings,
 	.get_sset_count = dm9051_get_sset_count,
 	.get_ethtool_stats = dm9051_get_ethtool_stats,
-/* ptpc */
+/* 4 ptpc */
 #if 1 //0
 #ifdef DMPLUG_PTP
 	.get_ts_info = dm9051_ts_info, //_15888_,
@@ -2003,7 +2003,7 @@ static int dm9051_loop_rx(struct board_info *db)
 		/* ptpc */
 		#if 1 //0
 		#ifdef DMPLUG_PTP
-		/* rx_tstamp */
+		/* receive rx_tstamp */
 		ret = dm9051_read_ptp_tstamp_mem(db, db->rxTSbyte);
 		if (ret)
 			return ret;
@@ -2035,7 +2035,13 @@ static int dm9051_loop_rx(struct board_info *db)
 		/* ptpc */
 		#if 1 //0
 		#ifdef DMPLUG_PTP
+	//So when NOT T1/T4, we can skip tell an empty (virtual) tstamp
+	//if (db->rxhdr.status & RSR_RXTS_EN) {	// Is it inserted Timestamp?
 		dm9051_ptp_rx_hwtstamp(db, skb, db->rxTSbyte); //_15888_, 
+		/* following, with netif_rx(skb),
+		 * slave4l can parse the T1 and/or T4 rx tstamp from master
+		 */
+	//}
 		#endif
 		#endif
 
@@ -2131,7 +2137,7 @@ static int dm9051_loop_tx(struct board_info *db)
 
 			ntx++;
 
-			/* ptpc */
+			/* 6 tx ptpc */
 			#if 1 //0
 			#ifdef DMPLUG_PTP
 			db->ptp_mode = (int) dm9051_ptp_one_step(skb); //_15888_,
@@ -2145,7 +2151,7 @@ static int dm9051_loop_tx(struct board_info *db)
 				return 0;
 			}
 
-			/* ptpc */
+			/* 6.1 tx ptpc */
 			#if 1 //0
 			#ifdef DMPLUG_PTP
 			dm9051_hwtstamp_to_skb(skb, db); //_15888_,
@@ -2409,7 +2415,7 @@ static int dm9051_open(struct net_device *ndev)
 	if (ret)
 		goto open_end;
 
-/* ptpc */
+/* -open ptpc */
 #if 1 //0
 #ifdef DMPLUG_PTP
 	if (db->ptp_on) {
@@ -2684,7 +2690,7 @@ static const struct net_device_ops dm9051_netdev_ops = {
 	.ndo_set_mac_address = dm9051_set_mac_address,
 	.ndo_set_features = dm9051_ndo_set_features,
 	.ndo_get_stats = dm9051_get_stats,
-	/* ptpc */
+	/* 5 ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	.ndo_eth_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
@@ -2712,14 +2718,6 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->automdix_log[1][0] = 0;
 	db->automdix_log[2][0] = 0;
 	db->mdi = 0x0830;
-
-/* ptpc */
-#if 1 //0
-#ifdef DMPLUG_PTP
-	db->ptp_enable = 0;
-	db->ptp_on = 0;
-#endif
-#endif
 	
 	db->tcr_wr = TCR_TXREQ; //pre-defined
 }
@@ -2905,11 +2903,12 @@ static int dm9051_probe(struct spi_device *spi)
 		return dev_err_probe(dev, ret, "device register failed");
 	}
 
-	/* ptpc */
+	/* 2 ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	//db->ptp_on = 1;
 	db->ptp_enable = 1;
+	db->ptp_on = 0;
 	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
 	dm9051_ptp_init(db); //_15888_
 	#endif
@@ -2927,7 +2926,7 @@ static int dm9051_drv_remove(struct spi_device *spi)
 
 	phy_disconnect(db->phydev);
 
-	/* ptpc */
+	/* 3 ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	dm9051_ptp_stop(db); //_15888_ todo
@@ -2948,7 +2947,7 @@ static void dm9051_drv_remove(struct spi_device *spi)
 
 	phy_disconnect(db->phydev);
 
-	/* ptpc */
+	/* 3 ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	dm9051_ptp_stop(db); //_15888_ todo
