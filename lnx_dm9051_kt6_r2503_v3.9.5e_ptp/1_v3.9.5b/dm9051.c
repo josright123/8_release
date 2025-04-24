@@ -2134,7 +2134,7 @@ static int dm9051_loop_tx(struct board_info *db)
 			/* ptpc */
 			#if 1 //0
 			#ifdef DMPLUG_PTP
-			db->ptp_mode = dm9051_ptp_one_step(skb); //_15888_,
+			db->ptp_mode = (int) dm9051_ptp_one_step(skb); //_15888_,
 			db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
 			#endif
 			#endif

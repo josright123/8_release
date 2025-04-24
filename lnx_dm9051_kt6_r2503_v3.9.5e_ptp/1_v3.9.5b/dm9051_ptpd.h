@@ -75,7 +75,15 @@ int dm9051_ptp_set_timestamp_mode(struct board_info *db,
 int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr);
 int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr);
 
-int dm9051_ptp_one_step(struct sk_buff *skb);
+/* PTP message type classification */
+enum ptp_sync_type {
+    PTP_NOT_PTP = 0,      /* Not a PTP packet or no timestamp involved */
+    PTP_ONE_STEP = 1,     /* One-step sync message */
+    PTP_TWO_STEP = 2,     /* Two-step sync message */
+    PTP_NOT_SYNC = 3      /* Not a sync message but other PTP message */
+};
+
+enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb);
 int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db);
 //extern const struct ethtool_ops dm9051_ptpd_ethtool_ops;
 

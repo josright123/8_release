@@ -151,6 +151,18 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 
 }
 
+/* PTP message type constants */
+//#define PTP_MSGTYPE_SYNC           0x0
+//#define PTP_MSGTYPE_DELAY_REQ      0x1
+//#define PTP_MSGTYPE_PDELAY_REQ     0x2
+//#define PTP_MSGTYPE_PDELAY_RESP    0x3
+#define PTP_MSGTYPE_FOLLOW_UP        0x8
+#define PTP_MSGTYPE_DELAY_RESP       0x9
+#define PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP 0xA
+#define PTP_MSGTYPE_ANNOUNCE         0xB
+#define PTP_MSGTYPE_SIGNALING        0xC
+#define PTP_MSGTYPE_MANAGEMENT       0xD
+
 static u8 get_ptp_message_type(struct sk_buff *skb) {
     struct udphdr *p_udp_hdr;
     u8 *ptp_hdr;
@@ -405,49 +417,50 @@ int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
 		-EFAULT : 0;
 }
 
-/*
- * return -
- * 0: not PTP packet
- * 1: one-step
- * 2: two-step 
- * 3: Not Sync packet
-*/
-int dm9051_ptp_one_step(struct sk_buff *skb)
+/**
+ * dm9051_ptp_one_step - Determine if a PTP packet is one-step or two-step sync
+ * @skb: The socket buffer containing the PTP packet
+ *
+ * Returns:
+ * PTP_NOT_PTP: Not a PTP packet or no timestamp involved
+ * PTP_ONE_STEP: One-step sync message
+ * PTP_TWO_STEP: Two-step sync message
+ * PTP_NOT_SYNC: Not a sync message but other PTP message
+ */
+enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb)
 {
 	struct ptp_header *hdr;
 	unsigned int ptp_class;
 	u8 msgtype;
 
-	/* No need to parse packet if PTP TS is not involved */
-	if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-		//printk("Check PTP Message\n");
-		/* Identify and return whether PTP one step sync is being processed */
-		ptp_class = ptp_classify_raw(skb);
-		if (ptp_class == PTP_CLASS_NONE)
-			goto no;
-
-		hdr = ptp_parse_header(skb, ptp_class);
-		if (!hdr)
-			goto no;
-		
-		msgtype = ptp_get_msgtype(hdr, ptp_class);
-		if (msgtype == PTP_MSGTYPE_SYNC) {
-			
-			if (hdr->flag_field[0] & PTP_FLAG_TWOSTEP) {
-				//printk("two-step TX Sync Message\n");
-				return 2;
-			}else {
-				//printk("onestep TX Sync Message\n");
-				return 1;
-			}
-		}else{
-			//printk("Not Sync Message\n");
-			return 3;
-		}
-		
+	/* Early return if no hardware timestamp is involved */
+	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+		printk("dm9051_ptp, no hardware timestamp involved\n");
+		return PTP_NOT_PTP;
 	}
-no:
-	return 0;
+ 
+	/* Validate skb length */
+	if (skb->len < sizeof(struct ptp_header)) {
+		printk("dm9051_ptp, packet too short for PTP header\n");
+		return PTP_NOT_PTP;
+	}
+    
+	/* Classify and parse PTP packet */
+	ptp_class = ptp_classify_raw(skb);
+	if (ptp_class == PTP_CLASS_NONE)
+		return PTP_NOT_PTP;
+
+	hdr = ptp_parse_header(skb, ptp_class);
+	if (!hdr)
+		return PTP_NOT_PTP;
+
+	/* Check if this is a sync message */
+	msgtype = ptp_get_msgtype(hdr, ptp_class);
+	if (msgtype != PTP_MSGTYPE_SYNC)
+		return PTP_NOT_SYNC;
+
+	/* Determine if one-step or two-step sync */
+	return (hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
 }
 
 unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db)
@@ -497,74 +510,94 @@ u16 lwip_htons(u16 n)
   return PP_HTONS(n);
 }
 
+static void dump_ptp_packet(struct board_info *db, struct sk_buff *skb, u8 message_type, int count)
+{
+	//u8 message_type = get_ptp_message_type(skb) & 0x0f;
+	struct udphdr *p_udp_hdr;
+	u8 *ptp_hdr;
+
+	p_udp_hdr = udp_hdr(skb);
+	ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
+	//[.ptp .general event/or .message event]
+	if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {
+		printk("\n");
+		printk("%d udp src port %d, dst port %d (hton)\n", count, lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest));
+		printk("%d message_type is %02x\n", count, message_type);
+		//do {
+		/* dump tx packet */
+		sprintf(db->bc.head, " TX LEN= %3d\n", skb->len);
+		dm9051_dump_data(db, skb->data, skb->len);
+		//} while(0);
+	}
+}
+
+/**
+ * dm9051_hwtstamp_to_skb - Process hardware timestamp for a PTP packet
+ * @skb: The socket buffer containing the PTP packet
+ * @db: The board info structure
+ *
+ * Returns: 0 on success, negative error code on failure
+ */
 int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 {
-	int ret = 0;
-	static int sync5 = 3; //5;
-	static int delayReq5 = 3; //5;
+    int ret = 0;
+    static int sync5 = 3; //5;
+    static int delayReq5 = 3; //5;
+    u8 message_type;
+    struct net_device *ndev = db->ndev;
 
-	if (db->ptp_on) { //NOT by db->ptp-enable
-		u8 message_type;
-		ret = dm9051_nsr_poll(db);	//TX completed
-		if (ret){
-			printk("nsr_polling timeout\n");
-			return ret;
-		}
+    if (!db->ptp_on)
+        return 0;
 
-		//if (db->ptp_tx_flags = _skb_shinfo(skb)->tx_flags)
-		if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-				message_type = get_ptp_message_type(skb) & 0x0f; //_15888_, and 0x0f
+    /* Poll for TX completion */
+    ret = dm9051_nsr_poll(db);
+    if (ret) {
+        netdev_err(ndev, "TX completion polling timeout\n");
+        return ret;
+    }
 
-				if ((message_type == 0 && sync5) || (message_type == 1 && delayReq5)) {
-				    struct udphdr *p_udp_hdr;
-				    u8 *ptp_hdr;
+    /* Check if hardware timestamp is enabled */
+    if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+        netdev_dbg(ndev, "No hardware timestamp requested\n");
+        return 0;
+    }
 
-				    p_udp_hdr = udp_hdr(skb);
-				    ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
-				    if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {  //[.ptp .general event/or .message event]
-					
-						printk("\n");
-					    printk("%d udp src port %d, dst port %d (hton)\n", delayReq5, lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest));
-					    printk("%d message_type is %02x\n", delayReq5, message_type);
-					    //do {
-					    /* dump tx packet */
-						sprintf(db->bc.head, " TX LEN= %3d\n", skb->len);
-						dm9051_dump_data(db, skb->data, skb->len);
-					    //} while(0);
-				    }
-				}
+    /* Get and validate PTP message type */
+    message_type = get_ptp_message_type(skb) & 0x0f;
+    if (message_type > PTP_MSGTYPE_MANAGEMENT) {
+        netdev_dbg(ndev, "Invalid PTP message type: 0x%02x\n", message_type);
+        return -EINVAL;
+    }
 
-				switch(message_type) {
-					case 0:	//Sync
-						//remark3-slave - none sync
-						if (sync5) {
-							
-							printk("%d TX Sync Timestamp\n", sync5--);
-						}
-						/*Spenser - Don't report HW timestamp to skb if one-step,
-						 * otherwise master role will be not continue send Sync Message.
-						*/
-						if (db->ptp_mode == 2)	//two-step
-							dm9051_ptp_tx_hwtstamp(db, skb); //_15888_ // Report HW Timestamp
-						break;
-					case 1:	//Delay Req
-						//remark6-slave
-						//printk("Tx Delay_Req Timestamp\n");
-						if (delayReq5) {
-							
-							delayReq5--; //printk("%d Tx Delay_Req Timestamp\n", delayReq5--);
-						}
-						
-						dm9051_ptp_tx_hwtstamp(db, skb); //_15888_ // Report HW Timestamp
-						//printk("Tx Delay_Req Timestamp...\n");
-						break;
-					default:
-						break;
-				}
-		}
-	}
+    /* Process PTP message based on type */
+    switch (message_type) {
+        case PTP_MSGTYPE_SYNC:
+            if (sync5) {
+                netdev_dbg(ndev, "TX Sync Timestamp (%d disp)\n", sync5);
+		dump_ptp_packet(db, skb, PTP_MSGTYPE_SYNC, sync5);
+		sync5--;
+            }
+            /* Only report HW timestamp for two-step sync */
+            if (db->ptp_mode == PTP_TWO_STEP) {
+                dm9051_ptp_tx_hwtstamp(db, skb);
+            }
+            break;
 
-	return ret;
+        case PTP_MSGTYPE_DELAY_REQ:
+            if (delayReq5) {
+                netdev_dbg(ndev, "TX Delay_Req Timestamp (%d disp)\n", delayReq5);
+		dump_ptp_packet(db, skb, PTP_MSGTYPE_DELAY_REQ, delayReq5);
+		delayReq5--;
+            }
+            dm9051_ptp_tx_hwtstamp(db, skb);
+            break;
+
+        default:
+            netdev_dbg(ndev, "Unhandled PTP message type: 0x%02x\n", message_type);
+            break;
+    }
+
+    return ret;
 }
 
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTSbyte)
