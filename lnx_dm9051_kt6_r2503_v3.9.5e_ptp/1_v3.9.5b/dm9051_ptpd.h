@@ -70,7 +70,7 @@ int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info); //
  */
 int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 
-int dm9051_ptp_set_timestamp_mode(struct board_info *db,
+//static int dm9051_ptp_set_timestamp_mode(struct board_info *db,
 					 struct hwtstamp_config *config);
 int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr);
 int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr);
@@ -90,10 +90,10 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db);
 unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db);
 
 int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte);
-void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb);
+//static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTSbyte);
 
-/*s64*/ u32 dm9051_get_rate_reg(struct board_info *db);
+u32 dm9051_get_rate_reg(struct board_info *db);
 
 int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm);
 int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta);
