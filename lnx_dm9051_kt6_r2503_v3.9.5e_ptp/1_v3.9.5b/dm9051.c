@@ -1970,6 +1970,9 @@ static int dm9051_loop_rx(struct board_info *db)
 
 	do
 	{
+#if 1
+//.		dm9051_loop_tx(db); /* [More] and more tx better performance */
+#endif
 		ret = dm9051_read_mem_rxb(db, DM_SPI_MRCMDX, &rxbyte, 2);
 		if (ret)
 			return ret;
@@ -2069,33 +2072,23 @@ struct sk_buff *dm9051_tx_skb_protect(struct sk_buff *skb)
 	dev_kfree_skb(skb);
 	return skb2;
 }
-#endif
 
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 {
-	#ifdef DM9051_SKB_PROTECT
 	if (pad) {
 		skb = dm9051_tx_skb_protect(skb); /* protection */ //'~wb'
 		if (!skb)
 			return NULL; //-ENOMEM;
 		//printk("new skb->len %d, data_len+pad %d (pad %d)\n", skb->len, skb->len + pad, pad);
 	}
-	#endif
 	return skb;
 }
+#endif
 
-static int dm9051_single_tx(struct board_info *db, struct sk_buff *skb) //, u8 *buff, unsigned int buff_len, unsigned int len)
+static int dm9051_single_tx(struct board_info *db, struct sk_buff *skb,
+		unsigned int buff_len, unsigned int data_len) //, u8 *buff, unsigned int buff_len, unsigned int data_len)
 {
-	unsigned int data_len = skb->len;
-	unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
-	unsigned int buff_len = data_len + pad;
 	int ret;
-
-	skb = EXPAND_SKB(skb, pad);
-	if (!skb) {
-		dev_info(&db->spidev->dev, "dm9051 wb_mode get DM9051_SKB_PROTECT error!\n");
-		return -ENOMEM;
-	}
 
 	do {
 		//u8 *buff = skb->data;
@@ -2111,7 +2104,7 @@ static int dm9051_single_tx(struct board_info *db, struct sk_buff *skb) //, u8 *
 		ret = dm9051_set_regs(db, DM9051_TXPLL, &data_len, 2);
 	} while(0);
 
-	dev_kfree_skb(skb);
+	//dev_kfree_skb(skb);
 	return ret;
 }
 #endif
@@ -2121,15 +2114,44 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	unsigned int data_len = skb->len;
 	int ret;
 
+	/* 6 tx ptpc */
+	#if 1 //0
+	#ifdef DMPLUG_PTP
+	db->ptp_mode = (u8) dm9051_ptp_one_step(skb, db); //_15888_,
+	db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
+	#endif
+	#endif
+
 	do {
 		//if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
 		//{ //as below:
 		//}
-		ret = 
+		
 #ifdef DMPLUG_CONTI
-			TX_OPS_CONTI(db, skb); //skb->data, data_len); //'double_wb'
+		ret = TX_OPS_CONTI(db, skb); //skb->data, data_len); //'double_wb'
 #else
-			dm9051_single_tx(db, skb); //skb->data, buff_len, data_len); //~'skb->len'
+		/*
+		 * if (!dm9051_modedata->skb_wb_mode) {
+		 *   ret = dm9051_single_tx(db, skb, skb->len, skb->len);
+		 * }
+		 * else {
+		 *   ...
+		 * }
+		 */
+		unsigned int pad = (dm9051_modedata->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'		
+		unsigned int data_len = skb->len;
+		unsigned int buff_len = skb->len + pad;
+
+		#ifdef DM9051_SKB_PROTECT
+		skb = EXPAND_SKB(skb, pad);
+		if (!skb) {
+			dev_info(&db->spidev->dev, "dm9051 wb_mode get SKB_PROTECT error!\n");
+			ret = -ENOMEM;
+			break;
+		}
+		#endif
+
+		ret = dm9051_single_tx(db, skb, buff_len, data_len); //skb->data, buff_len, data_len); //~'skb->len'
 #endif
 		if (ret)
 			break;
@@ -2145,7 +2167,14 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 		ndev->stats.tx_packets++;
 	}
 
-	//dev_kfree_skb(skb);
+	/* 6.1 tx ptpc */
+	#if 1 //0
+	#ifdef DMPLUG_PTP
+	dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+	#endif
+	#endif
+
+	dev_kfree_skb(skb);
 	return ret;
 }
 
@@ -2158,32 +2187,14 @@ static int dm9051_loop_tx(struct board_info *db)
 	{
 		struct sk_buff *skb = skb_dequeue(&db->txq);
 		if (skb) {
-			int ret;
-
 			ntx++;
-
-			/* 6 tx ptpc */
-			#if 1 //0
-			#ifdef DMPLUG_PTP
-			db->ptp_mode = (u8) dm9051_ptp_one_step(skb, db); //_15888_,
-			db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
-			#endif
-			#endif
-
-			ret = TX_PACKET(db, skb);
-			if (ret) {
+			//int ret = TX_PACKET(db, skb);
+			if (TX_PACKET(db, skb)) {
 				if (netif_queue_stopped(ndev) &&
 					(skb_queue_len(&db->txq) < DM9051_TX_QUE_LO_WATER))
 					netif_wake_queue(ndev);
 				return ntx;
 			}
-
-			/* 6.1 tx ptpc */
-			#if 1 //0
-			#ifdef DMPLUG_PTP
-			dm9051_hwtstamp_to_skb(skb, db); //_15888_,
-			#endif
-			#endif
 		}
 
 		if (netif_queue_stopped(ndev) &&

@@ -22,8 +22,13 @@
 #include "dm9051.h"
 #include "dm9051_plug.h"
 
-void dm9051_dump_data(struct board_info *db, u8 *packet_data, int packet_len)
+void dm9051_dump_data0(struct board_info *db, u8 *packet_data, int packet_len)
 {
+}
+
+void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len)
+{
+#if 1
 	int i, j, rowsize = 32;
 	int splen; //index of start row
 	int rlen; //remain/row length 
@@ -44,6 +49,7 @@ void dm9051_dump_data(struct board_info *db, u8 *packet_data, int packet_len)
 		}
 		printk("%s\n", line);
 	}
+#endif
 }
 
 //static void dm9051_dump_reg(struct board_info *db, unsigned int reg)

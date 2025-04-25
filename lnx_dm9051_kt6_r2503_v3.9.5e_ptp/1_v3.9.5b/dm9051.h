@@ -419,7 +419,8 @@ struct board_info
 
 int get_dts_irqf(struct board_info *db);
 
-void dm9051_dump_data(struct board_info *db, u8 *packet_data, int packet_len);
+void dm9051_dump_data0(struct board_info *db, u8 *packet_data, int packet_len);
+void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len);
 void dm9051_dump_reg2(struct board_info *db, unsigned int reg1, unsigned int reg2);
 void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
 void dm9051_dump_reg3(struct board_info *db, unsigned int reg1, unsigned int reg2, unsigned int reg3);
