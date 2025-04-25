@@ -2076,10 +2076,8 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 	#ifdef DM9051_SKB_PROTECT
 	if (pad) {
 		skb = dm9051_tx_skb_protect(skb); /* protection */ //'~wb'
-		if (!skb) {
-			dev_info(&db->spidev->dev, "dm9051 wb_mode get DM9051_SKB_PROTECT error!\n");
+		if (!skb)
 			return NULL; //-ENOMEM;
-		}
 		//printk("new skb->len %d, data_len+pad %d (pad %d)\n", skb->len, skb->len + pad, pad);
 	}
 	#endif
@@ -2094,24 +2092,35 @@ static int dm9051_single_tx(struct board_info *db, struct sk_buff *skb) //, u8 *
 	int ret;
 
 	skb = EXPAND_SKB(skb, pad);
-	if (!skb)
+	if (!skb) {
+		dev_info(&db->spidev->dev, "dm9051 wb_mode get DM9051_SKB_PROTECT error!\n");
 		return -ENOMEM;
+	}
 
-	ret = dm9051_nsr_poll(db);
-	if (ret)
-		return ret;
+	do {
+		//u8 *buff = skb->data;
 
-	ret = dm9051_write_mem_cache(db, buff, buff_len); //'!wb'
-	if (ret)
-		return ret;
+		ret = dm9051_nsr_poll(db);
+		if (ret)
+			break; //return ret;
 
-	return dm9051_set_regs(db, DM9051_TXPLL, &len, 2);
+		ret = dm9051_write_mem_cache(db, skb->data, buff_len); //'!wb'
+		if (ret)
+			break; //return ret;
+
+		ret = dm9051_set_regs(db, DM9051_TXPLL, &data_len, 2);
+	} while(0);
+
+	dev_kfree_skb(skb);
+	return ret;
 }
 #endif
 
-int TX_PACKET(struct board_info *db, struct sk_buff *skb, unsigned int data_len)
+static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 {
+	unsigned int data_len = skb->len;
 	int ret;
+
 	do {
 		//if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
 		//{ //as below:
@@ -2136,7 +2145,7 @@ int TX_PACKET(struct board_info *db, struct sk_buff *skb, unsigned int data_len)
 		ndev->stats.tx_packets++;
 	}
 
-	dev_kfree_skb(skb);
+	//dev_kfree_skb(skb);
 	return ret;
 }
 
@@ -2161,7 +2170,7 @@ static int dm9051_loop_tx(struct board_info *db)
 			#endif
 			#endif
 
-			ret = TX_PACKET(db, skb, skb->len);
+			ret = TX_PACKET(db, skb);
 			if (ret) {
 				if (netif_queue_stopped(ndev) &&
 					(skb_queue_len(&db->txq) < DM9051_TX_QUE_LO_WATER))
