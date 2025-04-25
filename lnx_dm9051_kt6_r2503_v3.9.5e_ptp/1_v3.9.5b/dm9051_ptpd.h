@@ -71,7 +71,7 @@ int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info); //
 int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 
 //static int dm9051_ptp_set_timestamp_mode(struct board_info *db,
-					 struct hwtstamp_config *config);
+//					 struct hwtstamp_config *config);
 int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr);
 int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr);
 
