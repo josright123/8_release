@@ -110,6 +110,7 @@
 #define TCR_TS_EN               BIT(7)  //_15888_
 #define TCR_DIS_JABBER_TIMER	BIT(6)  //for Jabber Packet support 
 #define TCR_TXREQ		BIT(0)
+#define TCR_TS_EMIT		TCR_DIS_JABBER_TIMER
  //0x05 
 #define RCR_DIS_WATCHDOG_TIMER	BIT(6)   //for Jabber Packet support 
 #define RCR_DIS_LONG		BIT(5)

@@ -2035,6 +2035,9 @@ static int dm9051_loop_rx(struct board_info *db)
 
 		if (is_ptp_packet(skb->data))
 		do {
+			static int slave_get_ptpFrame = 9;
+			static int master_get_delayReq6 = 6; //5;
+			static int slave_get_ptpMisc = 9;
 			//u8 message_type0 =
 			//	get_ptp_message_type(skb);
 			u8 message_type =
@@ -2042,54 +2045,61 @@ static int dm9051_loop_rx(struct board_info *db)
 			//printk("message type, A= %X B= %X\n", message_type0, message_type);
 			
 			if (message_type == PTP_MSGTYPE_SYNC) {
+				if (slave_get_ptpFrame)
 				if (db->ptp_enable) {
 				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
 		printk("\n");
-					printk("Slave-get-sync with tstamp.\n");
+					printk("Slave(%d)-get-sync with tstamp. \n", --slave_get_ptpFrame);
 		//sprintf(db->bc.head, "Slave-get-sync with tstamp, len= %3d", skb->len);
 		//dm9051_dump_data1(db, skb->data, skb->len);
 				} else {
-					printk("Slave-get-sync without tstamp.\n");
+					printk("Slave(%d)-get-sync without tstamp. \n", --slave_get_ptpFrame);
 				}}
 			} else
 			if (message_type == PTP_MSGTYPE_FOLLOW_UP) {
+				if (slave_get_ptpFrame)
 				if (db->ptp_enable) {
 				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					printk("Slave-get-followup with tstamp.\n");
+					printk("Slave(%d)-get-followup with tstamp. \n", --slave_get_ptpFrame);
 				} else {
-					printk("Slave-get-followup without tstamp.\n");
+					printk("Slave(%d)-get-followup without tstamp. \n", --slave_get_ptpFrame);
 				}}
 			} else
 			if (message_type == PTP_MSGTYPE_DELAY_RESP) {
+				if (slave_get_ptpFrame)
 				if (db->ptp_enable) {
 				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					printk("Slave-get-DELAY_RESP with tstamp.\n");
+					printk("Slave(%d)-get-DELAY_RESP with tstamp. \n", --slave_get_ptpFrame);
 				} else {
-					printk("Slave-get-DELAY_RESP without tstamp.\n");
+					printk("Slave(%d)-get-DELAY_RESP without tstamp. \n", --slave_get_ptpFrame);
 				}}
 			} else
 			if (message_type == PTP_MSGTYPE_ANNOUNCE) {
+				if (slave_get_ptpFrame)
 				if (db->ptp_enable) {
 				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					printk("Slave-get-ANNOUNCE with tstamp.\n");
+					printk("Slave(%d)-get-ANNOUNCE with tstamp. \n", --slave_get_ptpFrame);
 				} else {
-					printk("Slave-get-ANNOUNCE without tstamp.\n");
+					printk("Slave(%d)-get-ANNOUNCE without tstamp. \n", --slave_get_ptpFrame);
 				}}
 			} else
 			if (message_type == PTP_MSGTYPE_DELAY_REQ) {
 				if (db->ptp_enable) {
 				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					printk("Master-get-DELAY_REQ with tstamp.\n");
+					if (master_get_delayReq6) {
+						printk("Master(%d)-get-DELAY_REQ with tstamp. \n", --master_get_delayReq6);
+					}
 				} else {
 					printk("Master-get-DELAY_REQ without tstamp.\n");
 				}}
 			} else
 			{
+				if (slave_get_ptpMisc)
 				if (db->ptp_enable) {
 				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					printk("Slave or Master get-knonw with tstamp.\n");
+					printk("Slave(%d) or Master get-knonw with tstamp. \n", --slave_get_ptpMisc);
 				} else {
-					printk("Slave or Master get-knonw without tstamp.\n");
+					printk("Slave(%d) or Master get-knonw without tstamp. \n", --slave_get_ptpMisc);
 				}}
 			}
 		} while(0);
@@ -2169,9 +2179,25 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	/* 6 tx ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
+	u8 message_type = get_ptp_message_type005(skb);
 	//db->ptp_mode = (u8) dm9051_ptp_one_step(skb, db); //_15888_,
 	db->ptp_mode = (u8) dm9051_ptp_one_step001(skb, db); //_15888_,
-	db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
+	//db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
+	//db->tcr_wr = TCR_TXREQ;
+	//db->tcr_wr |= db->ptp_step == 2 ? TCR_TS_EN : TCR_DIS_JABBER_TIMER;
+	db->tcr_wr = TCR_TXREQ; // TCR register value
+	if (db->ptp_packet) {
+		//or
+		//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+			if (message_type == PTP_MSGTYPE_SYNC) {
+				if (db->ptp_step == 2)
+					db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
+				else
+					db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT;
+			} else if ((message_type == PTP_MSGTYPE_DELAY_REQ)) //_15888_,
+				db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
+		//}
+	}
 	#endif
 	#endif
 
@@ -2227,8 +2253,10 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	 * Change to be only 'db->ptp_sync' is true. (less report, report only essential.)
 	 */
 	if (db->ptp_mode == PTP_ONE_STEP || db->ptp_mode == PTP_TWO_STEP || db->ptp_mode == PTP_NOT_SYNC) { //temp
-		//get_ptp_message_type005
-		dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+		//u8 message_type = get_ptp_message_type005(skb);
+		if ((message_type == PTP_MSGTYPE_SYNC && db->ptp_step == 2) ||
+		   (message_type == PTP_MSGTYPE_DELAY_REQ)) //_15888_,
+			dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 	}
 	#endif
 	#endif

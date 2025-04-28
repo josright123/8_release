@@ -113,6 +113,7 @@ unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db);
 int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte);
 //static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTSbyte);
+void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 
 u32 dm9051_get_rate_reg(struct board_info *db);
 
