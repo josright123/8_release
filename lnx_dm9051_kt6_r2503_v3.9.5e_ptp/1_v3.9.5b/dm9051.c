@@ -2033,6 +2033,67 @@ static int dm9051_loop_rx(struct board_info *db)
 			return ret;
 		}
 
+		if (is_ptp_packet(skb->data))
+		do {
+			//u8 message_type0 =
+			//	get_ptp_message_type(skb);
+			u8 message_type =
+				get_ptp_message_type005(skb);
+			//printk("message type, A= %X B= %X\n", message_type0, message_type);
+			
+			if (message_type == PTP_MSGTYPE_SYNC) {
+				if (db->ptp_enable) {
+				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+		printk("\n");
+					printk("Slave-get-sync with tstamp.\n");
+		//sprintf(db->bc.head, "Slave-get-sync with tstamp, len= %3d", skb->len);
+		//dm9051_dump_data1(db, skb->data, skb->len);
+				} else {
+					printk("Slave-get-sync without tstamp.\n");
+				}}
+			} else
+			if (message_type == PTP_MSGTYPE_FOLLOW_UP) {
+				if (db->ptp_enable) {
+				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+					printk("Slave-get-followup with tstamp.\n");
+				} else {
+					printk("Slave-get-followup without tstamp.\n");
+				}}
+			} else
+			if (message_type == PTP_MSGTYPE_DELAY_RESP) {
+				if (db->ptp_enable) {
+				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+					printk("Slave-get-DELAY_RESP with tstamp.\n");
+				} else {
+					printk("Slave-get-DELAY_RESP without tstamp.\n");
+				}}
+			} else
+			if (message_type == PTP_MSGTYPE_ANNOUNCE) {
+				if (db->ptp_enable) {
+				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+					printk("Slave-get-ANNOUNCE with tstamp.\n");
+				} else {
+					printk("Slave-get-ANNOUNCE without tstamp.\n");
+				}}
+			} else
+			if (message_type == PTP_MSGTYPE_DELAY_REQ) {
+				if (db->ptp_enable) {
+				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+					printk("Master-get-DELAY_REQ with tstamp.\n");
+				} else {
+					printk("Master-get-DELAY_REQ without tstamp.\n");
+				}}
+			} else
+			{
+				if (db->ptp_enable) {
+				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+					printk("Slave or Master get-knonw with tstamp.\n");
+				} else {
+					printk("Slave or Master get-knonw without tstamp.\n");
+				}}
+			}
+		} while(0);
+
 		skb->protocol = eth_type_trans(skb, db->ndev);
 
 		/* 7.2 ptpc */
@@ -2165,8 +2226,10 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	/*
 	 * Change to be only 'db->ptp_sync' is true. (less report, report only essential.)
 	 */
-	if (db->ptp_mode == PTP_ONE_STEP || db->ptp_mode == PTP_TWO_STEP || db->ptp_mode == PTP_NOT_SYNC) //temp
+	if (db->ptp_mode == PTP_ONE_STEP || db->ptp_mode == PTP_TWO_STEP || db->ptp_mode == PTP_NOT_SYNC) { //temp
+		//get_ptp_message_type005
 		dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+	}
 	#endif
 	#endif
 

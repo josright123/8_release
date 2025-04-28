@@ -151,25 +151,5 @@ int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb)
 }
 #endif
 
-#if 0 //Saved
-//bool is_ptp_packet(struct sk_buff *skb) {
-//    struct udphdr *p_udp_hdr;
-//    struct iphdr *p_ip_hdr;
-
-//    if (skb->protocol != htons(ETH_P_IP))
-//        return false;
-
-//    p_ip_hdr = ip_hdr(skb);
-//    if (p_ip_hdr->protocol != IPPROTO_UDP)
-//        return false;
-
-//    p_udp_hdr = udp_hdr(skb);
-//    if (ntohs(p_udp_hdr->dest) == 319 || ntohs(p_udp_hdr->dest) == 320) {
-//        return true;
-//    }
-//    return false;
-//}
-#endif
-
 MODULE_DESCRIPTION("Davicom DM9051 driver, Plug-in"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
 MODULE_LICENSE("GPL");

@@ -26,27 +26,72 @@
 /* ptpc - support functions-1 */
 #if 1 //1 //0
 #ifdef DMPLUG_PTP
-/* PTP message type constants */
-//#define PTP_MSGTYPE_SYNC           0x0
-//#define PTP_MSGTYPE_DELAY_REQ      0x1
-//#define PTP_MSGTYPE_PDELAY_REQ     0x2
-//#define PTP_MSGTYPE_PDELAY_RESP    0x3
-#define PTP_MSGTYPE_FOLLOW_UP        0x8
-#define PTP_MSGTYPE_DELAY_RESP       0x9
-#define PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP 0xA
-#define PTP_MSGTYPE_ANNOUNCE         0xB
-#define PTP_MSGTYPE_SIGNALING        0xC
-#define PTP_MSGTYPE_MANAGEMENT       0xD
-
-static u8 get_ptp_message_type(struct sk_buff *skb) {
+//static 
+u8 get_ptp_message_type(struct sk_buff *skb) {
     struct udphdr *p_udp_hdr;
     u8 *ptp_hdr;
 
     p_udp_hdr = udp_hdr(skb);
     ptp_hdr = (u8 *)p_udp_hdr + sizeof(struct udphdr);
 
-    return ptp_hdr[0];
+//printk("A.udp %x, ptp %x\n", (unsigned int) p_udp_hdr, (unsigned int) ptp_hdr);
+    return ptp_hdr[0] & 0x0f;
 }
+
+u8 get_ptp_message_type005(struct sk_buff *skb) {
+    u8 *p = skb->data;
+    struct udphdr *p_udp_hdr; //= p + 14 + 20;
+    u8 *ptp_hdr;
+p += 14 + 20;
+p_udp_hdr = (struct udphdr *) p;
+	
+    ptp_hdr = (u8 *)p_udp_hdr + sizeof(struct udphdr);
+
+//printk("B.udp %x, ptp %x\n", (unsigned int) p_udp_hdr, (unsigned int) ptp_hdr);
+    return ptp_hdr[0] & 0x0f;
+}
+
+int is_ptp_packet(const u8 *packet) {
+    struct ethhdr *eth = (struct ethhdr *)packet;
+
+    // 檢查 Layer 2 PTP
+    if (ntohs(eth->h_proto) == PTP_ETHERTYPE) {
+        return 1;
+    }
+
+    // 檢查 Layer 4 UDP PTP
+    if (ntohs(eth->h_proto) == ETH_P_IP) {
+        struct iphdr *ip = (struct iphdr *)(packet + ETH_HLEN);
+        if (ip->protocol == IPPROTO_UDP) {
+            struct udphdr *udp = (struct udphdr *)(packet + ETH_HLEN + sizeof(struct iphdr));
+            if (ntohs(udp->dest) == PTP_EVENT_PORT || ntohs(udp->dest) == PTP_GENERAL_PORT) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+#if 0 //Saved
+//bool is_ptp_packet(struct sk_buff *skb) {
+//    struct udphdr *p_udp_hdr;
+//    struct iphdr *p_ip_hdr;
+
+//    if (skb->protocol != htons(ETH_P_IP))
+//        return false;
+
+//    p_ip_hdr = ip_hdr(skb);
+//    if (p_ip_hdr->protocol != IPPROTO_UDP)
+//        return false;
+
+//    p_udp_hdr = udp_hdr(skb);
+//    if (ntohs(p_udp_hdr->dest) == 319 || ntohs(p_udp_hdr->dest) == 320) {
+//        return true;
+//    }
+//    return false;
+//}
+#endif
 
 // show ptp message typee
 //static void types_log(char *head, u8 message_type) {
@@ -99,7 +144,7 @@ u16 lwip_htons(u16 n) {
 
 static void dump_ptp_packet0(struct board_info *db, struct sk_buff *skb, u8 message_type, int count)
 {
-	//u8 message_type = get_ptp_message_type(skb) & 0x0f;
+	//u8 message_type = get_ptp_message_type(skb);
 	struct udphdr *p_udp_hdr;
 	u8 *ptp_hdr;
 
@@ -108,26 +153,30 @@ static void dump_ptp_packet0(struct board_info *db, struct sk_buff *skb, u8 mess
 	//[.ptp .general event/or .message event]
 	if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {
 		printk("\n");
-		printk("%d udp src port %d, dst port %d (hton)\n", count, lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest));
-		printk("%d message_type is %02x\n", count, message_type);
+		printk("%d udp src/dst port %d / %d, %s\n", 
+			count, lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest),
+			message_type == PTP_MSGTYPE_SYNC ? "sync" : 
+			message_type == PTP_MSGTYPE_DELAY_REQ ? "delayReq" :
+			"otherPtpPacket");
+		//printk("%d message_type is %02x\n", count, message_type);
 		//do {
 		/* dump tx packet */
-		sprintf(db->bc.head, " TX LEN= %3d\n", skb->len);
-		printk("%s\n", db->bc.head);
+		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
+		//printk("%s\n", db->bc.head);
 		dm9051_dump_data0(db, skb->data, skb->len);
 		//} while(0);
 	}
 	else {
 		printk("No [udp src 319, dst 320]\n");
 		printk("count %d msg_type is %02x\n", count, message_type);
-		sprintf(db->bc.head, " TX LEN= %3d\n", skb->len);
+		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
 		printk("%s\n", db->bc.head);
 	}
 }
 
-static void dump_ptp_packet1(struct board_info *db, struct sk_buff *skb, u8 message_type, int count)
+//static 
+void dump_ptp_packet1(struct board_info *db, struct sk_buff *skb)
 {
-	//u8 message_type = get_ptp_message_type(skb) & 0x0f;
 	struct udphdr *p_udp_hdr;
 	u8 *ptp_hdr;
 
@@ -137,24 +186,13 @@ static void dump_ptp_packet1(struct board_info *db, struct sk_buff *skb, u8 mess
 	//[.ptp .general event/or .message event]
 	if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {
 		printk("\n");
-		printk("%d udp src port %d, dst port %d (hton)\n", count, lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest));
-		printk("message %u\n", message_type);
-//.		printk("count %d, message_type is %02x\n", count, message_type);
-		//do {
-		/* dump tx packet */
-		sprintf(db->bc.head, " TX LEN= %3d\n", skb->len);
-	#if 1
-		printk("%s\n", db->bc.head);
-	#else
+		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
 		dm9051_dump_data1(db, skb->data, skb->len);
-	#endif
-		//} while(0);
 	} else {
+		printk("\n");
 		printk("Not [udp src 319, dst 320]\n");
-		printk("message %u\n", message_type);
-		sprintf(db->bc.head, " TX LEN= %3d\n", skb->len);
-		printk("%s\n", db->bc.head);
-//.		dm9051_dump_data1(db, skb->data, skb->len);
+		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
+		dm9051_dump_data1(db, skb->data, skb->len);
 	}
 }
 #endif
@@ -317,9 +355,20 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 #if 1
 if (db->ptp_mode == PTP_NOT_PTP)
 printk("db->ptp_mode %u\n", db->ptp_mode);
-else
-printk("db->ptp_mode %u, ptp_step %u ptp_packet %u _sync %u _dlyreq %u\n",
-    db->ptp_mode, db->ptp_step, db->ptp_packet, db->ptp_sync, db->tempetory_ptp_dreq);
+else {
+    if (db->ptp_sync)
+	    printk("db->ptp_mode %u, [ptp_step %u] ptp_packet %u: _sync %u _dlyreq %u\n",
+		db->ptp_mode, db->ptp_step, db->ptp_packet, db->ptp_sync, db->tempetory_ptp_dreq);
+    else if (db->ptp_step == 2)
+	    printk("db->ptp_mode %u, [ptp_step %u] ptp_packet: _dlyreq %u\n",
+		db->ptp_mode, db->ptp_step, db->tempetory_ptp_dreq);
+    else if (db->tempetory_ptp_dreq)
+	    printk("db->ptp_mode %u, ptp_packet %u: _dlyreq %u\n", //ptp_step %u 
+		db->ptp_mode, db->ptp_packet, db->tempetory_ptp_dreq); //, db->ptp_step
+    else
+	    printk("db->ptp_mode %u, [ptp_step %u ptp_packet %u: _sync %u _dlyreq %u]\n",
+		db->ptp_mode, db->ptp_step, db->ptp_packet, db->ptp_sync, db->tempetory_ptp_dreq);
+}
 #endif
 
     /* Poll for TX completion */
@@ -331,44 +380,43 @@ printk("db->ptp_mode %u, ptp_step %u ptp_packet %u _sync %u _dlyreq %u\n",
 
 #if 0 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ check!!
 if (db->ptp_mode == PTP_NOT_PTP) {
-//	return 0;
+	return 0;
 #if 1
     /* Check if hardware timestamp is enabled */
-    if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-        netdev_dbg(ndev, "Nohardware timestamp\n");
-        return -EINVAL;
-    }
+//    if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+//        netdev_dbg(ndev, "Nohardware timestamp\n");
+//        return -EINVAL;
+//    }
 
     /* Get and validate PTP message type */
-    message_type = get_ptp_message_type(skb) & 0x0f;
-    if (message_type > PTP_MSGTYPE_MANAGEMENT) {
-        netdev_dbg(ndev, "InvalidPTP messagetype: 0x%02x\n", message_type);
-        return -EINVAL;
-    }
-    printk("  db->ptp_mode %u, (msg_type %u: is %s)\n",
-	db->ptp_mode, message_type,
-	message_type == PTP_MSGTYPE_SYNC ? "sync" : 
-	message_type == PTP_MSGTYPE_DELAY_REQ ? "delayReq" : "Others");
-    return 0;
+//    message_type = get_ptp_message_type(skb);
+//    if (message_type > PTP_MSGTYPE_MANAGEMENT) {
+//        netdev_dbg(ndev, "InvalidPTP messagetype: 0x%02x\n", message_type);
+//        return -EINVAL;
+//    }
+//    printk("  db->ptp_mode %u, (msg_type %u: is %s)\n",
+//	db->ptp_mode, message_type,
+//	message_type == PTP_MSGTYPE_SYNC ? "sync" : 
+//	message_type == PTP_MSGTYPE_DELAY_REQ ? "delayReq" : "Others");
+//    return 0;
 #endif
 }
 #endif
 
     /* Check if hardware timestamp is enabled */
     if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-        printk("No hardware timestamp requested\n");
         netdev_dbg(ndev, "No hardware timestamp requested\n");
-		//dump_ptp_packet1(db, skb, /*PTP_MSGTYPE_SYNC*/ 0x25, 0);
-	dump_ptp_packet1(db, skb, 0x25, 0);
+        printk("No hardware timestamp requested\n");
+	//dump_ptp_packet1(db, skb);
         return -EINVAL;
     }
 
     /* Get and validate PTP message type */
-    message_type = get_ptp_message_type(skb) & 0x0f;
+    message_type = get_ptp_message_type(skb);
     if (message_type > PTP_MSGTYPE_MANAGEMENT) {
-        printk("Invalid PTP message type: 0x%02x\n", message_type);
         netdev_dbg(ndev, "Invalid PTP message type: 0x%02x\n", message_type);
-	dump_ptp_packet1(db, skb, 0x26, 0);
+        printk("Invalid PTP message type: 0x%02x\n", message_type);
+	//dump_ptp_packet1(db, skb);
         return -EINVAL;
     }
 

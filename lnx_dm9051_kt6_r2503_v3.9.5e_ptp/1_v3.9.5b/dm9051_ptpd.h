@@ -83,6 +83,26 @@ enum ptp_sync_type {
     PTP_NOT_SYNC = 3      /* Not a sync message but other PTP message */
 };
 
+/* PTP message type constants */
+//#define PTP_MSGTYPE_SYNC           0x0
+//#define PTP_MSGTYPE_DELAY_REQ      0x1
+//#define PTP_MSGTYPE_PDELAY_REQ     0x2
+//#define PTP_MSGTYPE_PDELAY_RESP    0x3
+#define PTP_MSGTYPE_FOLLOW_UP        0x8
+#define PTP_MSGTYPE_DELAY_RESP       0x9
+#define PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP 0xA
+#define PTP_MSGTYPE_ANNOUNCE         0xB
+#define PTP_MSGTYPE_SIGNALING        0xC
+#define PTP_MSGTYPE_MANAGEMENT       0xD
+u8 get_ptp_message_type(struct sk_buff *skb);
+u8 get_ptp_message_type005(struct sk_buff *skb);
+
+// PTP ????
+#define PTP_ETHERTYPE 0x88F7    // Layer 2 PTP
+#define PTP_EVENT_PORT 319      // UDP ?????
+#define PTP_GENERAL_PORT 320    // UDP ?????
+int is_ptp_packet(const u8 *packet);
+
 enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb, struct board_info *db); //old
 enum ptp_sync_type dm9051_ptp_one_step001(struct sk_buff *skb, struct board_info *db);
 int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db);
