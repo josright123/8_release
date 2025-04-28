@@ -399,9 +399,11 @@ struct board_info
 	struct ptp_clock_info 	ptp_caps;
 
 	u8			ptp_mode; //1: one-step, 2: two-step, 3: not-sync, 0: Not PTP //_15888_
-	u8			ptp_packet; //dividual
-	u8			ptp_sync; //dividual
+	u8			tempetory_mod_field;
 	u8			ptp_step; //dividual
+	u8			ptp_packet; //dividual
+	u8			ptp_sync; //dividualx
+	u8			tempetory_ptp_dreq; //dividual
 
 	s64			pre_rate;
 	struct hwtstamp_config	tstamp_config;
@@ -464,7 +466,7 @@ struct mod_config
 //MODE_NUM = 3
 const struct mod_config driver_align_mode = {
 	.test_info = "Test in rpi5 bcm2712",
-	.skb_wb_mode = SKB_WB_ON,
+	.skb_wb_mode = SKB_WB_ON, //SKB_WB_OFF, //SKB_WB_ON,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
 	.align = {
 		.burst_mode_info = "Alignment",

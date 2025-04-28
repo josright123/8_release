@@ -147,7 +147,6 @@ int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb)
 		ret = dm9051_write_mem_cache(db, skb->data, tx_xxbst); //'tx_xxbst'
 	} while(0);
 
-	//dev_kfree_skb(skb);
 	return ret;
 }
 #endif

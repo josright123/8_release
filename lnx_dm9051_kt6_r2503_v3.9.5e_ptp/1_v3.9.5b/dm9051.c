@@ -2061,51 +2061,42 @@ static int dm9051_loop_rx(struct board_info *db)
 }
 
 #ifndef DMPLUG_CONTI
+#define EXPEND_LEN(datlen,pd)	(datlen + pd)
+#define WRITE_SKB(db,p,len)		dm9051_write_mem_cache(db,p,len)
 #ifdef DM9051_SKB_PROTECT
-struct sk_buff *dm9051_tx_skb_protect(struct sk_buff *skb)
-{
+static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
+{	
 	struct sk_buff *skb2;
+	//printk("pad skb->len %d, data_len+pad %d (pad %d)\n", skb->len, EXPEND_LEN(skb->len, pad), pad);
 
 	skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
-	if (!skb2)
-		printk("[WB_SUPPORT] which is on len %d, memory leak!\n", skb->len);
-	dev_kfree_skb(skb);
-	return skb2;
-}
-
-static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
-{
-	if (pad) {
-		skb = dm9051_tx_skb_protect(skb); /* protection */ //'~wb'
-		if (!skb)
-			return NULL; //-ENOMEM;
-		//printk("new skb->len %d, data_len+pad %d (pad %d)\n", skb->len, skb->len + pad, pad);
+	if (skb2) {
+		dev_kfree_skb(skb);
+		//printk("new skb->len %d, data_len+pad %d (pad %d)\n", skb2->len, EXPEND_LEN(skb2->len, pad), pad);
+		return skb2;
 	}
+
+	printk("[WB_SUPPORT] warn on len %d, skb_copy_expand get memory leak!\n", skb->len);
 	return skb;
 }
 #endif
 
-static int dm9051_single_tx(struct board_info *db, struct sk_buff *skb,
-		unsigned int buff_len, unsigned int data_len) //, u8 *buff, unsigned int buff_len, unsigned int data_len)
+static int dm9051_single_tx(struct board_info *db, u8 *p, unsigned int data_len, unsigned int pad)
 {
-	int ret;
+	int ret = dm9051_nsr_poll(db);
+	if (ret)
+		return ret;
 
-	do {
-		//u8 *buff = skb->data;
+	ret = WRITE_SKB(db, p, EXPEND_LEN(data_len, pad)); //'!wb'
+	if (ret)
+		return ret;
 
-		ret = dm9051_nsr_poll(db);
-		if (ret)
-			break; //return ret;
+	return dm9051_set_regs(db, DM9051_TXPLL, &data_len, 2);
+}
 
-		ret = dm9051_write_mem_cache(db, skb->data, buff_len); //'!wb'
-		if (ret)
-			break; //return ret;
-
-		ret = dm9051_set_regs(db, DM9051_TXPLL, &data_len, 2);
-	} while(0);
-
-	//dev_kfree_skb(skb);
-	return ret;
+static int dm9051_req_tx(struct board_info *db)
+{
+	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
 }
 #endif
 
@@ -2117,7 +2108,8 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	/* 6 tx ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	db->ptp_mode = (u8) dm9051_ptp_one_step(skb, db); //_15888_,
+	//db->ptp_mode = (u8) dm9051_ptp_one_step(skb, db); //_15888_,
+	db->ptp_mode = (u8) dm9051_ptp_one_step001(skb, db); //_15888_,
 	db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
 	#endif
 	#endif
@@ -2126,37 +2118,37 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 		//if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
 		//{ //as below:
 		//}
-		
 #ifdef DMPLUG_CONTI
 		ret = TX_OPS_CONTI(db, skb); //skb->data, data_len); //'double_wb'
+		if (ret)
+			break;
 #else
 		/*
 		 * if (!dm9051_modedata->skb_wb_mode) {
-		 *   ret = dm9051_single_tx(db, skb, skb->len, skb->len);
+		 *   ret = WRITE_SKB(db, skb, skb->len);
+		 *   ret = dm9051_single_tx(db, skb->len);
 		 * }
 		 * else {
-		 *   ...
+		 *   pad = ...
+		 *   skb = EXPAND_SKB(skb, pad);
+		 *   ret = WRITE_SKB(db, skb, EXPEND_LEN(data_len, pad);
+		 *   ret = dm9051_single_tx(db, skb, data_len, pad);
 		 * }
+		 * ret = dm9051_req_tx(db);
 		 */
-		unsigned int pad = (dm9051_modedata->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'		
-		unsigned int data_len = skb->len;
-		unsigned int buff_len = skb->len + pad;
+		unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
 
 		#ifdef DM9051_SKB_PROTECT
-		skb = EXPAND_SKB(skb, pad);
-		if (!skb) {
-			dev_info(&db->spidev->dev, "dm9051 wb_mode get SKB_PROTECT error!\n");
-			ret = -ENOMEM;
-			break;
-		}
+		if (pad)
+			skb = EXPAND_SKB(skb, pad);
 		#endif
 
-		ret = dm9051_single_tx(db, skb, buff_len, data_len); //skb->data, buff_len, data_len); //~'skb->len'
-#endif
+		ret = dm9051_single_tx(db, skb->data, data_len, pad);
 		if (ret)
 			break;
+#endif
 
-		ret = dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
+		ret = dm9051_req_tx(db);
 	} while(0);
 
 	if (ret)
@@ -2170,7 +2162,11 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	/* 6.1 tx ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+	/*
+	 * Change to be only 'db->ptp_sync' is true. (less report, report only essential.)
+	 */
+	if (db->ptp_mode == PTP_ONE_STEP || db->ptp_mode == PTP_TWO_STEP || db->ptp_mode == PTP_NOT_SYNC) //temp
+		dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 	#endif
 	#endif
 
@@ -2187,14 +2183,13 @@ static int dm9051_loop_tx(struct board_info *db)
 	{
 		struct sk_buff *skb = skb_dequeue(&db->txq);
 		if (skb) {
-			ntx++;
-			//int ret = TX_PACKET(db, skb);
 			if (TX_PACKET(db, skb)) {
 				if (netif_queue_stopped(ndev) &&
 					(skb_queue_len(&db->txq) < DM9051_TX_QUE_LO_WATER))
 					netif_wake_queue(ndev);
 				return ntx;
 			}
+			ntx++;
 		}
 
 		if (netif_queue_stopped(ndev) &&
@@ -2755,6 +2750,11 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->mdi = 0x0830;
 	
 	db->tcr_wr = TCR_TXREQ; //pre-defined
+
+	db->ptp_step = 0;
+	db->ptp_packet = 0;
+	db->ptp_sync = 0;
+	db->tempetory_ptp_dreq = 0;
 }
 
 static int dm9051_mdio_register(struct board_info *db)
