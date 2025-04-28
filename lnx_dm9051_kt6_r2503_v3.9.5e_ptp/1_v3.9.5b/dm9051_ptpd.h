@@ -103,6 +103,7 @@ u8 get_ptp_message_type005(struct sk_buff *skb);
 #define PTP_GENERAL_PORT 320    // UDP ?????
 int is_ptp_packet(const u8 *packet);
 
+u8 dm9051_ptp_frame(struct sk_buff *skb);
 enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb, struct board_info *db); //old
 enum ptp_sync_type dm9051_ptp_one_step001(struct sk_buff *skb, struct board_info *db);
 int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db);

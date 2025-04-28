@@ -2180,11 +2180,9 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	u8 message_type = get_ptp_message_type005(skb);
+	db->ptp_packet = dm9051_ptp_frame(skb);
 	//db->ptp_mode = (u8) dm9051_ptp_one_step(skb, db); //_15888_,
-	db->ptp_mode = (u8) dm9051_ptp_one_step001(skb, db); //_15888_,
-	//db->tcr_wr = dm9051_tcr_wr(skb, db); //_15888_,
-	//db->tcr_wr = TCR_TXREQ;
-	//db->tcr_wr |= db->ptp_step == 2 ? TCR_TS_EN : TCR_DIS_JABBER_TIMER;
+	//db->ptp_mode = (u8) dm9051_ptp_one_step001(skb, db); //_15888_,
 	db->tcr_wr = TCR_TXREQ; // TCR register value
 	if (db->ptp_packet) {
 		//or
@@ -2252,12 +2250,12 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	/*
 	 * Change to be only 'db->ptp_sync' is true. (less report, report only essential.)
 	 */
-	if (db->ptp_mode == PTP_ONE_STEP || db->ptp_mode == PTP_TWO_STEP || db->ptp_mode == PTP_NOT_SYNC) { //temp
+//	if (db->ptp_mode == PTP_ONE_STEP || db->ptp_mode == PTP_TWO_STEP || db->ptp_mode == PTP_NOT_SYNC) { //temp
 		//u8 message_type = get_ptp_message_type005(skb);
 		if ((message_type == PTP_MSGTYPE_SYNC && db->ptp_step == 2) ||
 		   (message_type == PTP_MSGTYPE_DELAY_REQ)) //_15888_,
 			dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
-	}
+//	}
 	#endif
 	#endif
 
@@ -2842,10 +2840,10 @@ static void dm9051_operation_clear(struct board_info *db)
 	
 	db->tcr_wr = TCR_TXREQ; //pre-defined
 
-	db->ptp_step = 0;
-	db->ptp_packet = 0;
-	db->ptp_sync = 0;
-	db->tempetory_ptp_dreq = 0;
+	//db->ptp_step = 0;
+	//db->ptp_packet = 0;
+	//db->ptp_sync = 0;
+	//db->tempetory_ptp_dreq = 0;
 }
 
 static int dm9051_mdio_register(struct board_info *db)

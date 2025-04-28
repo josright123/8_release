@@ -674,7 +674,24 @@ no:
 }
 #endif
 
-#if 1
+u8 dm9051_ptp_frame(struct sk_buff *skb)
+{
+	unsigned int ptp_class = ptp_packet_classify(skb);
+	struct ptp_header *hdr;
+
+	db->ptp_step = 0;
+	if (ptp_class == PTP_CLASS_NONE)
+		return 0;
+
+	hdr = ptp_parse_header(skb, ptp_class);
+	if (!hdr)
+		return 0;
+
+	db->ptp_step = (u8)(hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
+	return 1;
+}
+
+#if 0
 /**
  * dm9051_ptp_one_step - Determine if a PTP packet is one-step or two-step sync
  * @skb: The socket buffer containing the PTP packet
@@ -969,7 +986,7 @@ if (db->ptp_mode == PTP_NOT_PTP) {
 
     return ret;
 }
-#endif
+#endif //0
 
 static struct ptp_clock_info ptp_dm9051a_info = {
     .owner = THIS_MODULE,
