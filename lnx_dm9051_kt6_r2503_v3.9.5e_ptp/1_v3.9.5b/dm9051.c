@@ -34,23 +34,6 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 /* tX 'wb' do skb protect */
 #define DM9051_SKB_PROTECT
 
-/* log */
-#ifdef DMCONF_AARCH_64
-#define PRINT_ALIGN_INFO(n) \
-			printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
-				   dmplug_tx, \
-				   dm9051_modedata->align.rx_blk, \
-				   dm9051_modedata->align.tx_blk, \
-				   n)
-#else
-#define PRINT_ALIGN_INFO(n) \
-			printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
-				   dmplug_tx, \
-				   dm9051_modedata->align.rx_blk, \
-				   dm9051_modedata->align.tx_blk, \
-				   n)
-#endif
-
 /* Helper macros */
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
@@ -118,13 +101,8 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi)
 	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 	dev_info(dev, "LXR: %s, BUILD: %s\n", utsname()->release, utsname()->release); //dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]); /* Driver configuration test_info */
 	//dev_info(dev, "Kernel Version (compile-time): %s\n", UTS_RELEASE);
-#ifdef DMCONF_AARCH_64
-	dev_info(dev, "TX: %s blk %lu\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
-	dev_info(dev, "RX: %s blk %lu\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk);
-#else
-	dev_info(dev, "TX: %s blk %u\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk);
-	dev_info(dev, "RX: %s blk %u\n", dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk);
-#endif
+	DEV_INFO_TX_ALIGN(dev);
+	DEV_INFO_RX_ALIGN(dev);
 }
 
 static void SHOW_OPTION_MODE(struct spi_device *spi)

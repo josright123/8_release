@@ -82,14 +82,39 @@
 #define dmplug_tx "normal"
 #endif
 
-#ifdef DMCONF_AARCH_64
+/* log */
+#ifdef DMCONF_AARCH_64 //PRINT_ALIGN_INFO
+#define DEV_INFO_TX_ALIGN(dev) \
+		dev_info(dev, "TX: %s blk %lu\n", \
+			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk)
+#define DEV_INFO_RX_ALIGN(dev) \
+		dev_info(dev, "RX: %s blk %lu\n", \
+			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk)
+#define PRINT_ALIGN_INFO(n) \
+		printk("___[TX %s mode][Alignment RX %lu, Alignment TX %lu] nRxc %d\n", \
+			dmplug_tx, \
+			dm9051_modedata->align.rx_blk, \
+			dm9051_modedata->align.tx_blk, \
+			n)
 #define PRINT_REGMAP_BLK_ERR(pstr, ret, reg, BLKLEN) \
-			netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %lu\n", \
-				   __func__, ret, pstr, reg, BLKLEN)
+		netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %lu\n", \
+			__func__, ret, pstr, reg, BLKLEN)
 #else
+#define DEV_INFO_TX_ALIGN(dev) \
+		dev_info(dev, "TX: %s blk %u\n", \
+			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk)
+#define DEV_INFO_RX_ALIGN(dev) \
+		dev_info(dev, "RX: %s blk %u\n", \
+			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk)
+#define PRINT_ALIGN_INFO(n) \
+		printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
+			dmplug_tx, \
+			dm9051_modedata->align.rx_blk, \
+			dm9051_modedata->align.tx_blk, \
+			n)
 #define PRINT_REGMAP_BLK_ERR(pstr, ret, reg, BLKLEN) \
-			netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
-				   __func__, ret, pstr, reg, BLKLEN)
+		netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
+			__func__, ret, pstr, reg, BLKLEN)
 #endif
 
 /*
