@@ -403,8 +403,6 @@ struct board_info
 	//u8			tempetory_mod_field;
 	u8			ptp_step; //dividual
 	u8			ptp_packet; //dividual
-	//u8			ptp_sync; //dividualx
-	//u8			tempetory_ptp_dreq; //dividual
 
 	s64			pre_rate;
 	struct hwtstamp_config	tstamp_config;

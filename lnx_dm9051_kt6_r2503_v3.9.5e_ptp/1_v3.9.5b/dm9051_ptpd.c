@@ -719,8 +719,6 @@ enum ptp_sync_type dm9051_ptp_one_step001(struct sk_buff *skb, struct board_info
 
 	db->ptp_step = 0;
 	db->ptp_packet = 0;
-	db->ptp_sync = 0;
-	db->tempetory_ptp_dreq = 0;
 	
 	ptp_class = ptp_packet_classify(skb);
 	if (ptp_class == PTP_CLASS_NONE)
@@ -737,11 +735,6 @@ enum ptp_sync_type dm9051_ptp_one_step001(struct sk_buff *skb, struct board_info
 	/* [next] */
 	msgtype = ptp_get_msgtype(hdr, ptp_class);
 
-	if (is_ptp_sync_packet(msgtype))
-		db->ptp_sync = 1;
-	if (is_ptp_delayreq_packet(msgtype))
-		db->tempetory_ptp_dreq = 1;
-
 	/* if this is a sync message */
 	/* or if this is a delay-request message */
 	/* Sync one step chip-insert-tstamp (master do)
@@ -753,39 +746,6 @@ enum ptp_sync_type dm9051_ptp_one_step001(struct sk_buff *skb, struct board_info
 	/* Determine if one-step or two-step sync */
 	return (hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
 }
-//enum ptp_sync_type dm9051_ptp_one_step002(struct sk_buff *skb, struct board_info *db)
-//{
-//	unsigned int ptp_class;
-//	struct ptp_header *hdr;
-//	u8 msgtype;
-
-//	db->ptp_packet = 0;
-//	db->ptp_sync = 0;
-//	db->ptp_step = 0;
-//	
-//	ptp_class = ptp_packet_classify(skb);
-//	if (ptp_class == PTP_CLASS_NONE)
-//		return PTP_NOT_PTP;
-
-//	//hdr = ptp_packet_hdr(skb, ptp_class);
-//	hdr = ptp_parse_header(skb, ptp_class);
-//	if (!hdr)
-//		return PTP_NOT_PTP;
-
-//	db->ptp_packet = 1;
-//	db->ptp_step = (u8)(hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
-
-//	msgtype = ptp_get_msgtype(hdr, ptp_class);
-//	if (!is_ptp_sync_packet(msgtype))
-//		return PTP_NOT_SYNC;
-
-//	db->ptp_sync = 1;
-//#if 0
-//	db->ptp_step = (u8)(hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
-//#endif
-//	/* Determine if one-step or two-step sync */
-//	return (hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
-//}
 #endif
 
 #if 0
@@ -833,25 +793,6 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 
     if (!db->ptp_on)
         return 0;
-
-#if 1
-if (db->ptp_mode == PTP_NOT_PTP)
-printk("db->ptp_mode %u\n", db->ptp_mode);
-else {
-    if (db->ptp_sync)
-	    printk("db->ptp_mode %u, [ptp_step %u] ptp_packet %u: _sync %u _dlyreq %u\n",
-		db->ptp_mode, db->ptp_step, db->ptp_packet, db->ptp_sync, db->tempetory_ptp_dreq);
-    else if (db->ptp_step == 2)
-	    printk("db->ptp_mode %u, [ptp_step %u] ptp_packet: _dlyreq %u\n",
-		db->ptp_mode, db->ptp_step, db->tempetory_ptp_dreq);
-    else if (db->tempetory_ptp_dreq)
-	    printk("db->ptp_mode %u, ptp_packet %u: _dlyreq %u\n", //ptp_step %u 
-		db->ptp_mode, db->ptp_packet, db->tempetory_ptp_dreq); //, db->ptp_step
-    else
-	    printk("db->ptp_mode %u, [ptp_step %u ptp_packet %u: _sync %u _dlyreq %u]\n",
-		db->ptp_mode, db->ptp_step, db->ptp_packet, db->ptp_sync, db->tempetory_ptp_dreq);
-}
-#endif
 
     /* Poll for TX completion */
     ret = dm9051_nsr_poll(db);
@@ -1608,7 +1549,7 @@ void dm9051_ptp_init(struct board_info *db)
 	
 	db->ptp_caps = ptp_dm9051a_info;
 	
-#if 0					   
+	#if 0					   
 	db->tstamp_config.flags = 0;
 	db->tstamp_config.rx_filter = 
 		(1 << HWTSTAMP_FILTER_ALL) |
@@ -1618,7 +1559,7 @@ void dm9051_ptp_init(struct board_info *db)
 	db->tstamp_config.tx_type =
 		(1 << HWTSTAMP_TX_ON) |
 		(1 << HWTSTAMP_TX_OFF);
-#endif
+	#endif
 		
 	db->ptp_clock = ptp_clock_register(&db->ptp_caps,
 					   &db->ndev->dev);

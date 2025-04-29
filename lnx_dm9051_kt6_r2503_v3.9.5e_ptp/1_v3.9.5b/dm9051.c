@@ -2250,12 +2250,6 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	/* 6.1 tx ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	/*
-	 * Change to be only 'db->ptp_sync' is true. (less report, report only essential.)
-	 */
-//	if (db->ptp_mode == PTP_ONE_STEP || db->ptp_mode == PTP_TWO_STEP || db->ptp_mode == PTP_NOT_SYNC) { //temp
-		//u8 message_type = get_ptp_message_type005(skb);
-//	}
 	if ((is_ptp_sync_packet(message_type) &&
 		db->ptp_step == 2) ||
 		is_ptp_delayreq_packet(message_type)) //_15888_,
@@ -2839,8 +2833,6 @@ static void dm9051_operation_clear(struct board_info *db)
 
 	//db->ptp_step = 0;
 	//db->ptp_packet = 0;
-	//db->ptp_sync = 0;
-	//db->tempetory_ptp_dreq = 0;
 }
 
 static int dm9051_mdio_register(struct board_info *db)
