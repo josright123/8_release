@@ -23,6 +23,35 @@
 #include "dm9051_plug.h"
 #include "dm9051_ptpd.h"
 
+#ifdef DMCONF_DIV_HLPR_32
+/* Implement the missing ARM EABI division helper */
+long long __aeabi_ldivmod(long long numerator, long long denominator)
+{
+    long long res = 0;
+    long long d = denominator;
+    int sign = 1;
+
+    if (numerator < 0) {
+        numerator = -numerator;
+        sign = -sign;
+    }
+
+    if (d < 0) {
+        d = -d;
+        sign = -sign;
+    }
+
+    if (d != 0) {
+        /* Use the kernel's division helper */
+        res = div64_s64(numerator, d);
+        if (sign < 0)
+            res = -res;
+    }
+
+    return res;
+}
+#endif
+
 /* ptpc - support functions-1 */
 #if 1 //1 //0
 #ifdef DMPLUG_PTP
