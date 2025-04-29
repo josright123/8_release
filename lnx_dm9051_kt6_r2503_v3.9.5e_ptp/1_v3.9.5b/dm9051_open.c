@@ -199,20 +199,12 @@ void SHOW_MODE(struct spi_device *spi) //SHOW_INT_MODE
 	#ifdef DMPLUG_INT
 		unsigned int intdata[2];
 		of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-		dev_info(&spi->dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);
+		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt_des);
+		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt2);
 		dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
 		dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
-		#ifdef INT_TWO_STEP
-			dev_info(&spi->dev, "Interrupt: Two_step\n");
-		#endif
 	#else
-		dev_info(&spi->dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);
-		//int i;
-		//dev_info(&spi->dev, "Operation: Polling operate count %d\n", csched.nTargetMaxNum);
-		//for (i = 0; i < csched.nTargetMaxNum; i++)
-		//{
-		//	dev_info(&spi->dev, "Operation: Polling operate delayF[%d]= %lu\n", i, csched.delayF[i]);
-		//}
+		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt_des);
 	#endif
 }
 

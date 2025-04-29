@@ -1163,7 +1163,7 @@ static int dm9051_core_init(struct board_info *db)
 	/* Diagnostic contribute: In dm9051_enable_interrupt()
 	 * (or located in the core reset subroutine is better!!)
 	 */
-	#if defined(DMPLUG_INT) && defined(DMPLUG_INT_CLKOUT)
+	#if defined(DMPLUG_INT_CLKOUT)
 		printk("_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		if (ret)
@@ -2506,7 +2506,10 @@ static int dm9051_open(struct net_device *ndev)
 	
 	printk("\n");
 	netdev_info(db->phydev->attached_dev, "dm9051_open\n");
-	netdev_info(db->phydev->attached_dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);
+	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_intterrpt_des);
+	#ifdef DMPLUG_INT
+	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_intterrpt2);
+	#endif
 	//amdix_log_reset(db); (to be determined)
 
 	db->imr_all = IMR_PAR | IMR_PRM;
@@ -2980,8 +2983,6 @@ static int dm9051_probe(struct spi_device *spi)
 
 	printk("\n");
 	dev_info(dev, "Davicom: %s", confdata.release_version);
-	//dev_info(dev, "Davicom: %s(%d)", dmplug_intterrpt_des, dmplug_interrupt);
-	//dev_info(dev, "Davicom: confdata.interrupt= %s", confdata.interrupt);
 
 	SHOW_CONFIG_MODE(spi);
 

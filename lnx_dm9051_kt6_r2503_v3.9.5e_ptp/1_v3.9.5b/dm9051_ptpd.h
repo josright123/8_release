@@ -1,10 +1,8 @@
 #ifndef _DM9051_PTPD_H_
 #define _DM9051_PTPD_H_
-
 /*
  * ptp 1588: 
  */
-
 #define DM9051_1588_ST_GPIO 0x60
 #define DM9051_1588_CLK_CTRL 0x61
 #define DM9051_1588_GP_TXRX_CTRL 0x62

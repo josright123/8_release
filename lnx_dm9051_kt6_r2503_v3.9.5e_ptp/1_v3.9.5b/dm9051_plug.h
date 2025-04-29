@@ -2,23 +2,21 @@
 #define _DM9051_PLUG_H_
 #include <linux/module.h>
 #include <linux/netdevice.h>
-//#include <linux/ptp_clock_kernel.h>
 #include <linux/skbuff.h>
 #include <linux/ptp_classify.h>
 #include <linux/if_ether.h>
 #include <linux/ip.h>
 #include <linux/udp.h>
-//#include <linux/if.h>
 
 /* Macro domain
  */
-/*#define DMPLUG_INT */ //(INT 39)
 /*#define DMPLUG_CONTI */ //(conti)
 /*#define DMPLUG_CRYPT */ //(crypt)
-/*#define DMPLUG_PTP */ //(ptp 1588)
+/*#define DMPLUG_PTP */ //(ptp1588)
 
-/*#define DMPLUG_INT_CLKOUT */ //(INT 39)
-/*#define INT_TWO_STEP */ //(interrupt two_step)
+/*#define DMPLUG_INT */ //(INT39)
+/*#define DMPLUG_INT_CLKOUT */ //(INT39 ClkOut)
+/*#define INT_TWO_STEP */ //(INT39 two_step)
 
 /* Macro for already known platforms
  */ 
@@ -39,42 +37,41 @@
 
 #define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
-#define DMPLUG_INT //(INT 39)
+#define DMPLUG_INT //(INT39)
+
+  //#define PLUG_INT_CLKOUT
+  //#define PLUG_INT_2STEP
+  #ifdef PLUG_INT_CLKOUT
+  #define DMPLUG_INT_CLKOUT //(INT39_CLKOUT)
+  #endif
+  #ifdef PLUG_INT_2STEP
+  #define INT_TWO_STEP //(INT39_TWO_STEP)
+  #endif
 #endif
 
-//#define PLUG_INT_CLKOUT
-#ifdef PLUG_INT_CLKOUT
-#define DMPLUG_INT_CLKOUT
-#endif
-
-//#define PLUG_INT_2STEP
-#ifdef PLUG_INT_2STEP
-#define INT_TWO_STEP
-#endif
-
-enum
-{
-	MODE_POLL = 0,
-	MODE_INTERRUPT = 1,
-	MODE_INTERRUPT_CLKOUT = 2, /* need pi3/pi5 test and verify more */
-};
+//enum
+//{
+//	MODE_POLL = 0,
+//	MODE_INTERRUPT = 1,
+//	MODE_INTERRUPT_CLKOUT = 2, /* need pi3/pi5 test and verify more */
+//};
 
 #ifdef DMPLUG_INT
   #ifdef DMPLUG_INT_CLKOUT
-  #define dmplug_interrupt MODE_INTERRUPT_CLKOUT
+  //#define dmplug_interrupt MODE_INTERRUPT_CLKOUT
   #define dmplug_intterrpt_des "interrupt clkout mode"
   #else
-  #define dmplug_interrupt MODE_INTERRUPT
-  #define dmplug_intterrpt_des "interrupt mode"
+  //#define dmplug_interrupt MODE_INTERRUPT
+  #define dmplug_intterrpt_des "interrupt direct mode"
   #endif
 
   #ifdef INT_TWO_STEP
   #define dmplug_intterrpt2 "interrupt two step"
   #else
-  #define dmplug_intterrpt2 "interrupt direct trigger"
+  #define dmplug_intterrpt2 "interrupt direct step"
   #endif
 #else
-#define dmplug_interrupt MODE_POLL
+//#define dmplug_interrupt MODE_POLL
 #define dmplug_intterrpt_des "poll mode"
 #endif
 
@@ -115,17 +112,12 @@ enum
 struct driver_config
 {
 	const char *release_version;
-	int interrupt;
+	//.int interrupt;
 };
 const struct driver_config confdata = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
 	//.interrupt = dmplug_interrupt,
 };
-#else
-//.
-#endif
-
-#ifdef MAIN_DATA
 const struct eng_config engdata = {
 	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
 	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
@@ -143,9 +135,6 @@ extern const struct eng_config *econf;
 extern const struct eng_sched csched;
 #endif
 
-//#define econf   (&engdata)
-//#define csched  (engdata.sched)
-
 /*
  * SPI sync: 
  */
@@ -155,8 +144,6 @@ int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); /
 int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 						   size_t len);
 
-//void SHOW_INT_MODE(struct spi_device *spi);
-//void SHOW_POLL_MODE(struct spi_device *spi);
 void SHOW_MODE(struct spi_device *spi); //BOTH, #ifdef DMPLUG_INT #else/#endif
 int DM9051_OPEN_REQUEST(struct board_info *db);
 

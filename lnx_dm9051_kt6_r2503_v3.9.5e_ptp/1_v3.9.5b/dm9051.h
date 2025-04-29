@@ -3,7 +3,6 @@
  * Copyright (c) 2022 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
-
 #ifndef _DM9051_H_
 #define _DM9051_H_
 
