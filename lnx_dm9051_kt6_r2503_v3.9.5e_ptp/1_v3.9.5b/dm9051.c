@@ -2044,14 +2044,14 @@ static int dm9051_loop_rx(struct board_info *db)
 				get_ptp_message_type005(skb);
 			//printk("message type, A= %X B= %X\n", message_type0, message_type);
 			
-			if (message_type == PTP_MSGTYPE_SYNC) {
+			if (is_ptp_sync_packet(message_type)) {
 				if (slave_get_ptpFrame)
 				if (db->ptp_enable) {
 				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-		printk("\n");
+					printk("\n");
 					printk("Slave(%d)-get-sync with tstamp. \n", --slave_get_ptpFrame);
-		//sprintf(db->bc.head, "Slave-get-sync with tstamp, len= %3d", skb->len);
-		//dm9051_dump_data1(db, skb->data, skb->len);
+					//sprintf(db->bc.head, "Slave-get-sync with tstamp, len= %3d", skb->len);
+					//dm9051_dump_data1(db, skb->data, skb->len);
 				} else {
 					printk("Slave(%d)-get-sync without tstamp. \n", --slave_get_ptpFrame);
 				}}
@@ -2083,7 +2083,7 @@ static int dm9051_loop_rx(struct board_info *db)
 					printk("Slave(%d)-get-ANNOUNCE without tstamp. \n", --slave_get_ptpFrame);
 				}}
 			} else
-			if (message_type == PTP_MSGTYPE_DELAY_REQ) {
+			if (is_ptp_delayreq_packet(message_type)) {
 				if (db->ptp_enable) {
 				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
 					if (master_get_delayReq6) {
@@ -2180,19 +2180,19 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	u8 message_type = get_ptp_message_type005(skb);
-	db->ptp_packet = dm9051_ptp_frame(skb);
+
+	db->tcr_wr = TCR_TXREQ; // TCR register value
 	//db->ptp_mode = (u8) dm9051_ptp_one_step(skb, db); //_15888_,
 	//db->ptp_mode = (u8) dm9051_ptp_one_step001(skb, db); //_15888_,
-	db->tcr_wr = TCR_TXREQ; // TCR register value
-	if (db->ptp_packet) {
+	if (dm9051_ptp_frame(db, skb)) {
 		//or
 		//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-			if (message_type == PTP_MSGTYPE_SYNC) {
+			if (is_ptp_sync_packet(message_type)) {
 				if (db->ptp_step == 2)
 					db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
 				else
 					db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT;
-			} else if ((message_type == PTP_MSGTYPE_DELAY_REQ)) //_15888_,
+			} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
 				db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
 		//}
 	}
@@ -2252,10 +2252,11 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	 */
 //	if (db->ptp_mode == PTP_ONE_STEP || db->ptp_mode == PTP_TWO_STEP || db->ptp_mode == PTP_NOT_SYNC) { //temp
 		//u8 message_type = get_ptp_message_type005(skb);
-		if ((message_type == PTP_MSGTYPE_SYNC && db->ptp_step == 2) ||
-		   (message_type == PTP_MSGTYPE_DELAY_REQ)) //_15888_,
-			dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 //	}
+	if ((is_ptp_sync_packet(message_type) &&
+		db->ptp_step == 2) ||
+		is_ptp_delayreq_packet(message_type)) //_15888_,
+		dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 	#endif
 	#endif
 

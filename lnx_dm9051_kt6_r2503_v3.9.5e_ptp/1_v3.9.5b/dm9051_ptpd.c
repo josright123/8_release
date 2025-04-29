@@ -137,66 +137,62 @@ int is_ptp_packet(const u8 *packet) {
 //    types_log(head, get_ptp_message_type(skb));
 //}
 
-#define PP_HTONS(x) ((u16)((((x) & (u16)0x00ffU) << 8) | (((x) & (u16)0xff00U) >> 8)))
-u16 lwip_htons(u16 n) {
-  return PP_HTONS(n);
-}
+#if 0
+//#define PP_HTONS(x) ((u16)((((x) & (u16)0x00ffU) << 8) | (((x) & (u16)0xff00U) >> 8)))
+//u16 lwip_htons(u16 n) {
+//  return PP_HTONS(n);
+//}
 
-static void dump_ptp_packet0(struct board_info *db, struct sk_buff *skb, u8 message_type, int count)
-{
-	//u8 message_type = get_ptp_message_type(skb);
-	struct udphdr *p_udp_hdr;
-	u8 *ptp_hdr;
+//static void dump_ptp_packet0(struct board_info *db, struct sk_buff *skb, u8 message_type, int count)
+//{
+//	//u8 message_type = get_ptp_message_type(skb);
+//	struct udphdr *p_udp_hdr;
+//	u8 *ptp_hdr;
 
-	p_udp_hdr = udp_hdr(skb);
-	ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
-	//[.ptp .general event/or .message event]
-	if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {
-		printk("\n");
-		printk("%d udp src/dst port %d / %d, %s\n", 
-			count, lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest),
-			message_type == PTP_MSGTYPE_SYNC ? "sync" : 
-			message_type == PTP_MSGTYPE_DELAY_REQ ? "delayReq" :
-			"otherPtpPacket");
-		//printk("%d message_type is %02x\n", count, message_type);
-		//do {
-		/* dump tx packet */
-		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
-		//printk("%s\n", db->bc.head);
-		dm9051_dump_data0(db, skb->data, skb->len);
-		//} while(0);
-	}
-	else {
-		printk("No [udp src 319, dst 320]\n");
-		printk("count %d msg_type is %02x\n", count, message_type);
-		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
-		printk("%s\n", db->bc.head);
-	}
-}
+//	p_udp_hdr = udp_hdr(skb);
+//	ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
+//	//[.ptp .general event/or .message event]
+//	if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {
+//		printk("\n");
+//		printk("%d udp src/dst port %d / %d, %s\n", 
+//			count, lwip_htons(p_udp_hdr->source), lwip_htons(p_udp_hdr->dest),
+//			is_ptp_sync_packet(message_type) ? "sync" : 
+//			is_ptp_delayreq_packet(message_type) ? "delayReq" :
+//			"otherPtpPacket");
+//		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
+//		dm9051_dump_data0(db, skb->data, skb->len);
+//	}
+//	else {
+//		printk("No [udp src 319, dst 320]\n");
+//		printk("count %d msg_type is %02x\n", count, message_type);
+//		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
+//		printk("%s\n", db->bc.head);
+//	}
+//}
 
-//static 
-void dump_ptp_packet1(struct board_info *db, struct sk_buff *skb)
-{
-	struct udphdr *p_udp_hdr;
-	u8 *ptp_hdr;
+//static void dump_ptp_packet1(struct board_info *db, struct sk_buff *skb)
+//{
+//	struct udphdr *p_udp_hdr;
+//	u8 *ptp_hdr;
 
-	p_udp_hdr = udp_hdr(skb);
-	ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
+//	p_udp_hdr = udp_hdr(skb);
+//	ptp_hdr = (u8 *) p_udp_hdr + sizeof(struct udphdr);
 
-	//[.ptp .general event/or .message event]
-	if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {
-		printk("\n");
-		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
-		dm9051_dump_data1(db, skb->data, skb->len);
-	} else {
-		printk("\n");
-		printk("Not [udp src 319, dst 320]\n");
-		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
-		dm9051_dump_data1(db, skb->data, skb->len);
-	}
-}
-#endif
-#endif
+//	//[.ptp .general event/or .message event]
+//	if (lwip_htons(p_udp_hdr->dest) == 319 || lwip_htons(p_udp_hdr->dest) == 320) {
+//		printk("\n");
+//		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
+//		dm9051_dump_data1(db, skb->data, skb->len);
+//	} else {
+//		printk("\n");
+//		printk("Not [udp src 319, dst 320]\n");
+//		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
+//		dm9051_dump_data1(db, skb->data, skb->len);
+//	}
+//}
+#endif //0
+#endif //
+#endif //
 
 /* ptpc - support functions-2 */
 #ifdef DMPLUG_PTP
@@ -614,11 +610,41 @@ static unsigned int ptp_packet_classify(struct sk_buff *skb)
 	return ptp_class;
 }
 
-static int is_ptp_sync_packet(u8 msgtype)
+static struct ptp_header *dm9051_ptp_udphdr(struct sk_buff *skb)
+{
+	unsigned int ptp_class = ptp_packet_classify(skb);
+
+	if (ptp_class == PTP_CLASS_NONE)
+		return NULL;
+
+	return ptp_parse_header(skb, ptp_class);
+//	struct ptp_header *hdr;
+//	hdr = ptp_parse_header(skb, ptp_class);
+//	if (!hdr)
+//		return NULL;
+
+//	return hdr;
+}
+
+u8 dm9051_ptp_frame(struct board_info *db, struct sk_buff *skb)
+{
+	struct ptp_header *hdr = dm9051_ptp_udphdr(skb);
+
+	if (!hdr) {
+		db->ptp_packet = 0;
+		db->ptp_step = 0;
+	} else {
+		db->ptp_packet = 1;
+		db->ptp_step = (u8)(hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
+	}
+	return db->ptp_packet;
+}
+
+int is_ptp_sync_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_SYNC) ? 1 : 0;
 }
-static int is_ptp_delayreq_packet(u8 msgtype)
+int is_ptp_delayreq_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_DELAY_REQ) ? 1 : 0;
 }
@@ -654,7 +680,7 @@ enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb, struct board_info *d
 			goto no;
 		
 		msgtype = ptp_get_msgtype(hdr, ptp_class);
-		if (msgtype == PTP_MSGTYPE_SYNC) {
+		if (is_ptp_sync_packet(msgtype)) {
 			
 			if (hdr->flag_field[0] & PTP_FLAG_TWOSTEP) {
 				//printk("two-step TX Sync Message\n");
@@ -673,23 +699,6 @@ no:
 	return PTP_NOT_PTP;
 }
 #endif
-
-u8 dm9051_ptp_frame(struct sk_buff *skb)
-{
-	unsigned int ptp_class = ptp_packet_classify(skb);
-	struct ptp_header *hdr;
-
-	db->ptp_step = 0;
-	if (ptp_class == PTP_CLASS_NONE)
-		return 0;
-
-	hdr = ptp_parse_header(skb, ptp_class);
-	if (!hdr)
-		return 0;
-
-	db->ptp_step = (u8)(hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
-	return 1;
-}
 
 #if 0
 /**
@@ -885,8 +894,8 @@ if (db->ptp_mode == PTP_NOT_PTP) {
 //    }
 //    printk("  db->ptp_mode %u, (msg_type %u: is %s)\n",
 //	db->ptp_mode, message_type,
-//	message_type == PTP_MSGTYPE_SYNC ? "sync" : 
-//	message_type == PTP_MSGTYPE_DELAY_REQ ? "delayReq" : "Others");
+//	is_ptp_sync_packet(message_type) ? "sync" : 
+//	is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
 //    return 0;
 #endif
 }
@@ -913,8 +922,8 @@ if (db->ptp_mode == PTP_NOT_PTP) {
     if (db->ptp_mode)
 	    printk("db->ptp_mode %u, (message_type %u: is %s)\n",
 		db->ptp_mode, message_type,
-		message_type == PTP_MSGTYPE_SYNC ? "sync" : 
-		message_type == PTP_MSGTYPE_DELAY_REQ ? "delayReq" : "Others");
+		is_ptp_sync_packet(message_type) ? "sync" : 
+		is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
 #endif
 
     /* Process PTP message based on type */
@@ -943,15 +952,15 @@ if (db->ptp_mode == PTP_NOT_PTP) {
     if (!db->ptp_mode) {
 	    printk("db->ptp_mode %u, (message_type %u: is %s) dm9051_ptp_tx_hwtstamp().twoStep\n",
 		db->ptp_mode, message_type,
-		message_type == PTP_MSGTYPE_SYNC ? "sync" : 
-		message_type == PTP_MSGTYPE_DELAY_REQ ? "delayReq" : "Others");
+		is_ptp_sync_packet(message_type) ? "sync" : 
+		is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
     }
             } else {
     if (!db->ptp_mode) {
 	    printk("db->ptp_mode %u, (message_type %u: is %s) .oneStep\n",
 		db->ptp_mode, message_type,
-		message_type == PTP_MSGTYPE_SYNC ? "sync" : 
-		message_type == PTP_MSGTYPE_DELAY_REQ ? "delayReq" : "Others");
+		is_ptp_sync_packet(message_type) ? "sync" : 
+		is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
     }
 	    }
             break;
@@ -966,8 +975,8 @@ if (db->ptp_mode == PTP_NOT_PTP) {
     if (!db->ptp_mode) {
 	    printk("db->ptp_mode %u, (message_type %u: is %s) dm9051_ptp_tx_hwtstamp().oneStep\n",
 		db->ptp_mode, message_type,
-		message_type == PTP_MSGTYPE_SYNC ? "sync" : 
-		message_type == PTP_MSGTYPE_DELAY_REQ ? "delayReq" : "Others");
+		is_ptp_sync_packet(message_type) ? "sync" : 
+		is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
     }
             break;
 
@@ -976,8 +985,8 @@ if (db->ptp_mode == PTP_NOT_PTP) {
     if (!db->ptp_mode) {
 	    printk("db->ptp_mode %u, (message_type %u: is %s) .anyStep\n",
 		db->ptp_mode, message_type,
-		message_type == PTP_MSGTYPE_SYNC ? "sync" : 
-		message_type == PTP_MSGTYPE_DELAY_REQ ? "delayReq" : "Others");
+		is_ptp_sync_packet(message_type) ? "sync" : 
+		is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
     }
 
             netdev_dbg(ndev, "Unhandled PTP message type: 0x%02x\n", message_type);
