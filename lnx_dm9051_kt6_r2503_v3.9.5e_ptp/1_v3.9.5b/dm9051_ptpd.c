@@ -749,6 +749,8 @@ enum ptp_sync_type dm9051_ptp_one_step001(struct sk_buff *skb, struct board_info
 #endif
 
 #if 0
+//u8 ptp_mode; //1: one-step, 2: two-step, 3: not-sync, 0: Not PTP //_15888_
+//
 unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db)
 {
 	unsigned int tcr = TCR_TXREQ; // TCR register value
@@ -801,31 +803,6 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
         return ret;
     }
 
-#if 0 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ check!!
-if (db->ptp_mode == PTP_NOT_PTP) {
-	return 0;
-#if 1
-    /* Check if hardware timestamp is enabled */
-//    if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-//        netdev_dbg(ndev, "Nohardware timestamp\n");
-//        return -EINVAL;
-//    }
-
-    /* Get and validate PTP message type */
-//    message_type = get_ptp_message_type(skb);
-//    if (message_type > PTP_MSGTYPE_MANAGEMENT) {
-//        netdev_dbg(ndev, "InvalidPTP messagetype: 0x%02x\n", message_type);
-//        return -EINVAL;
-//    }
-//    printk("  db->ptp_mode %u, (msg_type %u: is %s)\n",
-//	db->ptp_mode, message_type,
-//	is_ptp_sync_packet(message_type) ? "sync" : 
-//	is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
-//    return 0;
-#endif
-}
-#endif
-
     /* Check if hardware timestamp is enabled */
     if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
         netdev_dbg(ndev, "No hardware timestamp requested\n");
@@ -842,14 +819,6 @@ if (db->ptp_mode == PTP_NOT_PTP) {
 	//dump_ptp_packet1(db, skb);
         return -EINVAL;
     }
-
-#if 1
-    if (db->ptp_mode)
-	    printk("db->ptp_mode %u, (message_type %u: is %s)\n",
-		db->ptp_mode, message_type,
-		is_ptp_sync_packet(message_type) ? "sync" : 
-		is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
-#endif
 
     /* Process PTP message based on type */
     /* TxSync one step chip-insert-tstamp, and NOT report HW tstamp to master4l 
@@ -874,20 +843,6 @@ if (db->ptp_mode == PTP_NOT_PTP) {
             /* Only report HW timestamp for two-step sync */
             if (db->ptp_mode == PTP_TWO_STEP) {
                 dm9051_ptp_tx_hwtstamp(db, skb);
-    if (!db->ptp_mode) {
-	    printk("db->ptp_mode %u, (message_type %u: is %s) dm9051_ptp_tx_hwtstamp().twoStep\n",
-		db->ptp_mode, message_type,
-		is_ptp_sync_packet(message_type) ? "sync" : 
-		is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
-    }
-            } else {
-    if (!db->ptp_mode) {
-	    printk("db->ptp_mode %u, (message_type %u: is %s) .oneStep\n",
-		db->ptp_mode, message_type,
-		is_ptp_sync_packet(message_type) ? "sync" : 
-		is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
-    }
-	    }
             break;
 
         case PTP_MSGTYPE_DELAY_REQ:
@@ -897,23 +852,9 @@ if (db->ptp_mode == PTP_NOT_PTP) {
 		delayReq5--;
             }
             dm9051_ptp_tx_hwtstamp(db, skb);
-    if (!db->ptp_mode) {
-	    printk("db->ptp_mode %u, (message_type %u: is %s) dm9051_ptp_tx_hwtstamp().oneStep\n",
-		db->ptp_mode, message_type,
-		is_ptp_sync_packet(message_type) ? "sync" : 
-		is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
-    }
             break;
 
         default:
-
-    if (!db->ptp_mode) {
-	    printk("db->ptp_mode %u, (message_type %u: is %s) .anyStep\n",
-		db->ptp_mode, message_type,
-		is_ptp_sync_packet(message_type) ? "sync" : 
-		is_ptp_delayreq_packet(message_type) ? "delayReq" : "Others");
-    }
-
             netdev_dbg(ndev, "Unhandled PTP message type: 0x%02x\n", message_type);
             break;
     }

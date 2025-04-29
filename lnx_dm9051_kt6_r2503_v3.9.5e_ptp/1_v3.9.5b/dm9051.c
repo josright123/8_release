@@ -2182,8 +2182,6 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	u8 message_type = get_ptp_message_type005(skb);
 
 	db->tcr_wr = TCR_TXREQ; // TCR register value
-	//db->ptp_mode = (u8) dm9051_ptp_one_step(skb, db); //_15888_,
-	//db->ptp_mode = (u8) dm9051_ptp_one_step001(skb, db); //_15888_,
 	if (dm9051_ptp_frame(db, skb)) {
 		//or
 		//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
