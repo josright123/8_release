@@ -2188,10 +2188,13 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 		//or
 		//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
 			if (is_ptp_sync_packet(message_type)) {
-				if (db->ptp_step == 2)
+				if (db->ptp_step == 2) {
 					db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
-				else
-					db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT;
+					//printk("SM9051 SYNC step %u, tcr = TCR_TS_EN | TCR_TXREQ\n", db->ptp_step);
+				} else {
+					db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
+					//printk("SM9051 SYNC step %u, tcr = TCR_TS_EN | TCR_TS_EMIT\n", db->ptp_step);
+				}
 			} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
 				db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
 		//}
