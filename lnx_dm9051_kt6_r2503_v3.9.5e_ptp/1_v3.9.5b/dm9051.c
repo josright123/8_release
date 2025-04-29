@@ -2944,17 +2944,20 @@ static int dm9051_probe(struct spi_device *spi)
 	ndev->ethtool_ops = &dm9051_ethtool_ops;//&dm9051_ptpd_ethtool_ops;
 
 	/* Set default features */
+	if (dm9051_modedata->checksuming)
+		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
+
 	/* 2 ptpc */
 	#ifdef DMPLUG_PTP
 	// Enable PTP - For the driver whole operations
 	db->ptp_enable = 1;
-	// Spenser - Setup for Checksum Offload
-	dm9051_modedata->checksuming = DEFAULT_CHECKSUM_OFF; //"Enable PTP must COERCE to disable checksum_offload"
-	dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
+	if (db->ptp_enable) {
+		// Spenser - Setup for Checksum Offload
+		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Enable PTP must COERCE to disable checksum_offload"
+		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
+	}
 	#endif
 
-	if (dm9051_modedata->checksuming)
-		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 	ndev->hw_features |= ndev->features;
 
 	mutex_init(&db->spi_lockm);
