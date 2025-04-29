@@ -28,10 +28,9 @@
 #include "dm9051_plug.h"
 #include "dm9051_ptpd.h"
 
-//#define KERNEL_BUILD_CONF	DM9051_KERNEL_6_6
 const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configuration */
 
-/* tX 'wb' do skb protect */
+/* Tx 'wb' do skb protect */
 #define DM9051_SKB_PROTECT
 
 /* Helper macros */
@@ -71,27 +70,12 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
-//const static char *linux_name[] = {
-//        "rsrv",
-//        "rsrv",
-//        "rsrv",
-//        "rsrv",
-//        "rsrv",
-//        "DM9051_KERNEL_5_10",
-//        "DM9051_KERNEL_5_15",
-//        "DM9051_KERNEL_6_1",
-//        "DM9051_KERNEL_6_6",
-//        "UNKNOW",
-//};
-
 static void SHOW_CONFIG_MODE(struct spi_device *spi)
 {
 	struct device *dev = &spi->dev;
 
 	/* [dbg] spi.speed */
-//	dev_info(dev, "Linux %s DM9051A\n", utsname()->release);
-	do
-	{
+	do {
 		unsigned int speed;
 		of_property_read_u32(spi->dev.of_node, "spi-max-frequency", &speed);
 		dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
@@ -99,8 +83,7 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi)
 	} while (0);
 	printk("\n");
 	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
-	dev_info(dev, "LXR: %s, BUILD: %s\n", utsname()->release, utsname()->release); //dev_info(dev, "LXR: %s, BUILD: %s\n", linux_name[LXR_REF_CONF], linux_name[KERNEL_BUILD_CONF]); /* Driver configuration test_info */
-	//dev_info(dev, "Kernel Version (compile-time): %s\n", UTS_RELEASE);
+	dev_info(dev, "LXR: %s, BUILD: %s\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
 	DEV_INFO_TX_ALIGN(dev);
 	DEV_INFO_RX_ALIGN(dev);
 }
@@ -332,11 +315,38 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 	return ret;
 }
 
+static int dm9051_ncr_poll(struct board_info *db)
+{
+	unsigned int mval;
+	int ret;
+
+	ret = regmap_read_poll_timeout(db->regmap_dm, DM9051_NSR, mval,
+								   !(mval & NCR_RST), 10, 100);
+	if (ret == -ETIMEDOUT)
+		netdev_err(db->ndev, "timeout in checking for ncr reset\n");
+	return ret;
+}
+
+static int dm9051_ncr_reset(struct board_info *db)
+{
+	int ret;
+
+	printk("_ncr_reset\n");
+
+	ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
+	if (ret)
+		return ret;
+
+	dm9051_ncr_poll(db);
+
+	return 0;
+}
+
 /* waiting tx-end rather than tx-req
  * got faster
  */
 #ifndef DMPLUG_CONTI
-/*static*/ int dm9051_nsr_poll(struct board_info *db)
+int dm9051_nsr_poll(struct board_info *db)
 {
 	unsigned int mval;
 	int ret;
@@ -359,18 +369,6 @@ static int dm9051_epcr_poll(struct board_info *db)
 								   !(mval & EPCR_ERRE), 100, 10000);
 	if (ret == -ETIMEDOUT)
 		netdev_err(db->ndev, "eeprom/phy in processing get timeout\n");
-	return ret;
-}
-
-static int dm9051_ncr_poll(struct board_info *db)
-{
-	unsigned int mval;
-	int ret;
-
-	ret = regmap_read_poll_timeout(db->regmap_dm, DM9051_NSR, mval,
-								   !(mval & NCR_RST), 10, 100);
-	if (ret == -ETIMEDOUT)
-		netdev_err(db->ndev, "timeout in checking for ncr reset\n");
 	return ret;
 }
 
@@ -638,12 +636,22 @@ static int PHY_RST(struct board_info *db)
 	return 0;
 }
 
+static int dm9051_phy_reset(struct board_info *db)
+{
+	int ret;
+#if 1
+	/* PHY reset */
+	printk("_phy_reset\n");
+	ret = PHY_RST(db);
+	if (ret)
+		return ret;
+#endif
+	return 0;
+}
+
 #ifdef DMCONF_BMCR_WR
 static int dm9051_phy_reset(struct board_info *db);
 
-/*void set_log_addr(struct board_info *db, char *p)
-  {
-  }*/
 char *get_log_addr(struct board_info *db)
 {
 	if (!db->automdix_log[0][0]) {
@@ -669,9 +677,6 @@ char *get_log_addr(struct board_info *db)
 	strcpy(&db->automdix_log[1][1], &db->automdix_log[2][1]);
 	
 	return &db->automdix_log[2][0];
-	//int i;
-	//for () {
-	//}
 }
 static void show_log_data(char *head, char *data)
 {
@@ -698,19 +703,19 @@ void amdix_log_reset(struct board_info *db)
 	db->stop_automdix_flag = 0;
 }
 #if 0
-void amdix_link_change_up(struct board_info *db, unsigned int bmsr)
-{
-	if (!(bmsr & BIT(2)) && (db->bmsr & BIT(2))) {
-		//[show]
-		show_log_addr("hist", db);
-		//[message]
-		printk("<link_phylib. on %02u to %02u>, current lpa %04x [bmsr] %04x to %04x found reach link\n", db->_stop_automdix_flag,
-			db->n_automdix, db->lpa, bmsr, db->bmsr);
-		//[clear]
-		printk("[link] clear log...");
-		amdix_log_reset(db);
-	}
-}
+//void amdix_link_change_up(struct board_info *db, unsigned int bmsr)
+//{
+//	if (!(bmsr & BIT(2)) && (db->bmsr & BIT(2))) {
+//		//[show]
+//		show_log_addr("hist", db);
+//		//[message]
+//		printk("<link_phylib. on %02u to %02u>, current lpa %04x [bmsr] %04x to %04x found reach link\n", db->_stop_automdix_flag,
+//			db->n_automdix, db->lpa, bmsr, db->bmsr);
+//		//[clear]
+//		printk("[link] clear log...");
+//		amdix_log_reset(db);
+//	}
+//}
 #endif
 
 void amdix_bmsr_change_up(struct board_info *db, unsigned int bmsr)
@@ -728,12 +733,10 @@ static int amdix_bmsr_change(struct board_info *db)
 {
 	static unsigned int bmsr = 0x0000; //0xffff;
 
-#if 1
 	/* bmsr (change linkup) */
 	if (db->bmsr & BIT(2)) {
 		amdix_bmsr_change_up(db, bmsr);
 	}
-#endif
 
 	/* bmsr (change) */
 	if (db->bmsr != bmsr) {		
@@ -781,7 +784,7 @@ static int dm9051_phyread_nt_bmsr(struct board_info *db,
 	db->bmsr = *val;
 
 	/* nt log */
-#if 1
+	#if 1
 	do
 	{
 		if (!amdix_bmsr_change(db))
@@ -855,93 +858,85 @@ static int dm9051_phyread_nt_bmsr(struct board_info *db,
 			}
 		}
 	} while (0);
-#endif
+	#endif
 
 	return ret;			
 }
 
 // dm9051_phyread.EXTEND
 #if 0
-//static 
-int dm9051_phyread_log_bmsr(struct board_info *db,
-								   unsigned int *val)
-{
-	int ret;
+//int dm9051_phyread_log_bmsr(struct board_info *db, unsigned int *val)
+//{
+//	int ret;
 
-	ret = dm9051_phyread(db, MII_LPA, val);
-	if (ret)
-		return ret;
-	db->lpa = *val;
+//	ret = dm9051_phyread(db, MII_LPA, val);
+//	if (ret)
+//		return ret;
+//	db->lpa = *val;
 
-	ret = dm9051_phyread(db, MII_BMSR, val);
-	if (ret)
-		return ret;
-	db->bmsr = *val;
+//	ret = dm9051_phyread(db, MII_BMSR, val);
+//	if (ret)
+//		return ret;
+//	db->bmsr = *val;
 
-	/* check log */
-	do
-	{
-		if (!amdix_link_change(db))
-		{
-			if (!(db->bmsr & BIT(2))) {
-				//static unsigned int n_automdix = 0;
-				//static unsigned int mdi = 0x0830;
-				db->n_automdix++;
-				
-				if (db->_stop_automdix_flag) {
-#if 1
-					printk("[lpa %04x]\n", db->lpa);
-					break;
-#else
-					printk("[lpa %04x] Go ..\n", db->lpa);
-					/* Too many Go .., 
-					 * Want rst something ...
-					 */
-#endif
-				}
+//	/* check log */
+//	do
+//	{
+//		if (!amdix_link_change(db))
+//		{
+//			if (!(db->bmsr & BIT(2))) {
+//				//static unsigned int n_automdix = 0;
+//				//static unsigned int mdi = 0x0830;
+//				db->n_automdix++;
+//				
+//				if (db->_stop_automdix_flag) {
+//#if 1
+//					printk("[lpa %04x]\n", db->lpa);
+//					break;
+//#endif
+//				}
 
-				//ret = dm9051_phyread(db, 5, &vval);
-				//if (ret)
-				//	return ret;
-				
-				if (db->lpa) {
-					printk("<fund_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> STOPPING... automdix\n", db->_stop_automdix_flag,
-						db->n_automdix, db->lpa);
-					db->_stop_automdix_flag = db->n_automdix;
-#if 1
-					printk("(STOP avoid below possible more once toggle...)\n");
-					break; //(STOP avoid below possible more once toggle...)
-#endif
-					//break; //(NOT STOP
-				}
+//				//ret = dm9051_phyread(db, 5, &vval);
+//				//if (ret)
+//				//	return ret;
+//				
+//				if (db->lpa) {
+//					printk("<fund_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> STOPPING... automdix\n", db->_stop_automdix_flag,
+//						db->n_automdix, db->lpa);
+//					db->_stop_automdix_flag = db->n_automdix;
+//#if 1
+//					printk("(STOP avoid below possible more once toggle...)\n");
+//					break; //(STOP avoid below possible more once toggle...)
+//#endif
+//				}
 
-				if (!(db->n_automdix % TOGG_INTVL)) {
-					char *p;
-					db->mdi ^= 0x0020;
+//				if (!(db->n_automdix % TOGG_INTVL)) {
+//					char *p;
+//					db->mdi ^= 0x0020;
 
-					if (db->n_automdix <= TOGG_TOT_SHOW) {
-						if (db->n_automdix == TOGG_INTVL) //only first.
-							printk("\n");
-					}
-					if (db->n_automdix <= TOGG_TOT_SHOW 
-						&& !(db->bmsr & BIT(6))) printk("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", DM9051_PHY_ADDR, db->bmsr);
+//					if (db->n_automdix <= TOGG_TOT_SHOW) {
+//						if (db->n_automdix == TOGG_INTVL) //only first.
+//							printk("\n");
+//					}
+//					if (db->n_automdix <= TOGG_TOT_SHOW 
+//						&& !(db->bmsr & BIT(6))) printk("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", DM9051_PHY_ADDR, db->bmsr);
 
-					ret = dm9051_phywrite(db, 20, db->mdi);
-					if (ret)
-						return ret;
+//					ret = dm9051_phywrite(db, 20, db->mdi);
+//					if (ret)
+//						return ret;
 
-					/* store to showlist */
-					p = get_log_addr(db);
-					sprintf(&p[1], "from_phylib. %02u [lpa] %04x _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]",
-							db->n_automdix, db->lpa, 20, db->mdi); //= set_log_addr(db, p, ...);
-				}
-				break;
-			}
-		}
-	} while (0);
+//					/* store to showlist */
+//					p = get_log_addr(db);
+//					sprintf(&p[1], "from_phylib. %02u [lpa] %04x _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]",
+//							db->n_automdix, db->lpa, 20, db->mdi); //= set_log_addr(db, p, ...);
+//				}
+//				break;
+//			}
+//		}
+//	} while (0);
 
-	return ret;
-}
+//	return ret;
+//}
 #endif //0
 #endif
 
@@ -984,11 +979,10 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 
 	if (addr == DM9051_PHY_ADDR)
 	{
+		static int mdio_write_count = 0;
 		int ret;
 
 		#if MI_FIX
-		static int mdio_write_count = 0;
-
 		if (regnum == 0x0d || regnum == 0x0e) //unknown of dm9051a
 			return 0;
 
@@ -1070,47 +1064,11 @@ static unsigned int dm9051_init_intcr_value(struct board_info *db)
 	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || get_dts_irqf(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
 }
 
-static int dm9051_ncr_reset(struct board_info *db)
-{
-	int ret;
-
-	printk("_ncr_reset\n");
-
-	ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
-	if (ret)
-		return ret;
-
-	dm9051_ncr_poll(db);
-
-	return 0;
-}
-static int dm9051_phy_reset(struct board_info *db)
-{
-	int ret;
-
-	printk("_phy_reset\n");
-
-//	ret = regmap_write(db->regmap_dm, DM9051_NCR, NCR_RST); /* NCR reset */
-//	if (ret)
-//		return ret;
-
-//	dm9051_ncr_poll(db);
-
-#if 1
-	/* PHY reset */
-	ret = PHY_RST(db);
-	if (ret)
-		return ret;
-#endif
-	return 0;
-}
-
 static int dm9051_core_init(struct board_info *db)
 {
 	int ret;
 
 //	db->bc.fifo_rst_counter++;
-
 	ret = BUS_SETUP(db); //reserved customization
 	if (ret)
 		return ret;
@@ -1339,10 +1297,6 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 	ret = dm9051_get_regs(db, DM9051_PAR, addr, sizeof(addr));
 	if (ret < 0)
 		return ret;
-
-	//dev_info(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
-	//		 addr[0], addr[1], addr[2],
-	//		 addr[3], addr[4], addr[5]);
 
 	if (!is_valid_ether_addr(addr))
 	{
@@ -1580,6 +1534,7 @@ static int dm9051_all_start(struct board_info *db)
 	ret = dm9051_ncr_reset(db);
 	if (ret)
 		return ret;
+
 	ret = dm9051_phy_reset(db);
 	if (ret)
 		return ret;
@@ -1709,17 +1664,13 @@ int dm9051_subconcl_and_rerxctrl(struct board_info *db)
 
 #define TIMES_TO_RST 10
 #define DM9051_RX_BREAK(exp, yhndlr, nhndlr) \
-	do                                       \
-	{                                        \
-		if ((exp))                           \
-		{                                    \
-			yhndlr;                          \
-		}                                    \
-		else                                 \
-		{                                    \
-			nhndlr;                          \
-		}                                    \
-	} while (0)
+	do {	\
+		if ((exp)) {	\
+			yhndlr;	\
+		} else {	\
+			nhndlr;	\
+		}	\
+	} while(0)
 
 static int trap_clr(struct board_info *db)
 {

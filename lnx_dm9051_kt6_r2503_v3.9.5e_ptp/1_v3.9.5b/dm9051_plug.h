@@ -150,7 +150,7 @@ const struct eng_config engdata = {
 	.sched = {
 		.delayF = {0, 1, 0, 0, 1}, 
 		.nTargetMaxNum = POLL_OPERATE_NUM},
-	.tx_timeout_us = 2100,
+	.tx_timeout_us = 210000, //2100,
 };
 const struct eng_config *econf = &engdata;
 const struct eng_sched csched = engdata.sched;

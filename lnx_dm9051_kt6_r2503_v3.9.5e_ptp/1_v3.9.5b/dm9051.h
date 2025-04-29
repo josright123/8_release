@@ -437,7 +437,7 @@ void dm9051_all_restart_sum(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 /* amdix functions */
-void amdix_link_change_up(struct board_info *db, unsigned int bmsr);
+//void amdix_link_change_up(struct board_info *db, unsigned int bmsr);
 
 #ifdef MAIN_DATA
 /* Driver configuration structure */
