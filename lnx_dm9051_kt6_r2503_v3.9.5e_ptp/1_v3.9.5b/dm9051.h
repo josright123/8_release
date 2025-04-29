@@ -394,16 +394,17 @@ struct board_info
 	/* 1 ptpc */
 	#if 1 //0
 	/* if defined DMPLUG_PTP. begin ... */
-	int			ptp_enable;
-	int			ptp_on; //_15888_
 	struct ptp_clock        *ptp_clock;
 	struct ptp_clock_info 	ptp_caps;
+
+	int			ptp_enable;
+	int			ptp_on; //_15888_
 
 	u8			ptp_step; //dividual
 	u8			ptp_packet; //dividual
 
-	s64			pre_rate;
 	struct hwtstamp_config	tstamp_config;
+	s64			pre_rate;
 	u8              	rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
 	/* if defined DMPLUG_PTP. end ... */
 	#endif

@@ -120,15 +120,15 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 
 u32 dm9051_get_rate_reg(struct board_info *db);
 
-int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm);
-int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta);
-int ptp_9051_gettime(struct ptp_clock_info *ptp,
+int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm);
+int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta);
+int ptp_9051_gettime(struct ptp_clock_info *caps,
 	struct timespec64 *ts);
-int ptp_9051_settime(struct ptp_clock_info *ptp,
+int ptp_9051_settime(struct ptp_clock_info *caps,
 	const struct timespec64 *ts);
-int ptp_9051_feature_enable(struct ptp_clock_info *ptp,
+int ptp_9051_feature_enable(struct ptp_clock_info *caps,
 	struct ptp_clock_request *rq, int on);
-int ptp_9051_verify_pin(struct ptp_clock_info *ptp, unsigned int pin,
+int ptp_9051_verify_pin(struct ptp_clock_info *caps, unsigned int pin,
     enum ptp_pin_function func, unsigned int chan);
 void dm9051_ptp_init(struct board_info *db);
 void dm9051_ptp_stop(struct board_info *db);

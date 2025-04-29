@@ -863,7 +863,7 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 }
 #endif //0
 
-static struct ptp_clock_info ptp_dm9051a_info = {
+static struct ptp_clock_info dm9051a_ptp_info = {
     .owner = THIS_MODULE,
     .name = "DM9051A PTP",
     .max_adj = 50000000,
@@ -882,9 +882,9 @@ static struct ptp_clock_info ptp_dm9051a_info = {
 };
 
 #if 1
-int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
+int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm)
 {
-    struct board_info *db = container_of(ptp, struct board_info, ptp_caps);
+    struct board_info *db = container_of(caps, struct board_info, ptp_caps);
     s64 ppm;
     s64 s64_adj;
     s64 subrate;
@@ -1307,12 +1307,12 @@ int ptp_9051_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 /* phyter seems to miss the mark by 16 ns */
 #define ADJTIME_FIX	16
 
-int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
+int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 {
 	//remark1-slave
 	//printk("...ptp_9051_adjtime\n");
 	
-	struct board_info *db = container_of(ptp, struct board_info,
+	struct board_info *db = container_of(caps, struct board_info,
 					     ptp_caps);
 	struct timespec64 ts;
 	int sign = 1;
@@ -1404,10 +1404,10 @@ int ptp_9051_adjtime(struct ptp_clock_info *ptp, s64 delta)
 
 }
 
-int ptp_9051_gettime(struct ptp_clock_info *ptp,
+int ptp_9051_gettime(struct ptp_clock_info *caps,
 	struct timespec64 *ts)
 {
-struct board_info *db = container_of(ptp, struct board_info,
+struct board_info *db = container_of(caps, struct board_info,
 			 ptp_caps);
 unsigned int temp[8];
 int i;
@@ -1446,11 +1446,11 @@ ts->tv_sec  = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
 return 0;
 }
 
-int ptp_9051_settime(struct ptp_clock_info *ptp,
+int ptp_9051_settime(struct ptp_clock_info *caps,
 	const struct timespec64 *ts)
 {
 
-struct board_info *db = container_of(ptp, struct board_info,
+struct board_info *db = container_of(caps, struct board_info,
 			 ptp_caps);
 mutex_lock(&db->spi_lockm);
 printk("...ptp_9051_settime\n");
@@ -1472,13 +1472,13 @@ mutex_unlock(&db->spi_lockm);
 return 0;
 }
 
-int ptp_9051_feature_enable(struct ptp_clock_info *ptp,
+int ptp_9051_feature_enable(struct ptp_clock_info *caps,
 	struct ptp_clock_request *rq, int on)
 {
 	printk("...ptp_9051_feature_enable\n");
 	return 0;
 }
-int ptp_9051_verify_pin(struct ptp_clock_info *ptp, unsigned int pin,
+int ptp_9051_verify_pin(struct ptp_clock_info *caps, unsigned int pin,
 			       enum ptp_pin_function func, unsigned int chan)
 {
 	printk("!!! 1. ptp_9051_verify_pin in\n");
@@ -1487,9 +1487,6 @@ int ptp_9051_verify_pin(struct ptp_clock_info *ptp, unsigned int pin,
 
 void dm9051_ptp_init(struct board_info *db)
 {
-	
-	db->ptp_caps = ptp_dm9051a_info;
-	
 	#if 0					   
 	db->tstamp_config.flags = 0;
 	db->tstamp_config.rx_filter = 
@@ -1501,7 +1498,9 @@ void dm9051_ptp_init(struct board_info *db)
 		(1 << HWTSTAMP_TX_ON) |
 		(1 << HWTSTAMP_TX_OFF);
 	#endif
-		
+
+	db->ptp_caps = dm9051a_ptp_info;
+
 	db->ptp_clock = ptp_clock_register(&db->ptp_caps,
 					   &db->ndev->dev);
 	if (IS_ERR(db->ptp_clock)) {
