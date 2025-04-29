@@ -793,21 +793,8 @@ unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db)
 {
 	unsigned int tcr = TCR_TXREQ; // TCR register value
 
-//	db->ptp_tx_flags = _skb_shinfo(skb)->tx_flags;
-//	if (db->ptp_tx_flags) 
-//	if (_skb_shinfo(skb)->tx_flags) 
-
 	//if (likely(skb_shinfo(skb)->tx_flags)) {		
-	//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
 	  if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-
-//		if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
-//			printk("skb_shinfo(skb)->tx_flags %x SKBTX_HW_TSTAMP (%x) same\n",
-//				skb_shinfo(skb)->tx_flags, SKBTX_HW_TSTAMP);
-//		else
-//			printk("skb_shinfo(skb)->tx_flags %x NOT SKBTX_HW_TSTAMP (%x) but send onestep\n",
-//				skb_shinfo(skb)->tx_flags, SKBTX_HW_TSTAMP);
-
 		/* Sync one step chip-insert-tstamp (master do)
 		 * DelayReq one-step chip-NOT-insert-tstamp (slave do)
 		 */
@@ -815,19 +802,16 @@ unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db)
 			case PTP_ONE_STEP: //1:
 				//Stone add for one-step Sync packet insert time stamp! 2024-08-14!
 				tcr = (TCR_TS_EN | TCR_TXREQ | TCR_DIS_JABBER_TIMER);
-//				printk("(TCR_TS_EN | TCR_TXREQ | TCR_DIS_JABBER_TIMER)\n");
 				break;
 			case PTP_TWO_STEP: //2:
 			case PTP_NOT_SYNC: //3:
 				tcr = (TCR_TS_EN | TCR_TXREQ);
-//				printk("(TCR_TS_EN | TCR_TXREQ)\n");
 				break;
 			default: //PTP_NOT_PTP
 				//printk("Not PTP packet\n");
 				break;
 		}
 	  }
-	//}
 	//}
 	return tcr;
 }

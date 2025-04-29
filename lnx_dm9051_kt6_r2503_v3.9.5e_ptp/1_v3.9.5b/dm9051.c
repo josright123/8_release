@@ -2703,22 +2703,15 @@ static netdev_tx_t dm9051_start_xmit(struct sk_buff *skb, struct net_device *nde
 {
 	struct board_info *db = to_dm9051_board(ndev);
 
-#if 0
-	//printk("dm9051_start_xmit...\n");
-	db->ptp_tx_flags = _skb_shinfo(skb)->tx_flags; ---------- in _dm9051_single_tx()
-	if (db->ptp_tx_flags & SKBTX_HW_TSTAMP) ---------------- no need
-		db->ptp_tx_flags |= SKBTX_IN_PROGRESS; ------------- no need
-#endif
-
 	skb_queue_tail(&db->txq, skb);
 	if (skb_queue_len(&db->txq) > DM9051_TX_QUE_HI_WATER)
 		netif_stop_queue(ndev); /* enforce limit queue size */
 
-#if 0
+		#if 0
 		//show_ptp_type(skb);	//Show PTP message type
 		skb_tx_timestamp(skb);	
 		//Spenser - Report software Timestamp ----- no need? v.s. skb_tstamp_tx(skb, &shhwtstamps);//Report HW Timestamp
-#endif
+		#endif
 
 	schedule_work(&db->tx_work);
 
