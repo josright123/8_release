@@ -215,7 +215,7 @@ u32 dm9051_get_rate_reg(struct board_info *db) {
 int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
 {
 	//_15888_
-	//if (db->ptp_on) {
+	//if (db->ptp_on) { //Even NOT ptp_on, need do.
 	if (db->ptp_enable) {
 	if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
 		struct net_device *ndev = db->ndev;
@@ -1525,7 +1525,6 @@ void dm9051_ptp_init(struct board_info *db)
 	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00); //Enable PTP function Register offset 0x60, value 0x00
 	
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, 0x01); //Enable PTP clock function Register offset 0x61, value 0x01
-//db->ptp_enable;
 	
 	//Setup GP1 to edge trigger output!
 	//Register 0x60 to 0x0 (GP page (bit 1), PTP Function(bit 0))

@@ -1891,9 +1891,9 @@ static int rx_head_break(struct board_info *db)
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	static int before_slave_ptp_packets = 5;
-//	if (db->ptp_on) 
-	//err_bits &= ~(RSR_LCS | RSR_PLE | RSR_AE); //(0x93);
-	err_bits &= ~RSR_PTP_BITS;
+	if (db->ptp_enable) {
+		err_bits &= ~RSR_PTP_BITS; //To allow support "Enable PTP" must disable checksum_offload
+	}
 	#endif
 	#endif
 
@@ -2109,13 +2109,13 @@ static int dm9051_loop_rx(struct board_info *db)
 		/* 7.2 ptpc */
 		#if 1 //0
 		#ifdef DMPLUG_PTP
-	//So when NOT T1/T4, we can skip tell an empty (virtual) tstamp
-	//if (db->rxhdr.status & RSR_RXTS_EN) {	// Is it inserted Timestamp?
-		dm9051_ptp_rx_hwtstamp(db, skb, db->rxTSbyte); //_15888_, 
-		/* following, with netif_rx(skb),
-		 * slave4l can parse the T1 and/or T4 rx tstamp from master
-		 */
-	//}
+		//So when NOT T1/T4, we can skip tell an empty (virtual) tstamp
+		//if (db->rxhdr.status & RSR_RXTS_EN) {	// Is it inserted Timestamp?
+			dm9051_ptp_rx_hwtstamp(db, skb, db->rxTSbyte); //_15888_, 
+			/* following, with netif_rx(skb),
+			 * slave4l can parse the T1 and/or T4 rx tstamp from master
+			 */
+		//}
 		#endif
 		#endif
 
@@ -2939,22 +2939,22 @@ static int dm9051_probe(struct spi_device *spi)
 	db->msg_enable = 0;
 	db->spidev = spi;
 	db->ndev = ndev;
-	//.by ptp4l run command
-	//db->ptp_on = 1;		//Enable PTP must disable checksum_offload
 
 	ndev->netdev_ops = &dm9051_netdev_ops;
 	ndev->ethtool_ops = &dm9051_ethtool_ops;//&dm9051_ptpd_ethtool_ops;
 
 	/* Set default features */
-	if (dm9051_modedata->checksuming)
-	{
-		// Spenser - Setup for Checksum Offload
+	/* 2 ptpc */
 	#ifdef DMPLUG_PTP
-		dev_info(&db->spidev->dev, "Enable PTP must coerce to disable checksum_offload\n");
-	#else
-		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
+	// Enable PTP - For the driver whole operations
+	db->ptp_enable = 1;
+	// Spenser - Setup for Checksum Offload
+	dm9051_modedata->checksuming = DEFAULT_CHECKSUM_OFF; //"Enable PTP must COERCE to disable checksum_offload"
+	dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
 	#endif
-	}
+
+	if (dm9051_modedata->checksuming)
+		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 	ndev->hw_features |= ndev->features;
 
 	mutex_init(&db->spi_lockm);
@@ -3014,11 +3014,11 @@ static int dm9051_probe(struct spi_device *spi)
 		return dev_err_probe(dev, ret, "device register failed");
 	}
 
-	/* 2 ptpc */
+	/* 2.1 ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	//db->ptp_on = 1;
-	db->ptp_enable = 1;
+	//.by ptp4l run command
+	//db->ptp_on = 1; //To allow support "Enable PTP" must disable checksum_offload
 	db->ptp_on = 0;
 	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
 	dm9051_ptp_init(db); //_15888_
