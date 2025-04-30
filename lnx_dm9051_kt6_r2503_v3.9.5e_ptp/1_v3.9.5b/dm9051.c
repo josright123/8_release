@@ -2342,7 +2342,7 @@ static int dm9051_open(struct net_device *ndev)
 	#ifdef DMPLUG_INT
 	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_intterrpt2);
 	#endif
-	//amdix_log_reset(db); (to be determined)
+	/* amdix_log_reset(db); */ //(to be determined)
 
 	db->imr_all = IMR_PAR | IMR_PRM;
 	db->lcr_all = LMCR_MODE1;
@@ -2355,7 +2355,6 @@ static int dm9051_open(struct net_device *ndev)
 
 	ndev->irq = spi->irq; /* by dts */
 //before [spi_lockm]
-
 //use [spi_lockm]
 	#if MI_FIX
 	mutex_lock(&db->spi_lockm);
@@ -2365,16 +2364,16 @@ static int dm9051_open(struct net_device *ndev)
 	if (ret)
 		goto open_end;
 
-/* -open ptpc */
-#if 1 //0
-#ifdef DMPLUG_PTP
+	/* -open ptpc */
+	#if 1 //0
+	#ifdef DMPLUG_PTP
 	if (db->ptp_on) {
 		//_15888_ 
 		u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
 		printk("Pre-RateReg value = 0x%08X\n", rate_reg);
 	}
-#endif
-#endif
+	#endif
+	#endif
 
 	#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
@@ -2408,9 +2407,6 @@ static int dm9051_open(struct net_device *ndev)
 
 	netif_wake_queue(ndev);
 
-//	if (!DM9051_OPEN_POLLING()) //POLLING will place into dm9051_plug.c (then eliminate dm9051_open.c)
-//	{ //as below:
-//	}
 	ret = DM9051_OPEN_REQUEST(db);
 	if (ret < 0) {
 		#if MI_FIX
@@ -2426,7 +2422,7 @@ static int dm9051_open(struct net_device *ndev)
 	}
 
 open_end:
-	printk("dm9051_open_end.done\n");
+	//printk("dm9051_open_end.done\n");
 
 	#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
@@ -2444,19 +2440,17 @@ static int dm9051_stop(struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	int ret;
 
-	//printk("\n");
 	dev_info(&db->spidev->dev, "dm9051_stop\n");
-
 	phy_stop(db->phydev);
 
 	/* schedule delay work */
 	#ifdef DMPLUG_INT
 	#ifdef INT_TWO_STEP
-		cancel_delayed_work_sync(&db->irq_servicep); //.if (_dm9051_cmode_int)
+		cancel_delayed_work_sync(&db->irq_servicep);
 	#endif //INT_TWO_STEP
 	#else //DMPLUG_INT
-		cancel_delayed_work_sync(&db->irq_workp); //.if (!_dm9051_cmode_int)
-	#endif 
+		cancel_delayed_work_sync(&db->irq_workp);
+	#endif //DMPLUG_INT
 
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
@@ -2489,7 +2483,6 @@ static int dm9051_stop(struct net_device *ndev)
 //	int ret;
 
 //	dev_info(&db->spidev->dev, "dm9051_stop\n");
-//	printk("\n");
 
 ////	mutex_lock(&db->spi_lockm);
 //	ret = dm9051_all_stop(db);
@@ -2534,11 +2527,11 @@ static netdev_tx_t dm9051_start_xmit(struct sk_buff *skb, struct net_device *nde
 	if (skb_queue_len(&db->txq) > DM9051_TX_QUE_HI_WATER)
 		netif_stop_queue(ndev); /* enforce limit queue size */
 
-		#if 0
-		//show_ptp_type(skb);	//Show PTP message type
-		skb_tx_timestamp(skb);	
-		//Spenser - Report software Timestamp ----- no need? v.s. skb_tstamp_tx(skb, &shhwtstamps);//Report HW Timestamp
-		#endif
+	#if 0
+	//show_ptp_type(skb);	//Show PTP message type
+	skb_tx_timestamp(skb); //Spenser - Report software Timestamp
+	//v.s. skb_tstamp_tx(skb, &shhwtstamps);//Report HW Timestamp
+	#endif
 
 	schedule_work(&db->tx_work);
 
