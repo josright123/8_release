@@ -2170,7 +2170,7 @@ static void dm9051_tx_delay(struct work_struct *work)
 
 static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 {
-	int result; //, result_tx;
+	int result;
 
 	do
 	{
@@ -2179,7 +2179,7 @@ static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 			return result; //result; //goto out_unlock;
 
 		dm9051_loop_tx(db); /* more tx better performance */
-//		result_tx = 
+//		int result_tx = 
 //		if (result_tx < 0)
 //			return result_tx; //result_tx; //goto out_unlock;
 	} while (result > 0);
@@ -2203,28 +2203,25 @@ static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 //		return result;
 //	return result;
 //}
-
 //static void dm9051_rx_plat_loop(struct board_info *db)
 //{
 //	int ret;
-
 //	ret = dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
 //	if (ret < 0)
 //		return;
-
 //	dm9051_enable_interrupt(db); //"dm9051_rx_plat_enable(struct board_info *db)"
 //}
 
 /* Interrupt: Interrupt work */
 
-static void dm9051_rx_int2_plat(int voidirq, void *pw) //.dm9051_(macro)_rx_tx_plat()
+static void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat()
 {
 	struct board_info *db = pw;
-	int result; //, result_tx;
+	int result;
 
 	mutex_lock(&db->spi_lockm);
 
-#if 1 //[REAL.]	//'MI_FIX' (result = dm9051_rx_plat_disable(db);)
+#if 1 //[REAL.'MI_FIX']	//(result is dm9051_rx_plat_disable(db))
 	result = dm9051_disable_interrupt(db);
 	if (result)
 		goto out_unlock;
@@ -2233,17 +2230,17 @@ static void dm9051_rx_int2_plat(int voidirq, void *pw) //.dm9051_(macro)_rx_tx_p
 	if (result)
 		goto out_unlock;
 
-	dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
+	dm9051_delayp_looping_rx_tx(db);
 	//result = 
 	//if (result < 0)
 	//	goto out_unlock;
 
 	dm9051_enable_interrupt(db);
-#else //[TEMP.]	
+#else
 	//result = dm9051_clear_interrupt(db);
 	//if (result)
 	//	goto out_unlock;
-#endif //[TEMP.]
+#endif
 
 	/* To exit and has mutex unlock while rx or tx error
 	 */
@@ -2252,8 +2249,8 @@ out_unlock:
 	//return IRQ_HANDLED;
 }
 
+#ifndef DMPLUG_INT //=POLL
 /* !Interrupt: Poll delay work */
-#ifndef DMPLUG_INT //NOT DMPLUG_INT =POLL
 /* [DM_TIMER_EXPIRE2] poll extream.fast */
 /* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
  * This is by CPU scheduling-poll, so is software driven!
@@ -2269,15 +2266,13 @@ void dm9051_poll_servicep(struct work_struct *work) //.dm9051_poll_delay_plat()
 
 	mutex_lock(&db->spi_lockm);
 
-	dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
+	dm9051_delayp_looping_rx_tx(db);
 
 	mutex_unlock(&db->spi_lockm);
 
 	if (db->bc.ndelayF >= csched.nTargetMaxNum)
 		db->bc.ndelayF = POLL_OPERATE_INIT;
 
-	/* redundent, but for safe */
-	//if (!dm9051_cmode_int)
 	schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
 }
 #endif
@@ -2291,7 +2286,7 @@ void dm9051_rx_irq_servicep(struct work_struct *work) //optional: INT: TWO_STEP 
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
 
-	dm9051_rx_int2_plat(0, db); // 0 is no-used //.dm9051_(macro)_rx_tx_plat()
+	dm9051_rx_int2_plat(0, db); // 0 is no-used //.(macro)_rx_tx_plat()
 	thread_servicep_done = 1;
 
 }
@@ -2301,15 +2296,11 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 	struct board_info *db = pw;
 
 	if (!thread_servicep_re_enter)
-		printk("_.int2   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++); //function
+		printk("_.int2   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++);
 
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
-
-		#if 1
-		//dm9051_rx_int2_plat(voidirq, pw); //.dm9051_(macro)_rx_tx_plat()
-		schedule_delayed_work(&db->irq_servicep, 0);
-		#endif
+		schedule_delayed_work(&db->irq_servicep, 0); //dm9051_rx_int2_plat(voidirq, pw);
 	}
 	else {
 		if (thread_servicep_re_enter <= 10)
@@ -2326,8 +2317,7 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 		
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
-
-		dm9051_rx_int2_plat(voidirq, pw); //.dm9051_(macro)_rx_tx_plat()
+		dm9051_rx_int2_plat(voidirq, pw); //.(macro)_rx_tx_plat()
 		thread_servicep_done = 1;
 	} else {
 		printk("_.int   [dm9051_rx_threaded_plat] re-enter %d\n", thread_servicep_re_enter++);
