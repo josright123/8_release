@@ -1995,12 +1995,10 @@ static int dm9051_loop_rx(struct board_info *db)
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 {	
 	struct sk_buff *skb2;
-	//printk("pad skb->len %d, data_len+pad %d (pad %d)\n", skb->len, EXPEND_LEN(skb->len, pad), pad);
 
 	skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
 	if (skb2) {
 		dev_kfree_skb(skb);
-		//printk("new skb->len %d, data_len+pad %d (pad %d)\n", skb2->len, EXPEND_LEN(skb2->len, pad), pad);
 		return skb2;
 	}
 
@@ -2036,35 +2034,21 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	/* 6 tx ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	u8 message_type = get_ptp_message_type005(skb);
-
-	db->tcr_wr = TCR_TXREQ; // TCR register value
-	if (dm9051_ptp_frame(db, skb)) {
-		//or
-		//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-			if (is_ptp_sync_packet(message_type)) {
-				if (db->ptp_step == 2) {
-					db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
-					//printk("SM9051 SYNC step %u, tcr = TCR_TS_EN | TCR_TXREQ\n", db->ptp_step);
-				} else {
-					db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
-					//printk("SM9051 SYNC step %u, tcr = TCR_TS_EN | TCR_TS_EMIT\n", db->ptp_step);
-				}
-			} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
-				db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
-		//}
-	}
+	u8 message_type = dm9051_ptp_txreq(db, skb);
 	#endif
 	#endif
 
-	do {
-		//if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
-		//{ //as below:
-		//}
 #ifdef DMPLUG_CONTI
+	//.if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
+	//.{ //as below:
+	//.}
+	do {
 		ret = TX_OPS_CONTI(db, skb); //skb->data, data_len); //'double_wb'
 		if (ret)
 			break;
+
+		ret = dm9051_req_tx(db);
+	} while(0);
 #else
 		/*
 		 * if (!dm9051_modedata->skb_wb_mode) {
@@ -2079,6 +2063,7 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 		 * }
 		 * ret = dm9051_req_tx(db);
 		 */
+	do {
 		unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
 
 		#ifdef DM9051_SKB_PROTECT
@@ -2089,10 +2074,10 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 		ret = dm9051_single_tx(db, skb->data, data_len, pad);
 		if (ret)
 			break;
-#endif
 
 		ret = dm9051_req_tx(db);
 	} while(0);
+#endif
 
 	if (ret)
 		db->bc.tx_err_counter++;

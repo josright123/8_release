@@ -92,7 +92,6 @@ enum ptp_sync_type {
 #define PTP_MSGTYPE_ANNOUNCE         0xB
 #define PTP_MSGTYPE_SIGNALING        0xC
 #define PTP_MSGTYPE_MANAGEMENT       0xD
-u8 get_ptp_message_type(struct sk_buff *skb);
 u8 get_ptp_message_type005(struct sk_buff *skb);
 
 // PTP ????
@@ -102,6 +101,7 @@ u8 get_ptp_message_type005(struct sk_buff *skb);
 int is_ptp_packet(const u8 *packet);
 
 u8 dm9051_ptp_frame(struct board_info *db, struct sk_buff *skb);
+u8 dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
 //extern const struct ethtool_ops dm9051_ptpd_ethtool_ops;
 
 int is_ptp_sync_packet(u8 msgtype);

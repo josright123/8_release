@@ -55,17 +55,15 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
 /* ptpc - support functions-1 */
 #if 1 //1 //0
 #ifdef DMPLUG_PTP
-//static 
-u8 get_ptp_message_type(struct sk_buff *skb) {
-    struct udphdr *p_udp_hdr;
-    u8 *ptp_hdr;
+//u8 get_ptp_message_type(struct sk_buff *skb) {
+//    struct udphdr *p_udp_hdr;
+//    u8 *ptp_hdr;
 
-    p_udp_hdr = udp_hdr(skb);
-    ptp_hdr = (u8 *)p_udp_hdr + sizeof(struct udphdr);
+//    p_udp_hdr = udp_hdr(skb);
+//    ptp_hdr = (u8 *)p_udp_hdr + sizeof(struct udphdr);
 
-//printk("A.udp %x, ptp %x\n", (unsigned int) p_udp_hdr, (unsigned int) ptp_hdr);
-    return ptp_hdr[0] & 0x0f;
-}
+//    return ptp_hdr[0] & 0x0f;
+//}
 
 u8 get_ptp_message_type005(struct sk_buff *skb) {
     u8 *p = skb->data;
@@ -231,11 +229,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		static int slave_get_ptpFrameResp3 = 3;
 		static int master_get_delayReq6 = 6; //5;
 		static int slave_get_ptpMisc = 9;
-		//u8 message_type0 =
-		//	get_ptp_message_type(skb);
-		u8 message_type =
-			get_ptp_message_type005(skb);
-		//printk("message type, A= %X B= %X\n", message_type0, message_type);
+		u8 message_type = get_ptp_message_type005(skb);
 		
 		if (is_ptp_sync_packet(message_type)) {
 			if (slave_get_ptpFrame)
@@ -751,6 +745,26 @@ int is_ptp_sync_packet(u8 msgtype)
 int is_ptp_delayreq_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_DELAY_REQ) ? 1 : 0;
+}
+
+u8 dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
+{
+	u8 message_type = get_ptp_message_type005(skb);
+
+	db->tcr_wr = TCR_TXREQ; // TCR register value
+	if (dm9051_ptp_frame(db, skb)) {
+		//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+		if (is_ptp_sync_packet(message_type)) {
+			if (db->ptp_step == 2) {
+				db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
+			} else {
+				db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
+			}
+		} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
+			db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
+		//}
+	}
+	return message_type;
 }
 #endif
 
