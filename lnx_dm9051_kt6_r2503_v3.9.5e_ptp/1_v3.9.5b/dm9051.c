@@ -70,6 +70,20 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
+void SHOW_MODE(struct spi_device *spi)
+{
+	#ifdef DMPLUG_INT
+		unsigned int intdata[2];
+		of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
+		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt_des);
+		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt2);
+		dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
+		dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
+	#else
+		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt_des);
+	#endif
+}
+
 static void SHOW_CONFIG_MODE(struct spi_device *spi)
 {
 	struct device *dev = &spi->dev;
@@ -313,6 +327,39 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 	if (ret == 0)
 		BUS_OPS(db, buff, crlen);
 	return ret;
+}
+
+void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len)
+{
+	int i, j, rowsize = 32;
+	int splen; //index of start row
+	int rlen; //remain/row length 
+	char line[120];
+
+	printk("%s\n", db->bc.head);
+	for (i = 0; i < packet_len; i += rlen) {
+		//rlen = print_line(packet_data+i, min(rowsize, skb->len - i)); ...
+		rlen =  packet_len - i;
+		if (rlen >= rowsize) rlen = rowsize;
+
+		splen = 0;
+		splen += sprintf(line + splen, " %3d", i);
+		for (j = 0; j < rlen; j++) {
+			if (!(j % 8)) splen += sprintf(line + splen, " ");
+			if (!(j % 16)) splen += sprintf(line + splen, " ");
+			splen += sprintf(line + splen, " %02x", packet_data[i+j]);
+		}
+		printk("%s\n", line);
+	}
+}
+
+void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2)
+{
+	unsigned int v1, v2;
+
+	dm9051_get_reg(db, reg1, &v1);
+	dm9051_get_reg(db, reg2, &v2);
+	printk("%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
 }
 
 static int dm9051_ncr_poll(struct board_info *db)
@@ -2326,6 +2373,84 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 }
 #endif
 
+#ifdef DMPLUG_INT
+/*
+ * Interrupt: 
+ */
+void INIT_RX_INT2_DELAY_SETUP(struct board_info *db)
+{
+	#ifdef INT_TWO_STEP
+	INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_servicep);
+	#endif //INT_TWO_STEP
+}
+
+int INIT_REQUEST_IRQ(struct net_device *ndev)
+{
+	struct board_info *db = to_dm9051_board(ndev);
+	int ret;
+	#ifdef INT_TWO_STEP
+		printk("request_threaded_irq(INT_TWO_STEP)\n");
+		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_int2_delay,
+									get_dts_irqf(db) | IRQF_ONESHOT,
+									ndev->name, db);
+		//ret = request_irq(ndev->irq, dm9051_rx_int2_delay,
+		//							get_dts_irqf(db) | IRQF_ONESHOT,
+		//							ndev->name, db);
+		if (ret < 0)
+			netdev_err(ndev, "failed to rx request irq setup\n");
+	#else //INT_TWO_STEP
+		printk("request_threaded_irq(INT_THREAD)\n");
+		ret = request_threaded_irq(ndev->irq, NULL, /*dm9051_rx_threaded_plat*/ /*dm9051_rx_int2_delay*/ dm9051_rx_threaded_plat,
+		 						   get_dts_irqf(db) | IRQF_ONESHOT,
+		 						   ndev->name, db);
+		if (ret < 0)
+			netdev_err(ndev, "failed to rx request threaded irq setup\n");
+	#endif //INT_TWO_STEP
+	return ret;
+}
+
+void END_FREE_IRQ(struct net_device *ndev)
+{
+	struct board_info *db = to_dm9051_board(ndev);
+	free_irq(db->spidev->irq, db);
+	printk("_stop [free irq %d]\n", db->spidev->irq);
+}
+#endif
+
+#ifndef DMPLUG_INT
+/*
+ * Polling: 
+ */
+void INIT_RX_POLL_DELAY_SETUP(struct board_info *db)
+{
+	/* schedule delay work */
+	INIT_DELAYED_WORK(&db->irq_workp, dm9051_poll_servicep); //.dm9051_poll_delay_plat()
+}
+
+void INIT_RX_POLL_SCHED_DELAY(struct board_info *db)
+{
+	schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
+}
+#endif
+
+int DM9051_OPEN_REQUEST(struct board_info *db)
+{
+	#ifdef DMPLUG_INT
+	/*
+	 * Interrupt: 
+	 */
+	/* interrupt work */
+	return INIT_REQUEST_IRQ(db->ndev);
+	#else
+	/*
+	 * Polling: 
+	 */
+	/* Or schedule delay work */
+	INIT_RX_POLL_SCHED_DELAY(db);
+	return 0;
+	#endif
+}
+
 /* Open network device
  * Called when the network device is marked active, such as a user executing
  * 'ifconfig up' on the device
@@ -2794,6 +2919,9 @@ static int dm9051_probe(struct spi_device *spi)
 		INIT_RX_INT2_DELAY_SETUP(db);
 	#endif
 	#else
+		/*
+		 * Polling: 
+		 */
 		INIT_RX_POLL_DELAY_SETUP(db);
 	#endif
 
