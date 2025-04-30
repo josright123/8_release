@@ -102,7 +102,6 @@ int is_ptp_packet(const u8 *packet);
 
 u8 dm9051_ptp_frame(struct board_info *db, struct sk_buff *skb);
 u8 dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
-//extern const struct ethtool_ops dm9051_ptpd_ethtool_ops;
 
 int is_ptp_sync_packet(u8 msgtype);
 int is_ptp_delayreq_packet(u8 msgtype);

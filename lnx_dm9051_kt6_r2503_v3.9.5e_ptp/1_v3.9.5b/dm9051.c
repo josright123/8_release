@@ -2598,13 +2598,13 @@ static int dm9051_set_mac_address(struct net_device *ndev, void *p)
 		return ret;
 
 	eth_commit_mac_addr_change(ndev, p);
-#if MI_FIX //mac
+	#if MI_FIX //mac
 	mutex_lock(&db->spi_lockm);
-#endif
+	#endif
 	ret = dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, sizeof(ndev->dev_addr));
-#if MI_FIX //mac
+	#if MI_FIX //mac
 	mutex_unlock(&db->spi_lockm);
-#endif
+	#endif
 	return ret;
 }
 
@@ -2656,9 +2656,6 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->mdi = 0x0830;
 	
 	db->tcr_wr = TCR_TXREQ; //pre-defined
-
-	//db->ptp_step = 0;
-	//db->ptp_packet = 0;
 }
 
 static int dm9051_mdio_register(struct board_info *db)
@@ -2696,8 +2693,8 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 
 	if (db->phydev->link)
 	{
-printk("\n");
-printk("LOCK_MUTEX\n");
+		printk("\n");
+		printk("LOCK_MUTEX\n");
 
 		if (db->phydev->pause)
 		{
@@ -2713,20 +2710,20 @@ printk("LOCK_MUTEX\n");
 	 */
 	if (db->phydev->link)
 	{
-#ifdef DMCONF_MRR_WR
+	#ifdef DMCONF_MRR_WR
 		do {
 			int ret = dm9051_all_upstart(db);
 			if (ret)
-				goto u_end;
+				goto dnf_end;
 		} while(0);
 		dm9051_update_fcr(db);
-u_end:
-#else
+dnf_end:
+	#else
 		dm9051_update_fcr(db);
-#endif
+	#endif
 
-printk("UNLOCK_MUTEX\n");
-printk("\n");
+		printk("UNLOCK_MUTEX\n");
+		printk("\n");
 	}
 
 	#if MI_FIX
@@ -2769,7 +2766,7 @@ static int dm9051_probe(struct spi_device *spi)
 	db->ndev = ndev;
 
 	ndev->netdev_ops = &dm9051_netdev_ops;
-	ndev->ethtool_ops = &dm9051_ethtool_ops;//&dm9051_ptpd_ethtool_ops;
+	ndev->ethtool_ops = &dm9051_ethtool_ops;
 
 	/* Set default features */
 	if (dm9051_modedata->checksuming)
@@ -2777,11 +2774,9 @@ static int dm9051_probe(struct spi_device *spi)
 
 	/* 2 ptpc */
 	#ifdef DMPLUG_PTP
-	// Enable PTP - For the driver whole operations
-	db->ptp_enable = 1;
+	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
 	if (db->ptp_enable) {
-		// Spenser - Setup for Checksum Offload
-		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Enable PTP must COERCE to disable checksum_offload"
+		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
 		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
 	}
 	#endif
@@ -2815,10 +2810,6 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-//	ret = _BUS_SETUP(db); /* first, reserved customization */
-//	if (ret)
-//		return ret;
-
 	SHOW_OPTION_MODE(spi);
 
 	ret = dm9051_map_etherdev_par(ndev, db);
@@ -2846,8 +2837,8 @@ static int dm9051_probe(struct spi_device *spi)
 	/* 2.1 ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	//.by ptp4l run command
-	//db->ptp_on = 1; //To allow support "Enable PTP" must disable checksum_offload
+	/* Turn on by ptp4l run command
+	 * db->ptp_on = 1; */
 	db->ptp_on = 0;
 	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
 	dm9051_ptp_init(db); //_15888_
@@ -2859,31 +2850,13 @@ static int dm9051_probe(struct spi_device *spi)
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,0)
 static int dm9051_drv_remove(struct spi_device *spi)
-{
-	struct device *dev = &spi->dev;
-	struct net_device *ndev = dev_get_drvdata(dev);
-	struct board_info *db = to_dm9051_board(ndev);
-
-	phy_disconnect(db->phydev);
-
-	/* 3 ptpc */
-	#if 1 //0
-	#ifdef DMPLUG_PTP
-	dm9051_ptp_stop(db); //_15888_ todo
-	#endif
-	#endif
-	return 0;
-}
 #else
 static void dm9051_drv_remove(struct spi_device *spi)
+#endif
 {
 	struct device *dev = &spi->dev;
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct board_info *db = to_dm9051_board(ndev);
-
-	sprintf(db->bc.head, "drv remove");
-	dm9051_dump_reg2s(db, DM9051_PIDL, DM9051_PIDH);
-	dm9051_dump_reg2s(db, DM9051_VIDL, DM9051_VIDH);
 
 	phy_disconnect(db->phydev);
 
@@ -2893,8 +2866,10 @@ static void dm9051_drv_remove(struct spi_device *spi)
 	dm9051_ptp_stop(db); //_15888_ todo
 	#endif
 	#endif
-}
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,0)
+	return 0;
 #endif
+}
 
 static const struct of_device_id dm9051_match_table[] = {
 	{.compatible = "davicom,dm9051"},
