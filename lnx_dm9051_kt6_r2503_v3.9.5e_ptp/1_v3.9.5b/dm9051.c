@@ -1691,8 +1691,8 @@ static void monitor_rxb0(unsigned int rxbyte)
 		u8 *bf = (u8 *)&rxbyte; // tested
 
 		if (SCAN_BL(rxbyte) == 1 && SCAN_BH(rxbyte) != 1)
-			printk("-. ........ warn, spenser board ...BL %02lx BH %02lx.......... on .monitor_rxb0 %2d\n",
-				   SCAN_BL(rxbyte), SCAN_BH(rxbyte), rxbz_counter);
+			printk("-. ........ warn, spenser board ...BL %02lx BH %02lx.......... on .%s %2d\n",
+				   SCAN_BL(rxbyte), SCAN_BH(rxbyte), __func__, rxbz_counter);
 
 		if (SCAN_BL(rxbyte) == 1 || SCAN_BL(rxbyte) == 0)
 			return;
@@ -1703,7 +1703,7 @@ static void monitor_rxb0(unsigned int rxbyte)
 		inval_rxb[rxbz_counter] = SCAN_BL(rxbyte);
 		rxbz_counter++;
 
-		n += sprintf(pbff + n, "_.monitor_rxb0 %2d]", rxbz_counter);
+		n += sprintf(pbff + n, "_.%s %2d]", __func__, rxbz_counter);
 		for (i = 0; i < rxbz_counter; i++)
 		{
 			if (i && !(i % 5))
@@ -1750,18 +1750,15 @@ static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 		unsigned int i;
 		char pbff[80];
 
-		//u8 *bf = (u8 *)prxbyte;
-		//printk("_.eval   bf] %02x %02x\n", bf[0], bf[1]);
-		//printk("_.eval rxbs] %02lx %02lx\n", SCAN_BL(*prxbyte), SCAN_BH(*prxbyte));
-
 		inval_rxb[db->bc.evaluate_rxb_counter] = SCAN_BH(*prxbyte);
 		db->bc.evaluate_rxb_counter++;
 
-  if (db->bc.evaluate_rxb_counter == 1) {
-	sprintf(db->bc.head, "rxb 1st %d", db->bc.evaluate_rxb_counter); 
-	dm9051_dump_reg2s(db, 0x74, 0x75);
-	dm9051_dump_reg2s(db, 0x24, 0x25);
-  }
+		if (db->bc.evaluate_rxb_counter == 1) {
+			sprintf(db->bc.head, "rxb 1st %d", db->bc.evaluate_rxb_counter); 
+			dm9051_dump_reg2s(db, 0x74, 0x75);
+			dm9051_dump_reg2s(db, 0x24, 0x25);
+		}
+
 		n += sprintf(pbff + n, "_[eval_rxb %2d]", db->bc.evaluate_rxb_counter);
 		for (i = 0; i < db->bc.evaluate_rxb_counter; i++)
 		{
@@ -1813,7 +1810,6 @@ static int rx_head_break(struct board_info *db)
 	struct net_device *ndev = db->ndev;
 	int rxlen;
 
-	//_15888_
 	u8 err_bits = RSR_ERR_BITS;
 	
 	/* 7 rxhead ptpc */
@@ -1821,7 +1817,7 @@ static int rx_head_break(struct board_info *db)
 	#ifdef DMPLUG_PTP
 	static int before_slave_ptp_packets = 5;
 	if (db->ptp_enable) {
-		err_bits &= ~RSR_PTP_BITS; //To allow support "Enable PTP" must disable checksum_offload
+		err_bits &= ~RSR_PTP_BITS; //_15888_ //To allow support "Enable PTP" must disable checksum_offload
 	}
 	#endif
 	#endif
@@ -1851,15 +1847,14 @@ static int rx_head_break(struct board_info *db)
 		{
 			db->bc.large_err_counter++;
 		}
-		
-		
+
 		if (db->rxhdr.status & err_bits) {
 			printk("check rxstatus-error (%02x)\n",
 					   db->rxhdr.status);
 			netdev_dbg(ndev, "check rxstatus-error (%02x)\n",
 					   db->rxhdr.status);
 		}
-		
+
 		if (rxlen > DM9051_PKT_MAX) {
 			printk("check rxlen large-error (%d > %d)\n",
 					   rxlen, DM9051_PKT_MAX);
@@ -1874,11 +1869,10 @@ static int rx_head_break(struct board_info *db)
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	if (before_slave_ptp_packets && (!db->ptp_on) && (db->rxhdr.status & RSR_PTP_BITS)) {
-		printk("%d. User raw state, ptp packet received!\n", before_slave_ptp_packets--);
+		printk("%d. On ptp_on is 0, ptp packet received!\n", before_slave_ptp_packets--);
 	}
 	#endif
 	#endif
-
 	return 0;
 }
 
@@ -1899,9 +1893,7 @@ static int dm9051_loop_rx(struct board_info *db)
 
 	do
 	{
-#if 1
 //.		dm9051_loop_tx(db); /* [More] and more tx better performance */
-#endif
 		ret = dm9051_read_mem_rxb(db, DM_SPI_MRCMDX, &rxbyte, 2);
 		if (ret)
 			return ret;
@@ -1909,11 +1901,11 @@ static int dm9051_loop_rx(struct board_info *db)
 		if (rx_break(rxbyte, ndev->features))
 		{
 			if (trap_rxb(db, &rxbyte)) {
-				  //if (db->bc.evaluate_rxb_counter == 1) {
-					sprintf(db->bc.head, "rxb last"); //(, db->bc.evaluate_rxb_counter); 
-					dm9051_dump_reg2s(db, 0x74, 0x75);
-					dm9051_dump_reg2s(db, 0x24, 0x25);
-				  //}
+				//if (db->bc.evaluate_rxb_counter == 1) {
+				sprintf(db->bc.head, "rxb last"); //(, db->bc.evaluate_rxb_counter); 
+				dm9051_dump_reg2s(db, 0x74, 0x75);
+				dm9051_dump_reg2s(db, 0x24, 0x25);
+				//}
 				dm9051_all_restart(db);
 				return -EINVAL;
 			}
@@ -1962,76 +1954,12 @@ static int dm9051_loop_rx(struct board_info *db)
 			return ret;
 		}
 
-		if (is_ptp_packet(skb->data))
-		do {
-			static int slave_get_ptpFrame = 9;
-			static int master_get_delayReq6 = 6; //5;
-			static int slave_get_ptpMisc = 9;
-			//u8 message_type0 =
-			//	get_ptp_message_type(skb);
-			u8 message_type =
-				get_ptp_message_type005(skb);
-			//printk("message type, A= %X B= %X\n", message_type0, message_type);
-			
-			if (is_ptp_sync_packet(message_type)) {
-				if (slave_get_ptpFrame)
-				if (db->ptp_enable) {
-				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					printk("\n");
-					printk("Slave(%d)-get-sync with tstamp. \n", --slave_get_ptpFrame);
-					//sprintf(db->bc.head, "Slave-get-sync with tstamp, len= %3d", skb->len);
-					//dm9051_dump_data1(db, skb->data, skb->len);
-				} else {
-					printk("Slave(%d)-get-sync without tstamp. \n", --slave_get_ptpFrame);
-				}}
-			} else
-			if (message_type == PTP_MSGTYPE_FOLLOW_UP) {
-				if (slave_get_ptpFrame)
-				if (db->ptp_enable) {
-				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					printk("Slave(%d)-get-followup with tstamp. \n", --slave_get_ptpFrame);
-				} else {
-					printk("Slave(%d)-get-followup without tstamp. \n", --slave_get_ptpFrame);
-				}}
-			} else
-			if (message_type == PTP_MSGTYPE_DELAY_RESP) {
-				if (slave_get_ptpFrame)
-				if (db->ptp_enable) {
-				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					printk("Slave(%d)-get-DELAY_RESP with tstamp. \n", --slave_get_ptpFrame);
-				} else {
-					printk("Slave(%d)-get-DELAY_RESP without tstamp. \n", --slave_get_ptpFrame);
-				}}
-			} else
-			if (message_type == PTP_MSGTYPE_ANNOUNCE) {
-				if (slave_get_ptpFrame)
-				if (db->ptp_enable) {
-				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					printk("Slave(%d)-get-ANNOUNCE with tstamp. \n", --slave_get_ptpFrame);
-				} else {
-					printk("Slave(%d)-get-ANNOUNCE without tstamp. \n", --slave_get_ptpFrame);
-				}}
-			} else
-			if (is_ptp_delayreq_packet(message_type)) {
-				if (db->ptp_enable) {
-				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					if (master_get_delayReq6) {
-						printk("Master(%d)-get-DELAY_REQ with tstamp. \n", --master_get_delayReq6);
-					}
-				} else {
-					printk("Master-get-DELAY_REQ without tstamp.\n");
-				}}
-			} else
-			{
-				if (slave_get_ptpMisc)
-				if (db->ptp_enable) {
-				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
-					printk("Slave(%d) or Master get-knonw with tstamp. \n", --slave_get_ptpMisc);
-				} else {
-					printk("Slave(%d) or Master get-knonw without tstamp. \n", --slave_get_ptpMisc);
-				}}
-			}
-		} while(0);
+		/* 7.2dbg ptpc */
+		#if 1 //0
+		#ifdef DMPLUG_PTP
+		dm9051_ptp_rx_packet_monitor(db, skb);
+		#endif
+		#endif
 
 		skb->protocol = eth_type_trans(skb, db->ndev);
 

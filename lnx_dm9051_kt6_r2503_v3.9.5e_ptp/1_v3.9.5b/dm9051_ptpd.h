@@ -106,6 +106,7 @@ u8 dm9051_ptp_frame(struct board_info *db, struct sk_buff *skb);
 
 int is_ptp_sync_packet(u8 msgtype);
 int is_ptp_delayreq_packet(u8 msgtype);
+void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
 //enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb, struct board_info *db); //old
 //enum ptp_sync_type dm9051_ptp_one_step001(struct sk_buff *skb, struct board_info *db);
 //int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db);

@@ -223,6 +223,81 @@ int is_ptp_packet(const u8 *packet) {
 #endif //
 #endif //
 
+void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
+{
+	if (is_ptp_packet(skb->data))
+	{
+		static int slave_get_ptpFrame = 9;
+		static int slave_get_ptpFrameResp3 = 3;
+		static int master_get_delayReq6 = 6; //5;
+		static int slave_get_ptpMisc = 9;
+		//u8 message_type0 =
+		//	get_ptp_message_type(skb);
+		u8 message_type =
+			get_ptp_message_type005(skb);
+		//printk("message type, A= %X B= %X\n", message_type0, message_type);
+		
+		if (is_ptp_sync_packet(message_type)) {
+			if (slave_get_ptpFrame)
+			if (db->ptp_enable) {
+			if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+				printk("\n");
+				printk("Slave(%d)-get-sync with tstamp. \n", --slave_get_ptpFrame);
+				//sprintf(db->bc.head, "Slave-get-sync with tstamp, len= %3d", skb->len);
+				//dm9051_dump_data1(db, skb->data, skb->len);
+			} else {
+				printk("Slave(%d)-get-sync without tstamp. \n", --slave_get_ptpFrame);
+			}}
+		} else
+		if (message_type == PTP_MSGTYPE_FOLLOW_UP) {
+			if (slave_get_ptpFrame)
+			if (db->ptp_enable) {
+			if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+				printk("Slave(%d)-get-followup with tstamp. \n", --slave_get_ptpFrame);
+			} else {
+				printk("Slave(%d)-get-followup without tstamp. \n", --slave_get_ptpFrame);
+			}}
+		} else
+		if (message_type == PTP_MSGTYPE_DELAY_RESP) {
+			if (slave_get_ptpFrameResp3)
+			if (db->ptp_enable) {
+			if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+				printk("Slave(%d)-get-DELAY_RESP with tstamp. \n", --slave_get_ptpFrameResp3);
+			} else {
+				printk("Slave(%d)-get-DELAY_RESP without tstamp. \n", --slave_get_ptpFrameResp3);
+			}}
+		} else
+		if (message_type == PTP_MSGTYPE_ANNOUNCE) {
+			if (slave_get_ptpFrame)
+			if (db->ptp_enable) {
+			if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+				printk("Slave(%d)-get-ANNOUNCE with tstamp. \n", --slave_get_ptpFrame);
+			} else {
+				printk("Slave(%d)-get-ANNOUNCE without tstamp. \n", --slave_get_ptpFrame);
+			}}
+		} else
+		if (is_ptp_delayreq_packet(message_type)) {
+			if (db->ptp_enable) {
+			if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+				if (master_get_delayReq6) {
+					printk("Master(%d)-get-DELAY_REQ with tstamp. \n", --master_get_delayReq6);
+				}
+			} else {
+				printk("Master-get-DELAY_REQ without tstamp.\n");
+			}}
+		} else
+		{
+			if (slave_get_ptpMisc)
+			if (db->ptp_enable) {
+			if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+				printk("Slave(%d) or Master get-knonw with tstamp. \n", --slave_get_ptpMisc);
+			} else {
+				printk("Slave(%d) or Master get-knonw without tstamp. \n", --slave_get_ptpMisc);
+			}}
+		}
+	}
+}
+
 /* ptpc - support functions-2 */
 #ifdef DMPLUG_PTP
 /*s64*/
