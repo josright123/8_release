@@ -67,16 +67,58 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
 
 u8 get_ptp_message_type005(struct sk_buff *skb) {
     u8 *p = skb->data;
-    struct udphdr *p_udp_hdr; //= p + 14 + 20;
+    struct ethhdr *eth = (struct ethhdr *)p;
     u8 *ptp_hdr;
-p += 14 + 20;
-p_udp_hdr = (struct udphdr *) p;
-	
-    ptp_hdr = (u8 *)p_udp_hdr + sizeof(struct udphdr);
+    u16 proto;
 
-//printk("B.udp %x, ptp %x\n", (unsigned int) p_udp_hdr, (unsigned int) ptp_hdr);
-    return ptp_hdr[0] & 0x0f;
+    // Skip Ethernet header
+    p += ETH_HLEN;
+    proto = ntohs(eth->h_proto);
+
+    // Check for Layer 2 PTP
+    if (proto == PTP_ETHERTYPE) {
+        ptp_hdr = p;
+        return ptp_hdr[0] & 0x0f;
+    }
+
+    // Handle IPv4
+    if (proto == ETH_P_IP) {
+        struct iphdr *ip = (struct iphdr *)p;
+        if (ip->protocol == IPPROTO_UDP) {
+            struct udphdr *udp = (struct udphdr *)(p + sizeof(struct iphdr));
+            if (ntohs(udp->dest) == PTP_EVENT_PORT || ntohs(udp->dest) == PTP_GENERAL_PORT) {
+                ptp_hdr = (u8 *)udp + sizeof(struct udphdr);
+                return ptp_hdr[0] & 0x0f;
+            }
+        }
+    }
+    // Handle IPv6
+    else if (proto == ETH_P_IPV6) {
+        struct ipv6hdr *ip6 = (struct ipv6hdr *)p;
+        if (ip6->nexthdr == IPPROTO_UDP) {
+            struct udphdr *udp = (struct udphdr *)(p + sizeof(struct ipv6hdr));
+            if (ntohs(udp->dest) == PTP_EVENT_PORT || ntohs(udp->dest) == PTP_GENERAL_PORT) {
+                ptp_hdr = (u8 *)udp + sizeof(struct udphdr);
+                return ptp_hdr[0] & 0x0f;
+            }
+        }
+    }
+
+    return 0; // Not a PTP packet
 }
+
+//u8 get_ptp_message_type0050(struct sk_buff *skb) {
+//    u8 *p = skb->data;
+//    struct udphdr *p_udp_hdr; //= p + 14 + 20;
+//    u8 *ptp_hdr;
+//p += 14 + 20;
+//p_udp_hdr = (struct udphdr *) p;
+//	
+//    ptp_hdr = (u8 *)p_udp_hdr + sizeof(struct udphdr);
+
+//    return ptp_hdr[0] & 0x0f;
+//}
+//printk("B.udp %x, ptp %x\n", (unsigned int) p_udp_hdr, (unsigned int) ptp_hdr);
 
 int is_ptp_packet(const u8 *packet) {
     struct ethhdr *eth = (struct ethhdr *)packet;

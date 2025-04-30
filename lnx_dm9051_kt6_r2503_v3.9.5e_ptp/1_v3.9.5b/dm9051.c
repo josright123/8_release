@@ -2342,11 +2342,10 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 {
 	struct board_info *db = pw;
 
-	if (!thread_servicep_re_enter)
-		printk("_.int2   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++);
-
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
+		if (!thread_servicep_re_enter)
+			printk("_.int2   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++);
 		schedule_delayed_work(&db->irq_servicep, 0); //dm9051_rx_int2_plat(voidirq, pw);
 	}
 	else {
@@ -2358,14 +2357,13 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 #endif //INT_TWO_STEP
 
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
-{
-	if (!thread_servicep_re_enter)
-		printk("_.int   [dm9051_rx_threaded_plat] first-enter %d\n", thread_servicep_re_enter++);
-		
+{		
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
 		dm9051_rx_int2_plat(voidirq, pw); //.(macro)_rx_tx_plat()
 		thread_servicep_done = 1;
+		if (!thread_servicep_re_enter)
+			printk("_.int   [dm9051_rx_threaded_plat] this-first-enter %d\n", thread_servicep_re_enter++);
 	} else {
 		printk("_.int   [dm9051_rx_threaded_plat] re-enter %d\n", thread_servicep_re_enter++);
 	}
