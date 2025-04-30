@@ -500,10 +500,12 @@ int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
 
 	info->so_timestamping =
 #if 1
+#if 0
 		/* .software ts */
 		SOF_TIMESTAMPING_TX_SOFTWARE |
 		SOF_TIMESTAMPING_RX_SOFTWARE |
 		SOF_TIMESTAMPING_SOFTWARE |
+#endif
 #endif
 		SOF_TIMESTAMPING_TX_HARDWARE |
 		SOF_TIMESTAMPING_RX_HARDWARE |
