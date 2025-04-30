@@ -10,6 +10,7 @@
 #include <linux/phy.h>
 #include <linux/regmap.h>
 #include <linux/skbuff.h>
+#include <linux/ipv6.h>
 #include <linux/spinlock.h>
 #include <linux/spi/spi.h>
 #include <linux/types.h>
