@@ -26,7 +26,7 @@
 #include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
 #include "dm9051_plug.h"
-#include "plug/dm9051_ptpd.h"
+//#include "plug/dm9051_ptpd.h"
 
 const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configuration */
 
@@ -2966,7 +2966,6 @@ static int dm9051_probe(struct spi_device *spi)
 	/* Turn on by ptp4l run command
 	 * db->ptp_on = 1; */
 	db->ptp_on = 0;
-	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
 	dm9051_ptp_init(db); //_15888_
 	#endif
 	#endif

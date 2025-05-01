@@ -21,8 +21,8 @@
 #include <linux/ptp_clock_kernel.h>
 
 #include "../dm9051.h"
-#include "../dm9051_plug.h"
-#include "dm9051_ptpd.h"
+//#include "../dm9051_plug.h"
+//#include "dm9051_ptpd.h"
 
 #ifdef DMCONF_DIV_HLPR_32
 /* Implement the missing ARM EABI division helper */
@@ -472,49 +472,49 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 }
 
 #if 1
+u64 rx_extract_ts(u8 *rxTSbyte)
+{
+	//u8 temp[12];
+	u16 ns_hi, ns_lo, s_hi, s_lo;
+	//u32 prttsyn_stat, hi, lo,
+	u32 sec;
+	u64 ns;
+
+	#if 0
+	printk(" REAL RX TSTAMP hwtstamp= %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n",
+	       rxTSbyte[0], rxTSbyte[1],rxTSbyte[2],rxTSbyte[3],rxTSbyte[4],rxTSbyte[5],rxTSbyte[6],rxTSbyte[7]);
+	#endif
+
+	//dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x02); //Read RX Time Stamp Clock Register offset 0x62, value 0x02
+
+	ns_lo = rxTSbyte[7] | (rxTSbyte[6] << 8);
+	ns_hi = rxTSbyte[5] | (rxTSbyte[4] << 8);
+
+	s_lo = rxTSbyte[3] | (rxTSbyte[2] << 8);
+	s_hi = rxTSbyte[1] | (rxTSbyte[0] << 8);
+
+	sec = s_lo;
+	sec |= s_hi << 16;
+
+	ns = ns_lo;
+	ns |= ns_hi  << 16;
+
+	ns += ((u64)sec) * 1000000000ULL;
+	//printk("dm9051_ptp_rx_hwtstamp ns_lo=%x, ns_hi=%x s_lo=%x s_hi=%x \r\n", ns_lo, ns_hi, s_lo, s_hi);
+	return ns;
+}
+
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTSbyte)
 {
 	if(db->ptp_on) { //NOT by db->ptp-enable
-		//u8 temp[12];
-		u16 ns_hi, ns_lo, s_hi, s_lo;
-		//u32 prttsyn_stat, hi, lo,
-		u32 sec;
-		u64 ns;
-		//int i;
-
 		//printk("==> dm9051_ptp_rx_hwtstamp in\r\n");
 		/* Since we cannot turn off the Rx timestamp logic if the device is
 		 * doing Tx timestamping, check if Rx timestamping is configured.
 		 */
-
-
-	#if 0
-		printk(" REAL RX TSTAMP hwtstamp= %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n",
-		       rxTSbyte[0], rxTSbyte[1],rxTSbyte[2],rxTSbyte[3],rxTSbyte[4],rxTSbyte[5],rxTSbyte[6],rxTSbyte[7]);
-	#endif
-
-		//dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x02); //Read RX Time Stamp Clock Register offset 0x62, value 0x02
-
-
-		ns_lo = rxTSbyte[7] | (rxTSbyte[6] << 8);
-		ns_hi = rxTSbyte[5] | (rxTSbyte[4] << 8);
-
-		s_lo = rxTSbyte[3] | (rxTSbyte[2] << 8);
-		s_hi = rxTSbyte[1] | (rxTSbyte[0] << 8);
-
-		sec = s_lo;
-		sec |= s_hi << 16;
-
-		ns = ns_lo;
-		ns |= ns_hi  << 16;
-
-		ns += ((u64)sec) * 1000000000ULL;
-
-		//printk("dm9051_ptp_rx_hwtstamp ns_lo=%x, ns_hi=%x s_lo=%x s_hi=%x \r\n", ns_lo, ns_hi, s_lo, s_hi);
-
+		u64 ns = rx_extract_ts(rxTSbyte);
 		do {
 			struct skb_shared_hwtstamps *shhwtstamps =
-			skb_hwtstamps(skb); //for pass T2 the HW rx tstamp
+				skb_hwtstamps(skb); //for pass T2 the HW rx tstamp
 			memset(shhwtstamps, 0, sizeof(*shhwtstamps));
 			shhwtstamps->hwtstamp = ns_to_ktime(ns);
 		} while(0);
@@ -1047,6 +1047,7 @@ static struct ptp_clock_info dm9051a_ptp_info = {
 #if 1
 int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm)
 {
+//struct aq_ptp_s *aq_ptp = container_of(ptp, struct aq_ptp_s, ptp_info);
     struct board_info *db = container_of(caps, struct board_info, ptp_caps);
     s64 ppm;
     s64 s64_adj;
@@ -1661,6 +1662,8 @@ void dm9051_ptp_init(struct board_info *db)
 		(1 << HWTSTAMP_TX_ON) |
 		(1 << HWTSTAMP_TX_OFF);
 	#endif
+
+	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
 
 	db->ptp_caps = dm9051a_ptp_info;
 

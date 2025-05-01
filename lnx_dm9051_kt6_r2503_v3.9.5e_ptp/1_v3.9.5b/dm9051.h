@@ -265,6 +265,12 @@ struct eng_config {
 
 #if 1 //sticked fixed here is better!
 #include "dm9051_plug.h" //for definition of 'INT_TWO_STEP'
+/* 0.1 ptpc */
+#if 1 //0
+#ifdef DMPLUG_PTP
+#include "plug/dm9051_ptpd.h"
+#endif
+#endif
 
 /**
  * struct rx_ctl_mach - rx activities record
@@ -392,6 +398,7 @@ struct board_info
 
 	/* 1 ptpc */
 	#if 1 //0
+	#ifdef DMPLUG_PTP
 	/* if defined DMPLUG_PTP. begin ... */
 	struct ptp_clock        *ptp_clock;
 	struct ptp_clock_info 	ptp_caps;
@@ -406,6 +413,7 @@ struct board_info
 	s64			pre_rate;
 	u8              	rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
 	/* if defined DMPLUG_PTP. end ... */
+	#endif
 	#endif
 };
 #endif

@@ -1,5 +1,9 @@
 #ifndef _DM9051_PTPD_H_
 #define _DM9051_PTPD_H_
+#include <linux/ptp_classify.h>
+#include <linux/ip.h>
+#include <linux/udp.h>
+
 /*
  * ptp 1588: 
  */
