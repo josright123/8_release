@@ -1519,6 +1519,16 @@ static int dm9051_get_sset_count(struct net_device *netdev, int sset)
 	return (sset == ETH_SS_STATS) ? ARRAY_SIZE(dm9051_stats_strings) : 0;
 }
 
+
+//void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2)
+//{
+//	unsigned int v1, v2;
+
+//	dm9051_get_reg(db, reg1, &v1);
+//	dm9051_get_reg(db, reg2, &v2);
+//	printk("%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+//}
+
 static void dm9051_get_ethtool_stats(struct net_device *ndev,
 									 struct ethtool_stats *stats, u64 *data)
 {
@@ -1531,6 +1541,15 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	data[4] = ndev->stats.rx_bytes;
 	data[5] = ndev->stats.tx_bytes;
 	data[6] = db->bc.fifo_rst_counter - 1; // Subtract Initial reset
+	
+	/* ethtool -S eth1, this is the extra dump parts */
+	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump rcr/rcr registers:");
+	dm9051_dump_reg2s(db, DM9051_RCR, DM9051_RCR);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump wdr registers:");
+	dm9051_dump_reg2s(db, 0x24, 0x25);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump mrr registers:");
+	dm9051_dump_reg2s(db, DM9051_MRRL, DM9051_MRRH);
 }
 
 static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_ops dm9051_ptpd_ethtool_ops
@@ -2752,7 +2771,18 @@ static const struct net_device_ops dm9051_netdev_ops = {
 	/* 5 ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
+//	int			(*ndo_do_ioctl)(struct net_device *dev,
+//					        struct ifreq *ifr, int cmd);
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
+//	.ndo_do_ioctl		= lan743x_netdev_ioctl,
+	.ndo_do_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
+#else
 	.ndo_eth_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
+#endif
+//	int			(*ndo_do_ioctl)(struct net_device *dev,
+//					        struct ifreq *ifr, int cmd);
+//	int			(*ndo_eth_ioctl)(struct net_device *dev,
+//						 struct ifreq *ifr, int cmd);
 	#endif
 	#endif
 };
@@ -2973,7 +3003,8 @@ static int dm9051_probe(struct spi_device *spi)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,0)
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,0) || \
+	LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
 static int dm9051_drv_remove(struct spi_device *spi)
 #else
 static void dm9051_drv_remove(struct spi_device *spi)
@@ -2991,7 +3022,8 @@ static void dm9051_drv_remove(struct spi_device *spi)
 	dm9051_ptp_stop(db); //_15888_ todo
 	#endif
 	#endif
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,0)
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,0) || \
+	LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
 	return 0;
 #endif
 }

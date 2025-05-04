@@ -72,10 +72,12 @@ int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info); //
  */
 int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 
+#if 0
 //static int dm9051_ptp_set_timestamp_mode(struct board_info *db,
 //					 struct hwtstamp_config *config);
 int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr);
 int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr);
+#endif
 
 /* PTP message type classification */
 enum ptp_sync_type {
@@ -85,9 +87,16 @@ enum ptp_sync_type {
     PTP_NOT_SYNC = 3      /* Not a sync message but other PTP message */
 };
 
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
+/* PTP header flag fields */
+#define PTP_FLAG_TWOSTEP	BIT(1)
+#endif
+
 /* PTP message type constants */
-//#define PTP_MSGTYPE_SYNC           0x0
-//#define PTP_MSGTYPE_DELAY_REQ      0x1
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
+#define PTP_MSGTYPE_SYNC             0x0
+#define PTP_MSGTYPE_DELAY_REQ        0x1
+#endif
 //#define PTP_MSGTYPE_PDELAY_REQ     0x2
 //#define PTP_MSGTYPE_PDELAY_RESP    0x3
 #define PTP_MSGTYPE_FOLLOW_UP        0x8

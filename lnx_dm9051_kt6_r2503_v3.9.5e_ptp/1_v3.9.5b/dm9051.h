@@ -20,12 +20,12 @@
 
 /* Macro for already known platforms
  */ 
-//#define PLUG_CFG_HLPR
+#define PLUG_CFG_HLPR
 #ifdef PLUG_CFG_HLPR
 #define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
 #endif
 
-#define PLUG_CFG64
+//#define PLUG_CFG64
 #ifdef PLUG_CFG64
 #define DMCONF_AARCH_64 //(64-bit OS)
 #endif
@@ -282,19 +282,20 @@ struct eng_config {
  *
  * To keep track for the driver operation statistics
  */
+#define HEAD_LOG_BUFSIZE	62
 struct rx_ctl_mach
 {
-	u16 status_err_counter;
-	u16 large_err_counter;
-	u16 rx_err_counter;
-	u16 tx_err_counter;
-	u16 fifo_rst_counter;
+	u32 status_err_counter;
+	u32 large_err_counter;
+	u32 rx_err_counter;
+	u32 tx_err_counter;
+	u32 fifo_rst_counter;
 
 	u16 evaluate_rxb_counter;
 	int nRxcF;
 	u16 ndelayF;
 	
-	char head[62];
+	char head[HEAD_LOG_BUFSIZE];
 };
 
 /**

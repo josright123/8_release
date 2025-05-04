@@ -264,6 +264,7 @@ int is_ptp_packet(const u8 *packet) {
 #endif //
 #endif //
 
+#ifdef DMPLUG_PTP
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 {
 	if (is_ptp_packet(skb->data))
@@ -334,6 +335,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		}
 	}
 }
+#endif
 
 /* ptpc - support functions-2 */
 #ifdef DMPLUG_PTP
@@ -567,6 +569,7 @@ int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
 	return 0;
 }
 
+#if 0
 static int dm9051_ptp_set_timestamp_mode(struct board_info *db,
 					 struct hwtstamp_config *config)
 {
@@ -704,6 +707,171 @@ int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
 	return copy_to_user(ifr->ifr_data, &config, sizeof(config)) ?
 		-EFAULT : 0;
 }
+#endif
+
+static int lan_ptp_get_ts_ioctl(struct net_device *netdev, struct ifreq *ifr)
+{
+	struct board_info *adb = netdev_priv(netdev);
+	struct hwtstamp_config *config = &adb->tstamp_config;
+        
+	/* copy from db tstamp_config, to user */
+	return copy_to_user(ifr->ifr_data, config, sizeof(*config)) ?
+		-EFAULT : 0;
+}
+
+static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd)
+{
+	struct board_info *adb = netdev_priv(netdev);
+	struct hwtstamp_config config;
+	int ret = 0;
+	//int index;
+
+	if (!ifr) {
+		netif_err(adb, drv, adb->ndev,
+			  "SIOCSHWTSTAMP, ifr == NULL\n");
+		return -EINVAL;
+	}
+
+	if (copy_from_user(&config, ifr->ifr_data, sizeof(config)))
+		return -EFAULT;
+
+	if (config.flags) {
+		netif_warn(adb, drv, adb->ndev,
+			   "ignoring hwtstamp_config.flags == 0x%08X, expected 0\n",
+			   config.flags);
+	}
+
+	switch (config.tx_type) {
+		case HWTSTAMP_TX_OFF:
+			dev_info(&adb->spidev->dev, "IOCtl - Now db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
+			//lan743x_ptp_set_sync_ts_insert(adapter, false);
+			break;
+		case HWTSTAMP_TX_ONESTEP_SYNC:
+	//.		db->ptp_onestep = true;
+			adb->ptp_on = 1;
+			dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", adb->ptp_on);
+			//gem_ptp_set_one_step_sync(bp, 1);
+			//lan743x_ptp_set_sync_ts_insert(adapter, true);
+			break;
+		case HWTSTAMP_TX_ON:
+	//.		db->ptp_onestep = false;
+			adb->ptp_on = 1;
+			dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
+			//gem_ptp_set_one_step_sync(bp, 0);
+			//lan743x_ptp_set_sync_ts_insert(adapter, false);
+			break;
+		case HWTSTAMP_TX_ONESTEP_P2P:
+			//ret = -ERANGE;
+			netif_warn(adb, drv, adb->ndev, "IOCtl - Now db->ptp_on %d, Error Range!\n", adb->ptp_on);
+			return -ERANGE;
+			//break;
+		default:
+			netif_warn(adb, drv, adb->ndev,
+				   "  tx_type = %d, UNKNOWN\n", config.tx_type);
+			return -EINVAL;
+			//ret = -EINVAL;
+			//break;
+	}
+
+	switch (config.rx_filter) {
+		case HWTSTAMP_FILTER_NONE:
+			break;
+		case HWTSTAMP_FILTER_PTP_V1_L4_SYNC:
+			break;
+		case HWTSTAMP_FILTER_PTP_V1_L4_DELAY_REQ:
+			break;
+		case HWTSTAMP_FILTER_PTP_V2_EVENT:
+		case HWTSTAMP_FILTER_PTP_V2_L2_EVENT:
+		case HWTSTAMP_FILTER_PTP_V2_L4_EVENT:
+		case HWTSTAMP_FILTER_PTP_V2_SYNC:
+		case HWTSTAMP_FILTER_PTP_V2_L2_SYNC:
+		case HWTSTAMP_FILTER_PTP_V2_L4_SYNC:
+		case HWTSTAMP_FILTER_PTP_V2_DELAY_REQ:
+		case HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ:
+		case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
+			//db->ptp_on = 1;
+			dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_PTP_V2_EVENT\n");
+			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
+			break;
+		case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
+		case HWTSTAMP_FILTER_ALL:
+			//db->ptp_on = 1;
+			dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_ALL\n");
+			config.rx_filter = HWTSTAMP_FILTER_ALL;
+			break;
+		default:
+			netif_warn(adb, drv, adb->ndev,
+					   "  rx_filter = %d, UNKNOWN\n", config.rx_filter);
+			config.rx_filter = HWTSTAMP_FILTER_NONE;
+			return -ERANGE;
+	}
+
+//	switch (config.tx_type) {
+//	case HWTSTAMP_TX_OFF:
+//		for (index = 0; index < LAN743X_MAX_TX_CHANNELS;
+//			index++)
+//			lan743x_tx_set_timestamping_mode(&adapter->tx[index],
+//							 false, false);
+//		lan743x_ptp_set_sync_ts_insert(adapter, false);
+//		break;
+//	case HWTSTAMP_TX_ON:
+//		for (index = 0; index < LAN743X_MAX_TX_CHANNELS;
+//			index++)
+//			lan743x_tx_set_timestamping_mode(&adapter->tx[index],
+//							 true, false);
+//		lan743x_ptp_set_sync_ts_insert(adapter, false);
+//		break;
+//	case HWTSTAMP_TX_ONESTEP_SYNC:
+//		for (index = 0; index < LAN743X_MAX_TX_CHANNELS;
+//			index++)
+//			lan743x_tx_set_timestamping_mode(&adapter->tx[index],
+//							 true, true);
+
+//		lan743x_ptp_set_sync_ts_insert(adapter, true);
+//		break;
+//	case HWTSTAMP_TX_ONESTEP_P2P:
+//		ret = -ERANGE;
+//		break;
+//	default:
+//		netif_warn(adapter, drv, adapter->netdev,
+//			   "  tx_type = %d, UNKNOWN\n", config.tx_type);
+//		ret = -EINVAL;
+//		break;
+//	}
+
+	if (!ret) {
+		/* copy to db tstamp_config */
+		memcpy(&adb->tstamp_config, &config,
+		       sizeof(adb->tstamp_config));
+
+		/* copy to user */
+		return copy_to_user(ifr->ifr_data, &config,
+			sizeof(config)) ? -EFAULT : 0;
+	}
+
+	return ret;
+}
+
+#if 0
+int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd)
+{
+	struct lan743x_adapter *adapter = netdev_priv(netdev);
+	struct hwtstamp_config config;
+	int ret = 0;
+	int index;
+
+	... }
+
+static int lan743x_netdev_ioctl(struct net_device *netdev,
+				struct ifreq *ifr, int cmd)
+{
+	if (!netif_running(netdev))
+		return -EINVAL;
+	if (cmd == SIOCSHWTSTAMP)
+		return lan743x_ptp_ioctl(netdev, ifr, cmd);
+	return phy_mii_ioctl(netdev->phydev, ifr, cmd);
+}
+#endif
 
 /* netdev_ops 
  * tell support ptp */
@@ -711,21 +879,32 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 {
 	//struct board_info *db = to_dm9051_board(ndev);
     //struct hwtstamp_config config;
+	if (!netif_running(ndev))
+		return -EINVAL;
 
 	switch(cmd) {
 		case SIOCGHWTSTAMP:
 			//printk("Process SIOCGHWTSTAMP\n");
 			//db->ptp_on = 1;
-			return dm9051_ptp_get_ts_config(ndev, rq);
+			//return dm9051_ptp_get_ts_config(ndev, rq);
+			return lan_ptp_get_ts_ioctl(ndev, rq);
 		case SIOCSHWTSTAMP:
 			//printk("Process SIOCSHWTSTAMP\n");
 			//db->ptp_on = 1;
-			return dm9051_ptp_set_ts_config(ndev, rq);
-		default:
-			printk("dm9051_netdev_ioctl cmd = 0x%X\n", cmd);
-			//db->ptp_on = 0;
+			//return dm9051_ptp_set_ts_config(ndev, rq);
+			return lan743x_ptp_ioctl(ndev, rq, cmd);
+		case SIOCBONDINFOQUERY:
+			printk("dm9051_netdev_ioctl SIOCBONDINFOQUERY = cmd 0x%X. NOT support\n", cmd);
 			return -EOPNOTSUPP;
+		default:
+			//printk("dm9051_netdev_ioctl cmd = 0x%X\n", cmd);
+			//db->ptp_on = 0;
+			//return -EOPNOTSUPP;
+			break;
 	}
+
+	printk("dm9051_netdev_ioctl phy_mii_ioctl, cmd = 0x%X\n", cmd);
+	return phy_mii_ioctl(ndev->phydev, rq, cmd); //'rq' is ifr
 }
 
 #if 1
@@ -1480,6 +1659,7 @@ int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 					     ptp_caps);
 	struct timespec64 ts;
 	int sign = 1;
+	int i;
 	//int err;
 	u8 temp[8];
 	
@@ -1518,7 +1698,7 @@ int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 	//printk("@@@3 ptp_dm8806_adjtime delta %llx  nsec=%lx  \n", delta, ts.tv_nsec);
 
 	if (sign == 0)	// delta less han zero
-    {
+	{
 		if (ts.tv_sec == 0) {
 			printk("adjtime - delta.tv_sec = 0\n");
 			ts.tv_sec++;
@@ -1543,7 +1723,7 @@ int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 	mutex_lock(&db->spi_lockm);
 
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);
-	for (int i=0; i<8; i++)
+	for (i=0; i<8; i++)
 	{
 		dm9051_set_reg(db, DM9051_1588_TS, temp[i] & 0xff);
 	}

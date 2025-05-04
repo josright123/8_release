@@ -43,27 +43,10 @@
 #endif
 
 #if 1
-	//enum
-	//{
-	//	MODE_POLL = 0,
-	//	MODE_INTERRUPT = 1,
-	//	MODE_INTERRUPT_CLKOUT = 2, /* need pi3/pi5 test and verify more */
-	//};
-
-//	#include <linux/module.h>
-//	#include <linux/netdevice.h>
-//	#include <linux/skbuff.h>
-//	#include <linux/ptp_classify.h>
-//	#include <linux/if_ether.h>
-//	#include <linux/ip.h>
-//	#include <linux/udp.h>
-
 	#ifdef DMPLUG_INT
 	  #ifdef DMPLUG_INT_CLKOUT
-	  //#define dmplug_interrupt MODE_INTERRUPT_CLKOUT
 	  #define dmplug_intterrpt_des "interrupt clkout mode"
 	  #else
-	  //#define dmplug_interrupt MODE_INTERRUPT
 	  #define dmplug_intterrpt_des "interrupt direct mode"
 	  #endif
 
@@ -73,7 +56,6 @@
 	  #define dmplug_intterrpt2 "interrupt direct step"
 	  #endif
 	#else
-	//#define dmplug_interrupt MODE_POLL
 	#define dmplug_intterrpt_des "poll mode"
 	#endif
 
@@ -139,11 +121,9 @@
 	struct driver_config
 	{
 		const char *release_version;
-		//.int interrupt;
 	};
 	const struct driver_config confdata = {
 		.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-		//.interrupt = dmplug_interrupt,
 	};
 	const struct eng_config engdata = {
 		.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
@@ -227,18 +207,24 @@
  */
 #ifdef MAIN_DATA
 #ifdef DMCONF_AARCH_64
-//#warning "dm9051 AARCH_64"
 #pragma message("dm9051 AARCH_64")
+//#warning "dm9051 AARCH_64"
 #else
-#warning "dm9051 AARCH_32"
+#pragma message("dm9051 AARCH_32")
+//#warning "dm9051 AARCH_32"
 #endif
 
 #ifdef DMCONF_DIV_HLPR_32
-#warning "dm9051 DIV_HLPR_32"
+#pragma message("dm9051 DIV_HLPR_32")
+//#warning "dm9051 DIV_HLPR_32"
 #endif
 
 #ifdef DMPLUG_CONTI
 #warning "dm9051 CONTI"
+#endif
+
+#ifdef DMPLUG_CRYPT
+#warning "dm9051 CRYPT"
 #endif
 
 #ifdef DMPLUG_PTP
