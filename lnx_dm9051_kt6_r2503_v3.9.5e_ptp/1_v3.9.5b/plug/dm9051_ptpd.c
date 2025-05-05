@@ -743,20 +743,22 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 
 	switch (config.tx_type) {
 		case HWTSTAMP_TX_OFF:
-			dev_info(&adb->spidev->dev, "IOCtl - Now db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
+			dev_info(&adb->spidev->dev, "IOCtl - Now db->ptp_on %d, _ptp_set_sync_ts_insert(x, false), x.has HWTSTAMP_TX_OFF\n", adb->ptp_on);
 			//lan743x_ptp_set_sync_ts_insert(adapter, false);
 			break;
 		case HWTSTAMP_TX_ONESTEP_SYNC:
 	//.		db->ptp_onestep = true;
 			adb->ptp_on = 1;
-			dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", adb->ptp_on);
+			//dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", adb->ptp_on);
+			printk("IOCtl: Set db->ptp_on %d, _ptp_set_sync_ts_insert(x, true), Master.has HWTSTAMP_TX_ONESTEP_SYNC\n", adb->ptp_on);
 			//gem_ptp_set_one_step_sync(bp, 1);
 			//lan743x_ptp_set_sync_ts_insert(adapter, true);
 			break;
 		case HWTSTAMP_TX_ON:
 	//.		db->ptp_onestep = false;
 			adb->ptp_on = 1;
-			dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
+			//dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
+			printk("IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(x, false), Slave.has HWTSTAMP_TX_ON\n", adb->ptp_on);
 			//gem_ptp_set_one_step_sync(bp, 0);
 			//lan743x_ptp_set_sync_ts_insert(adapter, false);
 			break;
@@ -789,8 +791,8 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 		case HWTSTAMP_FILTER_PTP_V2_DELAY_REQ:
 		case HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ:
 		case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
-			//db->ptp_on = 1;
-			dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_PTP_V2_EVENT\n");
+			//dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_PTP_V2_EVENT\n"); //~ db->ptp_on = 1;
+			printk("config->rx_filter: to be, Master/Slave HWTSTAMP_FILTER_PTP_V2_EVENT\n");
 			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
 			break;
 		case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
