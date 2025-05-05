@@ -746,7 +746,7 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 
 	switch (config.tx_type) {
 		case HWTSTAMP_TX_OFF:
-			dev_info(&adb->spidev->dev, "IOCtl - Now db->ptp_on %d, _ptp_set_sync_ts_insert(x, false), x.has HWTSTAMP_TX_OFF\n", adb->ptp_on);
+			printk("IOCtl: now db->ptp_on= %d, _ptp_set_sync_ts_insert(x, false), M/S.has HWTSTAMP_TX_OFF\n", adb->ptp_on);
 			//lan743x_ptp_set_sync_ts_insert(adapter, false);
 			break;
 		case HWTSTAMP_TX_ONESTEP_SYNC:
@@ -761,7 +761,7 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 	//.		db->ptp_onestep = false;
 			adb->ptp_on = 1;
 			//dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
-			printk("IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(x, false), Slave.has HWTSTAMP_TX_ON\n", adb->ptp_on);
+			printk("IOCtl: Set db->ptp_on %d, _ptp_set_sync_ts_insert(x, false), Slave.has HWTSTAMP_TX_ON\n", adb->ptp_on);
 			//gem_ptp_set_one_step_sync(bp, 0);
 			//lan743x_ptp_set_sync_ts_insert(adapter, false);
 			break;
