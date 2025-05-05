@@ -2160,6 +2160,13 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 		db->ptp_step == 2) ||
 		is_ptp_delayreq_packet(message_type)) { //_15888_,
 
+		/* Poll for TX completion */
+		ret = dm9051_nsr_poll(db);
+		if (ret) {
+			netdev_err(ndev, "ptp TX hwtstamp completion polling timeout\n");
+			//.return ret; //.only can be less hurt
+		}
+
 		dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 	}
 	#endif
