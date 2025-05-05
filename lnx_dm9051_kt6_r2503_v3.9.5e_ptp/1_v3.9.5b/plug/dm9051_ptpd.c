@@ -721,6 +721,9 @@ static int lan_ptp_get_ts_ioctl(struct net_device *netdev, struct ifreq *ifr)
 
 static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd)
 {
+	static int show_rx_filter_v2_event = 1;
+	static int show_rx_filter_filter_all_event = 1;
+	static int show_rx_filter_unknow_event = 1;
 	struct board_info *adb = netdev_priv(netdev);
 	struct hwtstamp_config config;
 	int ret = 0;
@@ -792,18 +795,27 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 		case HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ:
 		case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
 			//dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_PTP_V2_EVENT\n"); //~ db->ptp_on = 1;
-			printk("config->rx_filter: to be, Master/Slave HWTSTAMP_FILTER_PTP_V2_EVENT\n");
+			if (show_rx_filter_v2_event) {
+				show_rx_filter_v2_event--;
+				printk("config->rx_filter: to be, Master/Slave HWTSTAMP_FILTER_PTP_V2_EVENT\n");
+			}
 			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
 			break;
 		case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
 		case HWTSTAMP_FILTER_ALL:
 			//db->ptp_on = 1;
-			dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_ALL\n");
+			if (show_rx_filter_filter_all_event) {
+				show_rx_filter_filter_all_event--;
+				dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_ALL\n");
+			}
 			config.rx_filter = HWTSTAMP_FILTER_ALL;
 			break;
 		default:
-			netif_warn(adb, drv, adb->ndev,
+			if (show_rx_filter_unknow_event) {
+				show_rx_filter_unknow_event--;
+				netif_warn(adb, drv, adb->ndev,
 					   "  rx_filter = %d, UNKNOWN\n", config.rx_filter);
+			}
 			config.rx_filter = HWTSTAMP_FILTER_NONE;
 			return -ERANGE;
 	}
