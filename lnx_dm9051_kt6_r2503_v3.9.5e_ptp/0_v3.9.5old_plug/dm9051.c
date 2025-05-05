@@ -26,7 +26,7 @@
 #include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
 #include "dm9051_plug.h"
-//#include "dm9051_ptpd.h"
+//#include "plug/dm9051_ptpd.h"
 
 const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configuration */
 
@@ -2158,10 +2158,8 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	#ifdef DMPLUG_PTP
 	if ((is_ptp_sync_packet(message_type) &&
 		db->ptp_step == 2) ||
-		is_ptp_delayreq_packet(message_type)) { //_15888_,
-
+		is_ptp_delayreq_packet(message_type)) //_15888_,
 		dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
-	}
 	#endif
 	#endif
 

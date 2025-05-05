@@ -268,7 +268,7 @@ struct eng_config {
 /* 0.1 ptpc */
 #if 1 //0
 #ifdef DMPLUG_PTP
-#include "dm9051_ptpd.h"
+#include "plug/dm9051_ptpd.h"
 #endif
 #endif
 

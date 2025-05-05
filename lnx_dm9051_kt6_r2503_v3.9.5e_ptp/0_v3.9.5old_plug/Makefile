@@ -14,7 +14,7 @@ obj-m	:=	dm9051a.o
 #dm9051a-objs := dm9051.o dm9051_open.o ((dm9051_conti.o)) (dm9051_ptpd.o) (dm9051_crypt.o)
 #dm9051a-objs := dm9051.o dm9051_open.o dm9051_ptpd.o
 #dm9051a-objs := dm9051.o
-dm9051a-objs := dm9051.o dm9051_ptpd.o
+dm9051a-objs := dm9051.o plug/dm9051_ptpd.o
 # dm9051_open.o
 # dm9051_ptpd.o
 # dm9051_conti.o
@@ -39,7 +39,7 @@ save:
 	cp dm9051a.ko dm9051a_has_tested.ko
 
 clean:
-	rm -rf *.o plug/*.o .*.cmd plug/.*.cmd *~ core .depend *.mod.c .tmp_versions .*.o.d *.symvers *.order *.bak *.mod
+	rm -rf *.o *~ core .depend .*.cmd *.mod.c .tmp_versions .*.o.d *.symvers *.order *.bak *.mod
 
 ins install :
 	sudo insmod dm9051a.ko
