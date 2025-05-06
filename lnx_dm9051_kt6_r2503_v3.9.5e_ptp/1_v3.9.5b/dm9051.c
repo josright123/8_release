@@ -2167,18 +2167,20 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	/* 6.1 tx ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	if ((is_ptp_sync_packet(message_type) &&
-		db->ptp_step == 2) ||
-		is_ptp_delayreq_packet(message_type)) { //_15888_,
+	if (db->ptp_step) {
+		if ((is_ptp_sync_packet(message_type) &&
+			db->ptp_step == PTP_TWO_STEP) ||
+			is_ptp_delayreq_packet(message_type)) { //_15888_,
 
-		/* Poll for TX completion */
-		ret = dm9051_nsr_poll(db);
-		if (ret) {
-			netdev_err(db->ndev, "ptp TX hwtstamp completion polling timeout\n");
-			//.return ret; //.only can be less hurt
+			/* Poll for TX completion */
+			ret = dm9051_nsr_poll(db);
+			if (ret) {
+				netdev_err(db->ndev, "ptp TX hwtstamp completion polling timeout\n");
+				//.return ret; //.only can be less hurt
+			}
+
+			dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 		}
-
-		dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 	}
 	#endif
 	#endif
