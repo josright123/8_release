@@ -976,7 +976,7 @@ int is_ptp_delayreq_packet(u8 msgtype)
 	return (msgtype == PTP_MSGTYPE_DELAY_REQ) ? 1 : 0;
 }
 
-u8 dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
+void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 {
 	u8 message_type = get_ptp_message_type005(skb); //for tx send
 
@@ -994,7 +994,27 @@ u8 dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 			db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
 		//}
 	//}
-	return message_type;
+	//return message_type;
+}
+
+void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
+{
+//	if ((is_ptp_sync_packet(message_type) &&
+//		db->ptp_step == 2) ||
+//		is_ptp_delayreq_packet(message_type)) { //_15888_,
+	if (db->tcr_wr & TCR_TS_EN) {
+		int ret;
+
+		/* Poll for TX completion */
+		ret = dm9051_nsr_poll(db);
+		if (ret) {
+			netdev_err(db->ndev, "ptp TX hwtstamp completion polling timeout\n");
+			//.return ret; //.only can be less hurt
+		}
+
+		dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
+	}
+//	}
 }
 #endif
 

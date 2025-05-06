@@ -2111,11 +2111,12 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	/* 6 tx ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	u8 message_type = dm9051_ptp_txreq(db, skb);
+	//u8 message_type = 
+	dm9051_ptp_txreq(db, skb);
 	#endif
 	#endif
 
-#ifdef DMPLUG_CONTI
+	#ifdef DMPLUG_CONTI
 	//.if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
 	//.{ //as below:
 	//.}
@@ -2126,7 +2127,7 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 
 		ret = dm9051_req_tx(db);
 	} while(0);
-#else
+	#else
 		/*
 		 * if (!dm9051_modedata->skb_wb_mode) {
 		 *   ret = WRITE_SKB(db, skb, skb->len);
@@ -2154,7 +2155,7 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 
 		ret = dm9051_req_tx(db);
 	} while(0);
-#endif
+	#endif
 
 	if (ret)
 		db->bc.tx_err_counter++;
@@ -2167,19 +2168,7 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	/* 6.1 tx ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	if ((is_ptp_sync_packet(message_type) &&
-		db->ptp_step == 2) ||
-		is_ptp_delayreq_packet(message_type)) { //_15888_,
-
-		/* Poll for TX completion */
-		ret = dm9051_nsr_poll(db);
-		if (ret) {
-			netdev_err(db->ndev, "ptp TX hwtstamp completion polling timeout\n");
-			//.return ret; //.only can be less hurt
-		}
-
-		dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
-	}
+	dm9051_ptp_txreq_hwtstamp(db, skb);
 	#endif
 	#endif
 

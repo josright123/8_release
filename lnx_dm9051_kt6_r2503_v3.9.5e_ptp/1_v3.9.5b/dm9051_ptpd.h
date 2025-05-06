@@ -114,7 +114,8 @@ u8 get_ptp_message_type005(struct sk_buff *skb);
 int is_ptp_packet(const u8 *packet);
 
 //u8 dm9051_ptp_frame(struct board_info *db, struct sk_buff *skb);
-u8 dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 
 int is_ptp_sync_packet(u8 msgtype);
 int is_ptp_delayreq_packet(u8 msgtype);
@@ -122,7 +123,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
 //enum ptp_sync_type dm9051_ptp_one_step(struct sk_buff *skb, struct board_info *db); //old
 //enum ptp_sync_type dm9051_ptp_one_step001(struct sk_buff *skb, struct board_info *db);
 //int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db);
-unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db);
+//unsigned int dm9051_tcr_wr(struct sk_buff *skb, struct board_info *db);
 
 int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte);
 //static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb);
