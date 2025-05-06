@@ -25,6 +25,14 @@
 #define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
 #endif
 
+#include <asm/bitsperlong.h>
+#if BITS_PER_LONG == 64
+    // 64-bit system
+	#define DMCONF_AARCH_64 //(64-bit OS)
+#else
+    // 32-bit system
+#endif
+
 #define PLUG_CFG64
 #ifdef PLUG_CFG64
 #define DMCONF_AARCH_64 //(64-bit OS)

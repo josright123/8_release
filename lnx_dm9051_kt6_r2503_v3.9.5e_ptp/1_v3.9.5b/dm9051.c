@@ -2032,7 +2032,11 @@ static int dm9051_loop_rx(struct board_info *db)
 		/* 7.2 ptpc */
 		#if 1 //0
 		#ifdef DMPLUG_PTP
-		//So when NOT T1/T4, we can skip tell an empty (virtual) tstamp
+		if (db->rxhdr.status & RSR_RXTS_EN) {
+			//if T1/T4,
+		}
+
+		//So when NOT T1/T4, we can skip tell tstamp (just an empty (virtual) one)
 		//if (db->rxhdr.status & RSR_RXTS_EN) {	// Is it inserted Timestamp?
 			dm9051_ptp_rx_hwtstamp(db, skb, db->rxTSbyte); //_15888_, 
 			/* following, with netif_rx(skb),
