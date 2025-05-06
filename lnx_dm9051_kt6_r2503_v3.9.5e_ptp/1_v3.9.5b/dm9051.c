@@ -2103,18 +2103,9 @@ static int dm9051_req_tx(struct board_info *db)
 }
 #endif
 
-static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
+static int TX_SEND(struct board_info *db, struct sk_buff *skb)
 {
-	unsigned int data_len = skb->len;
 	int ret;
-
-	/* 6 tx ptpc */
-	#if 1 //0
-	#ifdef DMPLUG_PTP
-	//u8 message_type = 
-	dm9051_ptp_txreq(db, skb);
-	#endif
-	#endif
 
 	#ifdef DMPLUG_CONTI
 	//.if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
@@ -2128,20 +2119,21 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 		ret = dm9051_req_tx(db);
 	} while(0);
 	#else
-		/*
-		 * if (!dm9051_modedata->skb_wb_mode) {
-		 *   ret = WRITE_SKB(db, skb, skb->len);
-		 *   ret = dm9051_single_tx(db, skb->len);
-		 * }
-		 * else {
-		 *   pad = ...
-		 *   skb = EXPAND_SKB(skb, pad);
-		 *   ret = WRITE_SKB(db, skb, EXPEND_LEN(data_len, pad);
-		 *   ret = dm9051_single_tx(db, skb, data_len, pad);
-		 * }
-		 * ret = dm9051_req_tx(db);
-		 */
+	/*
+	 * if (!dm9051_modedata->skb_wb_mode) {
+	 *   ret = WRITE_SKB(db, skb, skb->len);
+	 *   ret = dm9051_single_tx(db, skb->len);
+	 * }
+	 * else {
+	 *   pad = ...
+	 *   skb = EXPAND_SKB(skb, pad);
+	 *   ret = WRITE_SKB(db, skb, EXPEND_LEN(data_len, pad);
+	 *   ret = dm9051_single_tx(db, skb, data_len, pad);
+	 * }
+	 * ret = dm9051_req_tx(db);
+	 */
 	do {
+		unsigned int data_len = skb->len;
 		unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
 
 		#ifdef DM9051_SKB_PROTECT
@@ -2161,9 +2153,26 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 		db->bc.tx_err_counter++;
 	else {
 		struct net_device *ndev = db->ndev;
-		ndev->stats.tx_bytes += data_len;
+		ndev->stats.tx_bytes += skb->len;
 		ndev->stats.tx_packets++;
 	}
+
+	return ret;
+}
+
+static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
+{
+	int ret;
+
+	/* 6 tx ptpc */
+	#if 1 //0
+	#ifdef DMPLUG_PTP
+	//u8 message_type = 
+	dm9051_ptp_txreq(db, skb);
+	#endif
+	#endif
+
+	ret = TX_SEND(db, skb);
 
 	/* 6.1 tx ptpc */
 	#if 1 //0
