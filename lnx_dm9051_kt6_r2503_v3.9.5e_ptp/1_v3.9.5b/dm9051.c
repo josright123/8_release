@@ -2101,24 +2101,11 @@ static int dm9051_req_tx(struct board_info *db)
 {
 	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
 }
-#endif
 
 static int TX_SEND(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 
-	#ifdef DMPLUG_CONTI
-	//.if (!DM9051_TX_CONTI()) //TX_CONTI will place into dm9051_plug.c (then eliminate dm9051_open.c)
-	//.{ //as below:
-	//.}
-	do {
-		ret = TX_OPS_CONTI(db, skb); //skb->data, data_len); //'double_wb'
-		if (ret)
-			break;
-
-		ret = dm9051_req_tx(db);
-	} while(0);
-	#else
 	/*
 	 * if (!dm9051_modedata->skb_wb_mode) {
 	 *   ret = WRITE_SKB(db, skb, skb->len);
@@ -2147,11 +2134,8 @@ static int TX_SEND(struct board_info *db, struct sk_buff *skb)
 
 		ret = dm9051_req_tx(db);
 	} while(0);
-	#endif
 
-	if (ret)
-		db->bc.tx_err_counter++;
-	else {
+	if (!ret) {
 		struct net_device *ndev = db->ndev;
 		ndev->stats.tx_bytes += skb->len;
 		ndev->stats.tx_packets++;
@@ -2159,6 +2143,7 @@ static int TX_SEND(struct board_info *db, struct sk_buff *skb)
 
 	return ret;
 }
+#endif
 
 static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 {
@@ -2172,7 +2157,14 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	#endif
 	#endif
 
+	#ifdef DMPLUG_CONTI
+	ret = TX_SEND_CONTI(db, skb);
+	#else
 	ret = TX_SEND(db, skb);
+	#endif
+
+	if (ret)
+		db->bc.tx_err_counter++;
 
 	/* 6.1 tx ptpc */
 	#if 1 //0

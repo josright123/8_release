@@ -120,6 +120,27 @@ int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb)
 
 	return ret;
 }
+
+int TX_SEND_CONTI(struct board_info *db, struct sk_buff *skb)
+{
+	int ret;
+
+	do {
+		ret = TX_OPS_CONTI(db, skb); //skb->data, data_len); //'double_wb'
+		if (ret)
+			break;
+
+		ret = dm9051_req_tx(db);
+	} while(0);
+
+	if (!ret) {
+		struct net_device *ndev = db->ndev;
+		ndev->stats.tx_bytes += skb->len;
+		ndev->stats.tx_packets++;
+	}
+
+	return ret;
+}
 #endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, Plug-in"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
