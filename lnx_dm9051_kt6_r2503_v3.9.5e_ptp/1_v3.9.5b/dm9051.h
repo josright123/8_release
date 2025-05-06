@@ -492,6 +492,18 @@ struct mod_config
 //SPI_SYNC_BURST_MODE = 1,
 //SPI_SYNC_MISC_MODE = 2,
 //MODE_NUM = 3
+enum
+{
+	SKB_WB_OFF = 0,
+	SKB_WB_ON = 1, //'wb'
+};
+
+enum
+{
+	BURST_MODE_ALIGN = 0,
+	BURST_MODE_FULL = 1,
+};
+
 const struct mod_config driver_align_mode = {
 	.test_info = "Test in rpi5 bcm2712",
 	.skb_wb_mode = SKB_WB_ON, //SKB_WB_OFF, //SKB_WB_ON,

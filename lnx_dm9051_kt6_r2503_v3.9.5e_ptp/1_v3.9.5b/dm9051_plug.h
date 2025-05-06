@@ -25,22 +25,11 @@
 #endif
 
 #if 1
+	#ifdef MAIN_DATA
 	/*
 	 * MAIN Data: 
 	 */
-	enum
-	{
-		SKB_WB_OFF = 0,
-		SKB_WB_ON = 1, //'wb'
-	};
 
-	enum
-	{
-		BURST_MODE_ALIGN = 0,
-		BURST_MODE_FULL = 1,
-	};
-
-	#ifdef MAIN_DATA
 	struct driver_config
 	{
 		const char *release_version;
@@ -59,10 +48,6 @@
 	};
 	const struct eng_config *econf = &engdata;
 	const struct eng_sched csched = engdata.sched;
-	#else
-	extern const struct eng_config engdata;
-	extern const struct eng_config *econf;
-	extern const struct eng_sched csched;
 	#endif
 
 #if 0
