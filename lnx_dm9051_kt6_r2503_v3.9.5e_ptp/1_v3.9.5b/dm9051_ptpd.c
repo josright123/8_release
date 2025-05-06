@@ -791,7 +791,7 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 		case HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ:
 		case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
 			//dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_PTP_V2_EVENT\n"); //~ db->ptp_on = 1;
-			printk("config->rx_filter: to be, Master.Has HWTSTAMP_FILTER_PTP_V2_EVENT\n");
+			printk("config->rx_filter: Master.Slave.Has, to be HWTSTAMP_FILTER_PTP_V2_EVENT\n");
 			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
 			break;
 		case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:

@@ -223,7 +223,7 @@ int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 	else
 	{
 		const u8 *p = (const u8 *)buff;
-		size_t BLKTX = dm9051_modedata->align.tx_blk;
+		u32 BLKTX = dm9051_modedata->align.tx_blk;
 		while (len >= BLKTX)
 		{
 			ret = regmap_noinc_write(db->regmap_dm, reg, p, BLKTX);
@@ -289,7 +289,7 @@ int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 	{
 		u8 *p = buff;
 		unsigned int rb;
-		size_t BLKRX = dm9051_modedata->align.rx_blk;
+		u32 BLKRX = dm9051_modedata->align.rx_blk;
 		while (len >= BLKRX)
 		{
 			ret = regmap_noinc_read(db->regmap_dm, reg, p, BLKRX);
@@ -2167,7 +2167,7 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 		/* Poll for TX completion */
 		ret = dm9051_nsr_poll(db);
 		if (ret) {
-			netdev_err(ndev, "ptp TX hwtstamp completion polling timeout\n");
+			netdev_err(db->ndev, "ptp TX hwtstamp completion polling timeout\n");
 			//.return ret; //.only can be less hurt
 		}
 

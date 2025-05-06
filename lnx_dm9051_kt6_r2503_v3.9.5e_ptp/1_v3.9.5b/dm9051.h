@@ -13,30 +13,22 @@
 
 /* Macro domain
  */
-/*#define DMCONF_DIV_HLPR_32 */	//(32-bit division helper, __aeabi_ldivmod())
-/*#define DMCONF_AARCH_64 */ //(64-bit OS)
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
 /*#define DMCONF_MRR_WR */ //(mrr-work around)
 
 /* Macro for already known platforms
- */ 
+ */
+/*#define DMCONF_DIV_HLPR_32 */	//(32-bit division helper, __aeabi_ldivmod()) 
 //#define PLUG_CFG_HLPR
-#ifdef PLUG_CFG_HLPR
+//#ifdef PLUG_CFG_HLPR
 #define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
-#endif
+//#endif
 
-#include <asm/bitsperlong.h>
-#if BITS_PER_LONG == 64
-    // 64-bit system
-	#define DMCONF_AARCH_64 //(64-bit OS)
-#else
-    // 32-bit system
-#endif
-
-#define PLUG_CFG64
-#ifdef PLUG_CFG64
-#define DMCONF_AARCH_64 //(64-bit OS)
-#endif
+/*#define DMCONF_AARCH_64 */ //(64-bit OS)
+//#define PLUG_CFG64
+//#ifdef PLUG_CFG64
+//#define DMCONF_AARCH_64 //(64-bit OS)
+//#endif
 
 #define PLUG_BMCR
 #ifdef PLUG_BMCR
@@ -469,8 +461,8 @@ struct mod_config
 	{
 		char *burst_mode_info;
 		int burst_mode;
-		size_t tx_blk;
-		size_t rx_blk;
+		u32 tx_blk;
+		u32 rx_blk;
 	} align;
 };
 
