@@ -13,6 +13,9 @@
 
 /* Macro domain
  */
+/*#define DMPLUG_INT */ //(INT39)
+/*#define INT_CLKOUT */ //(INT39 ClkOut)
+/*#define INT_TWO_STEP */ //(INT39 two_step)
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
 /*#define DMCONF_MRR_WR */ //(mrr-work around)
 
@@ -29,6 +32,20 @@
 //#ifdef PLUG_CFG64
 //#define DMCONF_AARCH_64 //(64-bit OS)
 //#endif
+
+#define PLUG_ENABLE_INT
+#ifdef PLUG_ENABLE_INT
+#define DMPLUG_INT //(INT39)
+
+  //#define PLUG_INT_CLKOUT
+  //#define PLUG_INT_2STEP
+  #ifdef PLUG_INT_CLKOUT
+  #define INT_CLKOUT //(INT39_CLKOUT)
+  #endif
+  #ifdef PLUG_INT_2STEP
+  #define INT_TWO_STEP //(INT39_TWO_STEP)
+  #endif
+#endif
 
 #define PLUG_BMCR
 #ifdef PLUG_BMCR
@@ -500,6 +517,19 @@ const struct mod_config driver_misc_mode = {
 		.burst_mode = BURST_MODE_FULL,
 		.tx_blk = 0, .rx_blk = 0},
 };
+
+/* INT and INT two_step */
+#ifdef DMPLUG_INT
+//#warning "dm9051 INT"
+#pragma message("dm9051 INT")
+#ifdef INT_CLKOUT
+#warning "INT: INT_CLKOUT"
+#endif
+#ifdef INT_TWO_STEP
+#warning "INT: TWO_STEP"
+#endif
+#endif
+
 #else
 //.
 #endif

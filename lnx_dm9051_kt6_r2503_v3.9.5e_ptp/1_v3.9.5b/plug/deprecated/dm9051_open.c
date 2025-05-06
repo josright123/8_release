@@ -198,12 +198,12 @@ void dm9051_dump_registers(struct board_info *db)
 //	#ifdef DMPLUG_INT
 //		unsigned int intdata[2];
 //		of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-//		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt_des);
+//		dev_info(&spi->dev, "Davicom: %s", dmplug_rx_mach);
 //		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt2);
 //		dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
 //		dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
 //	#else
-//		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt_des);
+//		dev_info(&spi->dev, "Davicom: %s", dmplug_rx_mach);
 //	#endif
 //}
 

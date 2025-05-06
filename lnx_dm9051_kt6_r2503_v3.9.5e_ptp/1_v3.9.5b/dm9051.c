@@ -70,17 +70,59 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
+#ifdef DMPLUG_INT
+  #ifdef INT_CLKOUT
+  #define dmplug_rx_mach "interrupt clkout mode"
+  #else
+  #define dmplug_rx_mach "interrupt direct mode"
+  #endif
+
+  #ifdef INT_TWO_STEP
+  #define dmplug_intterrpt2 "interrupt two step"
+  #else
+  #define dmplug_intterrpt2 "interrupt direct step"
+  #endif
+#else
+#define dmplug_rx_mach "poll mode"
+#endif
+
+/* Log definitions */
+#ifdef DMPLUG_CONTI
+#define dmplug_tx "continue"
+#else
+#define dmplug_tx "normal"
+#endif
+
+/* log */
+#define DEV_INFO_TX_ALIGN(dev) \
+		dev_info(dev, "TX: %s blk %u\n", \
+			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk)
+#define DEV_INFO_RX_ALIGN(dev) \
+		dev_info(dev, "RX: %s blk %u\n", \
+			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk)
+#define PRINT_ALIGN_INFO(n) \
+		printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
+			dmplug_tx, \
+			dm9051_modedata->align.rx_blk, \
+			dm9051_modedata->align.tx_blk, \
+			n)
+#define PRINT_REGMAP_BLK_ERR(pstr, ret, reg, BLKLEN) \
+		netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
+			__func__, ret, pstr, reg, BLKLEN)
+
 void SHOW_MODE(struct spi_device *spi)
 {
+	dev_info(&spi->dev, "Davicom: %s", dmplug_rx_mach);
+		dev_info(&spi->dev, "Davicom: %s", dmplug_rx_mach);
+
 	#ifdef DMPLUG_INT
+	do {
 		unsigned int intdata[2];
 		of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt_des);
 		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt2);
 		dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
 		dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
-	#else
-		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt_des);
+	} while(0);
 	#endif
 }
 
@@ -1146,7 +1188,7 @@ static int dm9051_core_init(struct board_info *db)
 	/* Diagnostic contribute: In dm9051_enable_interrupt()
 	 * (or located in the core reset subroutine is better!!)
 	 */
-	#if defined(DMPLUG_INT_CLKOUT)
+	#if defined(INT_CLKOUT)
 		printk("_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		if (ret)
@@ -2490,7 +2532,7 @@ static int dm9051_open(struct net_device *ndev)
 	
 	printk("\n");
 	netdev_info(db->phydev->attached_dev, "dm9051_open\n");
-	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_intterrpt_des);
+	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_rx_mach);
 	#ifdef DMPLUG_INT
 	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_intterrpt2);
 	#endif
