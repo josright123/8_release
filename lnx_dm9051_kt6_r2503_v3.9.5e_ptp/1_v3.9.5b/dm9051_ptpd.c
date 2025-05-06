@@ -978,23 +978,25 @@ int is_ptp_delayreq_packet(u8 msgtype)
 
 void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 {
-	u8 message_type = get_ptp_message_type005(skb); //for tx send
-
- db->ptp_step = dm9051_ptp_step(db, skb);
 	db->tcr_wr = TCR_TXREQ; // TCR register value
-	//if (dm9051_ptp_frame(db, skb)) {
-		//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-		if (is_ptp_sync_packet(message_type)) {
-			if (db->ptp_step == 2) {
-				db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
-			} else {
-				db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
-			}
-		} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
-			db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
+	db->ptp_step = dm9051_ptp_step(db, skb);
+	if (db->ptp_step) {
+		u8 message_type = get_ptp_message_type005(skb); //for tx send
+
+		//if (dm9051_ptp_frame(db, skb)) {
+			//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+			if (is_ptp_sync_packet(message_type)) {
+				if (db->ptp_step == 2) {
+					db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
+				} else {
+					db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
+				}
+			} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
+				db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
+			//}
 		//}
-	//}
-	//return message_type;
+		//return message_type;
+	}
 }
 
 void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
