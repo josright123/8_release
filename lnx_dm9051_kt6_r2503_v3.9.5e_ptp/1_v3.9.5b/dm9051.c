@@ -1543,13 +1543,20 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	data[6] = db->bc.fifo_rst_counter - 1; // Subtract Initial reset
 	
 	/* ethtool -S eth1, this is the extra dump parts */
+#if MI_FIX //ee read
+	mutex_lock(&db->spi_lockm);
+#endif
+	printk("rx_psckets: %llu\n", data[0]);
 	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump rcr/rcr registers:");
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump rcr registers:");
 	dm9051_dump_reg2s(db, DM9051_RCR, DM9051_RCR);
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump wdr registers:");
 	dm9051_dump_reg2s(db, 0x24, 0x25);
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump mrr registers:");
 	dm9051_dump_reg2s(db, DM9051_MRRL, DM9051_MRRH);
+#if MI_FIX //ee write
+	mutex_unlock(&db->spi_lockm);
+#endif
 }
 
 static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_ops dm9051_ptpd_ethtool_ops

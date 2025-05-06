@@ -113,7 +113,7 @@ u8 get_ptp_message_type005(struct sk_buff *skb);
 #define PTP_GENERAL_PORT 320    // UDP ?????
 int is_ptp_packet(const u8 *packet);
 
-u8 dm9051_ptp_frame(struct board_info *db, struct sk_buff *skb);
+//u8 dm9051_ptp_frame(struct board_info *db, struct sk_buff *skb);
 u8 dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
 
 int is_ptp_sync_packet(u8 msgtype);

@@ -408,7 +408,7 @@ struct board_info
 	int			ptp_on; //_15888_
 
 	u8			ptp_step; //dividual
-	u8			ptp_packet; //dividual
+	u8			_ptp_rsrv; //ptp_packet; //dividual
 
 	struct hwtstamp_config	tstamp_config;
 	s64			pre_rate;
