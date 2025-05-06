@@ -42,6 +42,16 @@
 
 #warning "DMPLUG: dm9051 plug-in encrypt bus work"
 
+/*
+ * Encrypt Protection Driver version: 
+ */
+
+#define	FORCE_BUS_ENCPT_OFF		0
+#define	FORCE_BUS_ENCPT_CUST_ON		1
+
+#define ENCPT_MODE                      FORCE_BUS_ENCPT_CUST_ON
+#define FORCE_BUS_ENCPT_FIX_KEY		0x95 //for fix selected
+
 #define DM9051_BUS_WORK(exp, yhndlr) 	\
 	do                                  \
 	{                                   \

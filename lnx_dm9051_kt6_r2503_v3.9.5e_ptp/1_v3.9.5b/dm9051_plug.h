@@ -65,18 +65,12 @@
 	extern const struct eng_sched csched;
 	#endif
 
+#if 0
 	/*
 	 * SPI sync: 
 	 */
 
 	int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb); //used in the plug section
-	int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
-	int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
-							   size_t len);
-
-	void SHOW_MODE(struct spi_device *spi);
-	int DM9051_OPEN_REQUEST(struct board_info *db);
-
 	/*
 	 * Polling: 
 	 */
@@ -97,33 +91,7 @@
 	void INIT_RX_INT2_DELAY_SETUP(struct board_info *db);
 	int INIT_REQUEST_IRQ(struct net_device *ndev);
 	void END_FREE_IRQ(struct net_device *ndev);
-
-	/*
-	 * Conti: 
-	 */
-
-	int TX_SET_CONTI(struct board_info *db);
-	int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb); //, u8 *buff, unsigned int len);
-	int TX_SEND_CONTI(struct board_info *db, struct sk_buff *skb);
-
-	/*
-	 * Encrypt Protection Driver version: 
-	 */
-
-	#define	FORCE_BUS_ENCPT_OFF		0
-	#define	FORCE_BUS_ENCPT_CUST_ON		1
-
-	#define ENCPT_MODE                      FORCE_BUS_ENCPT_OFF
-	#define FORCE_BUS_ENCPT_FIX_KEY		0x95 //for fix selected     
-
-	//inline
-	#ifdef DMPLUG_CRYPT
-	int BUS_SETUP(struct board_info *db);
-	void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
-	#else
-	#define BUS_SETUP(db)	0		//empty(NoError)
-	#define BUS_OPS(db, buff, crlen)	//empty
-	#endif
+#endif
 #endif
 
 /*
@@ -155,6 +123,24 @@
 #pragma message("dm9051 PTP")
 //#warning "dm9051 PTP"
 #endif
+#endif
+
+//inline
+#ifdef DMPLUG_CRYPT
+int BUS_SETUP(struct board_info *db);
+void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
+#else
+#define BUS_SETUP(db)	0		//empty(NoError)
+#define BUS_OPS(db, buff, crlen)	//empty
+#endif
+
+/*
+ * Conti: 
+ */
+#ifdef DMPLUG_CONTI
+int TX_SET_CONTI(struct board_info *db);
+int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb); //, u8 *buff, unsigned int len);
+int TX_SEND_CONTI(struct board_info *db, struct sk_buff *skb);
 #endif
 
 #endif //_DM9051_PLUG_H_
