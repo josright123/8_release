@@ -2066,8 +2066,6 @@ static int dm9051_loop_rx(struct board_info *db)
 }
 
 #ifndef DMPLUG_CONTI
-#define EXPEND_LEN(datlen,pd)	(datlen + pd)
-#define WRITE_SKB(db,p,len)		dm9051_write_mem_cache(db,p,len)
 #ifdef DM9051_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 {	
@@ -2090,7 +2088,7 @@ static int dm9051_single_tx(struct board_info *db, u8 *p, unsigned int data_len,
 	if (ret)
 		return ret;
 
-	ret = WRITE_SKB(db, p, EXPEND_LEN(data_len, pad)); //'!wb'
+	ret = dm9051_write_mem_cache(db, p, data_len + pad); //'!wb'
 	if (ret)
 		return ret;
 
@@ -2107,6 +2105,8 @@ static int TX_SEND(struct board_info *db, struct sk_buff *skb)
 	int ret;
 
 	/*
+	 * #define EXPEND_LEN(datlen,pd) (datlen + pd)
+	 * #define WRITE_SKB(db,p,len) dm9051_write_mem_cache(db,p,len)
 	 * if (!dm9051_modedata->skb_wb_mode) {
 	 *   ret = WRITE_SKB(db, skb, skb->len);
 	 *   ret = dm9051_single_tx(db, skb->len);
