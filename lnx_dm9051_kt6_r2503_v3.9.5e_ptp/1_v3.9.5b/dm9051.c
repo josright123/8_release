@@ -2142,7 +2142,7 @@ static int dm9051_req_tx(struct board_info *db)
 	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
 }
 
-static int TX_SEND(struct board_info *db, struct sk_buff *skb)
+static int TX_SEND(struct board_info *db, struct sk_buff *skb, unsigned int data_len, unsigned int pad)
 {
 	int ret;
 
@@ -2155,21 +2155,13 @@ static int TX_SEND(struct board_info *db, struct sk_buff *skb)
 	 * }
 	 * else {
 	 *   pad = ...
-	 *   skb = EXPAND_SKB(skb, pad);
+	 *   skb = _EXPAND_SKB(skb, pad);
 	 *   ret = WRITE_SKB(db, skb, EXPEND_LEN(data_len, pad);
 	 *   ret = dm9051_single_tx(db, skb, data_len, pad);
 	 * }
 	 * ret = dm9051_req_tx(db);
 	 */
 	do {
-		unsigned int data_len = skb->len;
-		unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
-
-		#ifdef DM9051_SKB_PROTECT
-		if (pad)
-			skb = EXPAND_SKB(skb, pad);
-		#endif
-
 		ret = dm9051_single_tx(db, skb->data, data_len, pad);
 		if (ret)
 			break;
@@ -2187,9 +2179,44 @@ static int TX_SEND(struct board_info *db, struct sk_buff *skb)
 }
 #endif
 
-static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
+//	#ifdef DMPLUG_CONTI
+//	int TX_SENDC(struct board_info *db, struct sk_buff *skb)
+//	{
+//		/* 6 tx ptpc */
+//		#if 1 //0
+//		#ifdef DMPLUG_PTP
+//		//u8 message_type = 
+//		dm9051_ptp_txreq(db, skb);
+//		#endif
+//		#endif
+//		
+//		ret = TX_SEND_CONTI(db, skb);
+
+//		/* 6.1 tx ptpc */
+//		#if 1 //0
+//		#ifdef DMPLUG_PTP
+//		dm9051_ptp_txreq_hwtstamp(db, skb);
+//		#endif
+//		#endif
+
+//		dev_kfree_skb(skb);
+
+//		return ret;
+//	}
+//	#else
+//	#endif
+int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
+#if !defined(DMPLUG_CONTI)
+	unsigned int data_len = skb->len;
+	unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
+
+	#ifdef DM9051_SKB_PROTECT
+	if (pad)
+		skb = EXPAND_SKB(skb, pad);
+	#endif
+#endif
 
 	/* 6 tx ptpc */
 	#if 1 //0
@@ -2199,14 +2226,11 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	#endif
 	#endif
 
-	#ifdef DMPLUG_CONTI
+#ifdef DMPLUG_CONTI
 	ret = TX_SEND_CONTI(db, skb);
-	#else
-	ret = TX_SEND(db, skb);
-	#endif
-
-	if (ret)
-		db->bc.tx_err_counter++;
+#else
+	ret = TX_SEND(db, skb, data_len, pad);
+#endif
 
 	/* 6.1 tx ptpc */
 	#if 1 //0
@@ -2216,6 +2240,26 @@ static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
 	#endif
 
 	dev_kfree_skb(skb);
+
+	return ret;
+}
+
+static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
+{
+	int ret;
+
+	#ifdef DMPLUG_CONTI
+	/* continue mode
+	 */
+	ret = TX_SENDC(db, skb);
+	#else
+	/* wb mode
+	 */
+	ret = TX_SENDC(db, skb);
+	#endif
+
+	if (ret)
+		db->bc.tx_err_counter++;
 	return ret;
 }
 
