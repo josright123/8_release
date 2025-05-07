@@ -80,7 +80,7 @@ static unsigned int tx_free_poll_timeout(struct board_info *db, unsigned int tx_
 	return 0;
 }
 
-int TX_SET_CONTI(struct board_info *db)
+int TX_MOTE2_CONTI_RCR(struct board_info *db)
 {
 	/* or, be OK to put in dm9051_set_rcr()
 		 */
@@ -93,7 +93,7 @@ int TX_SET_CONTI(struct board_info *db)
  *   0 - succeed
  *  -ETIMEDOUT - timeout error
  */
-int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb)
+static int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb)
 {
 	//u8 *buff = skb->data;
 	//unsigned int len = skb->len;
@@ -121,7 +121,7 @@ int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb)
 	return ret;
 }
 
-int TX_SEND_CONTI(struct board_info *db, struct sk_buff *skb)
+int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 

@@ -123,9 +123,15 @@ void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
  * Conti: 
  */
 #ifdef DMPLUG_CONTI
-int TX_SET_CONTI(struct board_info *db);
-int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb); //, u8 *buff, unsigned int len);
-int TX_SEND_CONTI(struct board_info *db, struct sk_buff *skb);
+int TX_MOTE2_CONTI_RCR(struct board_info *db);
+int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb);
+#endif
+
+/* Log definitions */
+#ifdef DMPLUG_CONTI
+#define dmplug_tx "continue"
+#else
+#define dmplug_tx "normal"
 #endif
 
 #endif //_DM9051_PLUG_H_

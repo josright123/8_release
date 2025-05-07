@@ -262,7 +262,7 @@ int is_ptp_packet(const u8 *packet) {
 //}
 #endif //0
 #endif //
-#endif //
+#endif // 1
 
 #ifdef DMPLUG_PTP
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
@@ -1479,7 +1479,7 @@ void dm9051_ptp_stop(struct board_info *db)
 		printk("_[ptp] remove: PTP clock!!!\r\n");
 	}
 }
-#endif //DMPLUG_PTP
+#endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, ptpd"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
 MODULE_LICENSE("GPL");

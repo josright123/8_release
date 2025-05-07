@@ -86,13 +86,6 @@ int get_dts_irqf(struct board_info *db)
 #define dmplug_rx_mach "poll mode"
 #endif
 
-/* Log definitions */
-#ifdef DMPLUG_CONTI
-#define dmplug_tx "continue"
-#else
-#define dmplug_tx "normal"
-#endif
-
 /* log */
 #define DEV_INFO_TX_ALIGN(dev) \
 		dev_info(dev, "TX: %s blk %u\n", \
@@ -434,7 +427,7 @@ static int dm9051_ncr_reset(struct board_info *db)
 /* waiting tx-end rather than tx-req
  * got faster
  */
-#ifndef DMPLUG_CONTI
+#if !defined(DMPLUG_CONTI) || defined(DMPLUG_PTP)
 int dm9051_nsr_poll(struct board_info *db)
 {
 	unsigned int mval;
@@ -475,10 +468,10 @@ static int dm9051_set_fcr(struct board_info *db)
 
 static int dm9051_set_rcr(struct board_info *db)
 {
-#ifdef DMPLUG_CONTI
-	return TX_SET_CONTI(db);
-#else
+#if !defined(DMPLUG_CONTI)
 	return dm9051_set_reg(db, DM9051_RCR, db->rctl.rcr_all);
+#else
+	return TX_MOTE2_CONTI_RCR(db);
 #endif
 }
 
@@ -2124,6 +2117,20 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 }
 #endif
 
+/* particulars, wb mode*/
+struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
+{
+//#if !defined(_DMPLUG_CONTI)
+	db->data_len = skb->len;
+	db->pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
+#ifdef DM9051_SKB_PROTECT
+	if (db->pad)
+		skb = EXPAND_SKB(skb, db->pad);
+#endif
+//#endif
+	return skb;
+}
+
 static int dm9051_single_tx(struct board_info *db, u8 *p)
 {
 	int ret = dm9051_nsr_poll(db);
@@ -2179,27 +2186,13 @@ static int TX_SEND(struct board_info *db, struct sk_buff *skb)
 }
 #endif
 
-struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
-{
-#if !defined(DMPLUG_CONTI)
-	db->data_len = skb->len;
-	db->pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
-#ifdef DM9051_SKB_PROTECT
-	if (db->pad)
-		skb = EXPAND_SKB(skb, db->pad);
-#endif
-#endif
-	return skb;
-}
-
 int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
-//#if !defined(DMPLUG_CONTI)
-//	#ifdef DM9051_SKB_PROTECT
-//	#endif
-//#endif
+
+#if !defined(DMPLUG_CONTI)
 	skb = dm9051_pad_txreq(db, skb);
+#endif
 
 	/* 6 tx ptpc */
 	#if 1 //0
@@ -2213,12 +2206,10 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 		printk("tx_send tcr_wr %02x\n", db->tcr_wr);
 	}
 
-#ifdef DMPLUG_CONTI
-	/* continue mode*/
-	ret = TX_SEND_CONTI(db, skb);
-#else
-	/* wb mode*/
+#if !defined(DMPLUG_CONTI)
 	ret = TX_SEND(db, skb);
+#else
+	ret = TX_MODE2_CONTI_TCR(db, skb);
 #endif
 	
 	if (db->xmit_in <=9 || db->xmit_thrd <= 9) {
