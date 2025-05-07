@@ -1082,13 +1082,13 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 		do {
 			/* NOT next with printk for dm9051_phywr(regnum, val) */
 			if ((regnum == 0) && (val & 0x800)) {
-				printk("[mdio write] phywr(%d) %04x: power down (warn)\n", regnum, val);
+				printk("[mdio phywr] %d %04x: power down (warn)\n", regnum, val);
 				//printk("\n");
 				break;
 			}
 
 			if (mdio_write_count <= 9)
-				printk("[count%d] phywr(%d) %04x\n", mdio_write_count++, regnum, val);
+				printk("[count%d] mdio phywr %d %04x\n", mdio_write_count++, regnum, val);
 		} while(0);
 		ret = dm9051_phywrite(db, regnum, val);
 
@@ -2482,7 +2482,7 @@ void END_FREE_IRQ(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
 	free_irq(db->spidev->irq, db);
-	printk("_stop [free irq %d]\n", db->spidev->irq);
+	printk("_[stop] remove: free irq %d\n", db->spidev->irq);
 }
 #endif
 
@@ -2982,6 +2982,8 @@ static int dm9051_probe(struct spi_device *spi)
 	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
 	if (db->ptp_enable) {
 		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
+		printk("\n");
+		dev_info(&db->spidev->dev, "DMPLUG_PTP Version\n");
 		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
 	}
 	#endif
@@ -3066,6 +3068,7 @@ static void dm9051_drv_remove(struct spi_device *spi)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct board_info *db = to_dm9051_board(ndev);
 
+	printk("_[phy] remove: disconnect\r\n");
 	phy_disconnect(db->phydev);
 
 	/* 3 ptpc */
