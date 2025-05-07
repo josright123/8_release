@@ -2107,7 +2107,7 @@ static int dm9051_loop_rx(struct board_info *db)
 	return scanrr;
 }
 
-#ifndef DMPLUG_CONTI
+#if !defined(DMPLUG_CONTI)
 #ifdef DM9051_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 {	
@@ -2124,17 +2124,17 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 }
 #endif
 
-static int dm9051_single_tx(struct board_info *db, u8 *p, unsigned int data_len, unsigned int pad)
+static int dm9051_single_tx(struct board_info *db, u8 *p)
 {
 	int ret = dm9051_nsr_poll(db);
 	if (ret)
 		return ret;
 
-	ret = dm9051_write_mem_cache(db, p, data_len + pad); //'!wb'
+	ret = dm9051_write_mem_cache(db, p, db->data_len + db->pad); //'!wb'
 	if (ret)
 		return ret;
 
-	return dm9051_set_regs(db, DM9051_TXPLL, &data_len, 2);
+	return dm9051_set_regs(db, DM9051_TXPLL, &db->data_len, 2); //address of structure's field
 }
 
 static int dm9051_req_tx(struct board_info *db)
@@ -2142,7 +2142,7 @@ static int dm9051_req_tx(struct board_info *db)
 	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
 }
 
-static int TX_SEND(struct board_info *db, struct sk_buff *skb, unsigned int data_len, unsigned int pad)
+static int TX_SEND(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 
@@ -2162,7 +2162,7 @@ static int TX_SEND(struct board_info *db, struct sk_buff *skb, unsigned int data
 	 * ret = dm9051_req_tx(db);
 	 */
 	do {
-		ret = dm9051_single_tx(db, skb->data, data_len, pad);
+		ret = dm9051_single_tx(db, skb->data);
 		if (ret)
 			break;
 
@@ -2171,7 +2171,7 @@ static int TX_SEND(struct board_info *db, struct sk_buff *skb, unsigned int data
 
 	if (!ret) {
 		struct net_device *ndev = db->ndev;
-		ndev->stats.tx_bytes += skb->len;
+		ndev->stats.tx_bytes += db->data_len;
 		ndev->stats.tx_packets++;
 	}
 
@@ -2179,44 +2179,27 @@ static int TX_SEND(struct board_info *db, struct sk_buff *skb, unsigned int data
 }
 #endif
 
-//	#ifdef DMPLUG_CONTI
-//	int TX_SENDC(struct board_info *db, struct sk_buff *skb)
-//	{
-//		/* 6 tx ptpc */
-//		#if 1 //0
-//		#ifdef DMPLUG_PTP
-//		//u8 message_type = 
-//		dm9051_ptp_txreq(db, skb);
-//		#endif
-//		#endif
-//		
-//		ret = TX_SEND_CONTI(db, skb);
+struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
+{
+#if !defined(DMPLUG_CONTI)
+	db->data_len = skb->len;
+	db->pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
+#ifdef DM9051_SKB_PROTECT
+	if (db->pad)
+		skb = EXPAND_SKB(skb, db->pad);
+#endif
+#endif
+	return skb;
+}
 
-//		/* 6.1 tx ptpc */
-//		#if 1 //0
-//		#ifdef DMPLUG_PTP
-//		dm9051_ptp_txreq_hwtstamp(db, skb);
-//		#endif
-//		#endif
-
-//		dev_kfree_skb(skb);
-
-//		return ret;
-//	}
-//	#else
-//	#endif
 int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
-#if !defined(DMPLUG_CONTI)
-	unsigned int data_len = skb->len;
-	unsigned int pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
-
-	#ifdef DM9051_SKB_PROTECT
-	if (pad)
-		skb = EXPAND_SKB(skb, pad);
-	#endif
-#endif
+//#if !defined(DMPLUG_CONTI)
+//	#ifdef DM9051_SKB_PROTECT
+//	#endif
+//#endif
+	skb = dm9051_pad_txreq(db, skb);
 
 	/* 6 tx ptpc */
 	#if 1 //0
@@ -2227,9 +2210,11 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	#endif
 
 #ifdef DMPLUG_CONTI
+	/* continue mode*/
 	ret = TX_SEND_CONTI(db, skb);
 #else
-	ret = TX_SEND(db, skb, data_len, pad);
+	/* wb mode*/
+	ret = TX_SEND(db, skb);
 #endif
 
 	/* 6.1 tx ptpc */
@@ -2244,25 +2229,6 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	return ret;
 }
 
-static int TX_PACKET(struct board_info *db, struct sk_buff *skb)
-{
-	int ret;
-
-	#ifdef DMPLUG_CONTI
-	/* continue mode
-	 */
-	ret = TX_SENDC(db, skb);
-	#else
-	/* wb mode
-	 */
-	ret = TX_SENDC(db, skb);
-	#endif
-
-	if (ret)
-		db->bc.tx_err_counter++;
-	return ret;
-}
-
 static int dm9051_loop_tx(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
@@ -2272,7 +2238,8 @@ static int dm9051_loop_tx(struct board_info *db)
 	{
 		struct sk_buff *skb = skb_dequeue(&db->txq);
 		if (skb) {
-			if (TX_PACKET(db, skb)) {
+			if (TX_SENDC(db, skb)) {
+				db->bc.tx_err_counter++;
 				if (netif_queue_stopped(ndev) &&
 					(skb_queue_len(&db->txq) < DM9051_TX_QUE_LO_WATER))
 					netif_wake_queue(ndev);

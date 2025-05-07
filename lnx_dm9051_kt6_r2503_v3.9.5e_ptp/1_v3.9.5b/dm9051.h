@@ -410,6 +410,8 @@ struct board_info
 	char automdix_log[3][AMDIX_LOG_BUFSIZE]; //u16 automdix_flag[3];
 
 	unsigned int tcr_wr;
+	unsigned int data_len;
+	unsigned int pad;
 	unsigned int bmsr;
 	unsigned int lpa;
 	unsigned int mdi; //= 0x0830;
