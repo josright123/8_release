@@ -2208,6 +2208,10 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	dm9051_ptp_txreq(db, skb);
 	#endif
 	#endif
+	
+	if (db->xmit_in <=9 || db->xmit_thrd <= 9) {
+		printk("tx_send tcr_wr %02x\n", db->tcr_wr);
+	}
 
 #ifdef DMPLUG_CONTI
 	/* continue mode*/
@@ -2216,6 +2220,10 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	/* wb mode*/
 	ret = TX_SEND(db, skb);
 #endif
+	
+	if (db->xmit_in <=9 || db->xmit_thrd <= 9) {
+		printk("tx_send end_wr %02x\n", db->tcr_wr);
+	}
 
 	/* 6.1 tx ptpc */
 	#if 1 //0
@@ -2283,10 +2291,19 @@ out_unlock:
 static void dm9051_tx_delay(struct work_struct *work)
 {
 	struct board_info *db = container_of(work, struct board_info, tx_work);
+	int ntx;
 
 	mutex_lock(&db->spi_lockm);
 
-	dm9051_loop_tx(db);
+	ntx = dm9051_loop_tx(db);
+	db->xmit_in++;
+	db->xmit_tc += ntx;
+	if (!ntx)
+		db->xmit_zc++;
+	if (db->in <= 9) {
+		printk("%2d [_dly] In %u Pkt %u zero-in %u\n", db->xmit_in, db->xmit_tc, db->xmit_zc);
+	}
+
 //	int result;
 //	result = 
 //	if (result < 0)
@@ -2299,6 +2316,8 @@ static void dm9051_tx_delay(struct work_struct *work)
 
 static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 {
+	//static unsigned int xmit_thrd = 0;
+	int ntx;
 	int result;
 
 	do
@@ -2307,7 +2326,12 @@ static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 		if (result < 0)
 			return result; //result; //goto out_unlock;
 
-		dm9051_loop_tx(db); /* more tx better performance */
+		ntx = dm9051_loop_tx(db); /* more tx better performance */
+		db->xmit_thrd++;
+		if (db->xmit_thrd <= 9) {
+			printk("%2d [_THrd] In %u Pkt %u zero-in %u, on-THrd %u\n", db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd);
+		}
+
 //		int result_tx = 
 //		if (result_tx < 0)
 //			return result_tx; //result_tx; //goto out_unlock;
@@ -2872,6 +2896,11 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->mdi = 0x0830;
 	
 	db->tcr_wr = TCR_TXREQ; //pre-defined
+	
+	db->xmit_in = 0;
+	db->xmit_tc = 0;
+	db->xmit_zc = 0;
+	db->xmit_thrd = 0;
 }
 
 static int dm9051_mdio_register(struct board_info *db)

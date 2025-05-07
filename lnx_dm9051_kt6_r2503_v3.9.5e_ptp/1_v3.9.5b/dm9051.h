@@ -412,6 +412,10 @@ struct board_info
 	unsigned int tcr_wr;
 	unsigned int data_len;
 	unsigned int pad;
+	unsigned int xmit_in; //
+	unsigned int xmit_tc; //
+	unsigned int xmit_zc; //zero count
+	unsigned int xmit_thrd;
 	unsigned int bmsr;
 	unsigned int lpa;
 	unsigned int mdi; //= 0x0830;
