@@ -283,11 +283,11 @@ struct eng_config {
 #if 1 //sticked fixed here is better!
 #include "dm9051_plug.h" //for definition of 'INT_TWO_STEP'
 /* 0.1 ptpc */
-#if 1 //0
-#ifdef DMPLUG_PTP
-#include "dm9051_ptpd.h"
-#endif
-#endif
+//#if 1 //0
+//#ifdef DMPLUG_PTP
+//#include "dm9051_ptpd.h"
+//#endif
+//#endif
 
 /**
  * struct rx_ctl_mach - rx activities record
@@ -300,6 +300,10 @@ struct eng_config {
  * To keep track for the driver operation statistics
  */
 #define HEAD_LOG_BUFSIZE	62
+
+#define TX_DELAY		1 // by .ndo_start_xmit
+#define TX_THREAD		2 // in rx loop
+
 struct rx_ctl_mach
 {
 	u32 status_err_counter;
@@ -313,6 +317,8 @@ struct rx_ctl_mach
 	u16 ndelayF;
 	
 	char head[HEAD_LOG_BUFSIZE];
+	
+	u16 mode;
 };
 
 /**
@@ -416,6 +422,7 @@ struct board_info
 	unsigned int xmit_tc; //
 	unsigned int xmit_zc; //zero count
 	unsigned int xmit_thrd;
+	unsigned int xmit_ttc; //zero count
 	unsigned int bmsr;
 	unsigned int lpa;
 	unsigned int mdi; //= 0x0830;

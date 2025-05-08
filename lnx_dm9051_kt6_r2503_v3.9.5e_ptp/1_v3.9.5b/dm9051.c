@@ -75,7 +75,7 @@ int get_dts_irqf(struct board_info *db)
   #ifdef INT_CLKOUT
   #define dmplug_rx_mach "interrupt clkout mode"
   #else
-  #define dmplug_rx_mach "interrupt direct mode"
+  #define dmplug_rx_mach "interrupt polarity ctrl mode"
   #endif
 
   #ifdef INT_TWO_STEP
@@ -1590,6 +1590,11 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	dm9051_dump_reg2s(db, 0x24, 0x25);
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump mrr registers:");
 	dm9051_dump_reg2s(db, DM9051_MRRL, DM9051_MRRH);
+
+	printk("%6d [_dely] In %u Pkt %u zero-in %u\n", db->xmit_in,
+		db->xmit_in, db->xmit_tc, db->xmit_zc);
+	printk("%6d [_THrd] In %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
+		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
 #if MI_FIX //ee write
 	mutex_unlock(&db->spi_lockm);
 #endif
@@ -2123,7 +2128,7 @@ struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
 {
 //#if !defined(_DMPLUG_CONTI)
 	db->data_len = skb->len;
-	db->pad = (dm9051_modedata->skb_wb_mode && (data_len & 1)) ? 1 : 0; //'~wb'
+	db->pad = (dm9051_modedata->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
 #ifdef DM9051_SKB_PROTECT
 	if (db->pad)
 		skb = EXPAND_SKB(skb, db->pad);
@@ -2205,8 +2210,9 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	#endif
 	#endif
 	
-	if (db->xmit_in <=9 || db->xmit_thrd <= 9) {
-		printk("tx_send tcr_wr %02x\n", db->tcr_wr);
+	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
+		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9)) {
+		printk("%s. tx_send tcr_wr %02x\n", db->bc.head, db->tcr_wr);
 	}
 
 #if !defined(DMPLUG_CONTI)
@@ -2215,8 +2221,9 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	ret = TX_MODE2_CONTI_TCR(db, skb);
 #endif
 	
-	if (db->xmit_in <=9 || db->xmit_thrd <= 9) {
-		printk("tx_send end_wr %02x\n", db->tcr_wr);
+	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
+		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9)) {
+		printk("%s. tx_send end_wr %02x\n", db->bc.head, db->tcr_wr);
 	}
 
 	/* 6.1 tx ptpc */
@@ -2290,13 +2297,16 @@ static void dm9051_tx_delay(struct work_struct *work)
 
 	mutex_lock(&db->spi_lockm);
 
+	sprintf(db->bc.head, "_dely");
+	db->bc.mode = TX_DELAY;
 	ntx = dm9051_loop_tx(db);
 	db->xmit_in++;
 	db->xmit_tc += ntx;
 	if (!ntx)
 		db->xmit_zc++;
-	if (db->in <= 9) {
-		printk("%2d [_dly] In %u Pkt %u zero-in %u\n", db->xmit_in, db->xmit_tc, db->xmit_zc);
+	if (/*ntx &&*/ db->xmit_in <= 9) {
+		printk("%2d [_dely] In %u Pkt %u zero-in %u\n", db->xmit_in,
+			db->xmit_in, db->xmit_tc, db->xmit_zc);
 	}
 
 //	int result;
@@ -2321,10 +2331,16 @@ static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 		if (result < 0)
 			return result; //result; //goto out_unlock;
 
+		sprintf(db->bc.head, "_THrd");
+		db->bc.mode = TX_THREAD;
 		ntx = dm9051_loop_tx(db); /* more tx better performance */
-		db->xmit_thrd++;
-		if (db->xmit_thrd <= 9) {
-			printk("%2d [_THrd] In %u Pkt %u zero-in %u, on-THrd %u\n", db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd);
+		if (ntx) {
+			db->xmit_thrd++;
+			db->xmit_ttc += ntx;
+			if (db->xmit_thrd <= 9) {
+				printk("%2d [_THrd] In %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
+					db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
+			}
 		}
 
 //		int result_tx = 
@@ -2896,6 +2912,7 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->xmit_tc = 0;
 	db->xmit_zc = 0;
 	db->xmit_thrd = 0;
+	db->xmit_ttc = 0;
 }
 
 static int dm9051_mdio_register(struct board_info *db)
@@ -3012,12 +3029,19 @@ static int dm9051_probe(struct spi_device *spi)
 	if (dm9051_modedata->checksuming)
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 
+	/* version log */
+	printk("\n");
+
+	/* conti */
+	#ifdef DMPLUG_CONTI
+	dev_info(&db->spidev->dev, "DMPLUG_CONTI Version\n");
+	#endif
+
 	/* 2 ptpc */
 	#ifdef DMPLUG_PTP
 	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
 	if (db->ptp_enable) {
 		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
-		printk("\n");
 		dev_info(&db->spidev->dev, "DMPLUG_PTP Version\n");
 		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
 	}
@@ -3046,6 +3070,7 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
+	/* platform log */
 	printk("\n");
 	dev_info(dev, "Davicom: %s", confdata.release_version);
 

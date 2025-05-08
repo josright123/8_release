@@ -134,4 +134,11 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb);
 #define dmplug_tx "normal"
 #endif
 
+/* 0.1 ptpc */
+#if 1 //0
+#ifdef DMPLUG_PTP
+#include "dm9051_ptpd.h"
+#endif
+#endif
+
 #endif //_DM9051_PLUG_H_

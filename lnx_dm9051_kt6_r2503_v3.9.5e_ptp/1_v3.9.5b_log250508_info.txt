@@ -1,0 +1,110 @@
+
+[62938.670813] dm9051 spi0.1: DMPLUG_PTP Version
+[62938.670816] dm9051 spi0.1: Enable PTP must COERCE to disable checksum_offload
+[62938.670838] debugfs: Directory 'spi0.1' with parent 'regmap' already present!
+
+[62938.670843] dm9051 spi0.1: Davicom: lnx_dm9051_kt6631_r2502_v3.9.1
+[62938.670845] dm9051 spi0.1: SPI speed from DTS: 31200000 Hz
+[62938.670848] dm9051 spi0.1: Davicom: interrupt direct mode
+[62938.670851] dm9051 spi0.1: Davicom: interrupt direct mode
+[62938.670853] dm9051 spi0.1: Davicom: interrupt direct step
+[62938.670855] dm9051 spi0.1: Operation: Interrupt pin: 26
+[62938.670857] dm9051 spi0.1: Operation: Interrupt trig type: 8
+
+[62938.670861] dm9051 spi0.1: Davicom: Test in rpi5 bcm2712
+[62938.670863] dm9051 spi0.1: LXR: 6.6.31+rpt-rpi-2712, BUILD: 6.6.31+rpt-rpi-2712
+[62938.670865] dm9051 spi0.1: TX: Alignment blk 32
+[62938.670868] dm9051 spi0.1: RX: Alignment blk 64
+[62938.671162] dm9051 spi0.1: chip 9051 found
+[62938.671164] dm9051 spi0.1: Check TX End: 210000, TX mode= normal mode, DRVR= silence rxb, silence tx_ec
+[62938.671430] dm9051 spi0.1: Power-on chip MAC address: 00:60:6e:e2:7c:c4
+[62938.675970] <link_phylib. on 00 to 00>, current lpa 45e1 [bmsr] 0000 to 786d found reach link
+[62938.675977] [link] clear log...
+[62938.676766] [count0] mdio phywr 0 3100
+[62938.677496] dm9051 spi0.1: DM9051A Driver PTP Init
+[62938.677675] ptp_clock_register added PHC, index 1 on eth1
+
+[62938.732779] dm9051 spi0.1 eth1: dm9051_open
+[62938.732783] dm9051 spi0.1 eth1: Davicom: interrupt direct mode
+[62938.732785] dm9051 spi0.1 eth1: Davicom: interrupt direct step
+[62938.732787] _all_start
+[62938.742149] _ncr_reset
+[62938.742252] _phy_reset
+[62938.758660] request_threaded_irq(INT_THREAD)
+[62938.760694] [count1] mdio phywr 4 05e1
+[62938.762967] [count2] mdio phywr 0 3300
+
+[62938.767052] dm9051 spi0.1 eth1: Link is Down
+[62939.775075] <fund_phylib. on 00 to 02, rd.bmsr 7849 [lpa] 05e1> STOPPING... amdix
+
+[62940.799707] <hist> in_case phylib. 01 [lpa] 0000 phy[AutoMDIX] reg 20 [val 0810]
+[62940.799709] <hist> in_case phylib. 02 [lpa] 0000 phy[AutoMDIX] reg 20 [val 0830]
+[62940.799711] <link_phylib. on 02 to 02>, current lpa 45e1 [bmsr] 7869 to 786d found reach link
+[62940.799713] [link] clear log...
+
+[62940.800026] LOCK_MUTEX
+[62940.800029] dm9051 spi0.1 eth1: Link is Up - 100Mbps/Full - flow control rx/tx
+[62940.800412] UNLOCK_MUTEX
+
+[62940.804038] tx_send tcr_wr 01
+[62940.805221] tx_send end_wr 01
+[62940.805225]  1 [_dly] In 1 Pkt 1 zero-in 0
+[62940.818020]  1 [_THrd] In 1 Pkt 1 zero-in 0, on-THrd 1
+[62940.818101]  1 [_THrd] In 1 Pkt 1 zero-in 0, on-THrd 2
+[62940.818130] _.int   [dm9051_rx_threaded_plat] this-first-enter 0
+[62940.842318] tx_send tcr_wr 01
+[62940.846977] tx_send end_wr 01
+[62940.847014]  2 [_dly] In 2 Pkt 2 zero-in 0
+[62940.847328] tx_send tcr_wr 01
+[62940.847726] tx_send end_wr 01
+[62940.847730]  3 [_dly] In 3 Pkt 3 zero-in 0
+[62940.934977] tx_send tcr_wr 01
+[62940.935674] tx_send end_wr 01
+[62940.935676]  4 [_dly] In 4 Pkt 4 zero-in 0
+[62941.088332] tx_send tcr_wr 01
+[62941.088988] tx_send end_wr 01
+[62941.088989]  5 [_dly] In 5 Pkt 5 zero-in 0
+[62941.090982] 5. On ptp_on is 0, ptp packet received!
+[62941.093587]  5 [_THrd] In 5 Pkt 5 zero-in 0, on-THrd 3
+[62941.093663]  5 [_THrd] In 5 Pkt 5 zero-in 0, on-THrd 4
+[62941.140800] tx_send tcr_wr 01
+[62941.141684] tx_send end_wr 01
+[62941.141686]  6 [_dly] In 6 Pkt 6 zero-in 0
+[62941.182126] tx_send tcr_wr 01
+[62941.182721] tx_send end_wr 01
+[62941.182723]  7 [_dly] In 7 Pkt 7 zero-in 0
+[62941.339242] tx_send tcr_wr 01
+[62941.339898] tx_send end_wr 01
+[62941.339900]  8 [_dly] In 8 Pkt 8 zero-in 0
+[62941.589704] tx_send tcr_wr 01
+[62941.590418] tx_send end_wr 01
+[62941.590421]  9 [_dly] In 9 Pkt 9 zero-in 0
+[62941.592561] 4. On ptp_on is 0, ptp packet received!
+[62941.593982]  9 [_THrd] In 9 Pkt 9 zero-in 0, on-THrd 5
+[62941.594058]  9 [_THrd] In 9 Pkt 9 zero-in 0, on-THrd 6
+[62941.790394] tx_send tcr_wr 01
+[62941.791356] tx_send end_wr 01
+[62941.937606] tx_send tcr_wr 01
+[62941.938355] tx_send end_wr 01
+[62942.345303] tx_send tcr_wr 01
+[62942.346286] tx_send end_wr 01
+[62942.847744] tx_send tcr_wr 01
+[62942.848092] tx_send end_wr 01
+[62942.995184] tx_send tcr_wr 01
+[62942.995944] tx_send end_wr 01
+[62943.938286] tx_send tcr_wr 01
+[62943.939037] tx_send end_wr 01
+[62944.550197] tx_send tcr_wr 01
+[62944.551244] tx_send end_wr 01
+[62944.847810] tx_send tcr_wr 01
+[62944.848201] tx_send end_wr 01
+[62945.200125] tx_send tcr_wr 01
+[62945.200953] tx_send end_wr 01
+[62947.941045] tx_send tcr_wr 01
+[62947.941799] tx_send end_wr 01
+[62950.786108] tx_send tcr_wr 01
+[62950.786488] tx_send end_wr 01
+[62950.786490] 19 [_THrd] In 19 Pkt 19 zero-in 0, on-THrd 7
+[62950.786577] 19 [_THrd] In 19 Pkt 19 zero-in 0, on-THrd 8
+[62950.987799] 20 [_THrd] In 20 Pkt 19 zero-in 1, on-THrd 9
+
