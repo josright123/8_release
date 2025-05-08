@@ -1591,9 +1591,11 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump mrr registers:");
 	dm9051_dump_reg2s(db, DM9051_MRRL, DM9051_MRRH);
 
-	printk("%6d [_dely] In %u Pkt %u zero-in %u\n", db->xmit_in,
+	printk("%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 		db->xmit_in, db->xmit_tc, db->xmit_zc);
-	printk("%6d [_THrd] In %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
+	printk("%6d [_THrd0] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
+		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
+	printk("%6d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
 		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
 #if MI_FIX //ee write
 	mutex_unlock(&db->spi_lockm);
@@ -1990,6 +1992,8 @@ static int rx_head_break(struct board_info *db)
 	return 0;
 }
 
+static int dm9051_loop_tx(struct board_info *db);
+
 /* read packets from the fifo memory
  * return value,
  *  > 0 - read packet number, caller can repeat the rx operation
@@ -2007,7 +2011,20 @@ static int dm9051_loop_rx(struct board_info *db)
 
 	do
 	{
-//.		dm9051_loop_tx(db); /* [More] and more tx better performance */
+#if 1
+		int ntx;
+		sprintf(db->bc.head, "_THrd0");
+		db->bc.mode = TX_THREAD0;
+		ntx = dm9051_loop_tx(db); /* [More] and more tx better performance */
+		if (ntx) {
+			db->xmit_thrd0++;
+			db->xmit_ttc0 += ntx;
+			if (db->xmit_thrd0 <= 9) {
+				printk("%2d [_THrd0] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
+					db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
+			}
+		}
+#endif
 		ret = dm9051_read_mem_rxb(db, DM_SPI_MRCMDX, &rxbyte, 2);
 		if (ret)
 			return ret;
@@ -2210,10 +2227,11 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	#endif
 	#endif
 	
-	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
-		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9)) {
-		printk("%s. tx_send tcr_wr %02x\n", db->bc.head, db->tcr_wr);
-	}
+//	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
+//		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
+//		(db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
+//		printk("%s. tx_send tcr_wr %02x\n", db->bc.head, db->tcr_wr);
+//	}
 
 #if !defined(DMPLUG_CONTI)
 	ret = TX_SEND(db, skb);
@@ -2222,7 +2240,8 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 #endif
 	
 	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
-		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9)) {
+		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
+		(db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
 		printk("%s. tx_send end_wr %02x\n", db->bc.head, db->tcr_wr);
 	}
 
@@ -2305,7 +2324,7 @@ static void dm9051_tx_delay(struct work_struct *work)
 	if (!ntx)
 		db->xmit_zc++;
 	if (/*ntx &&*/ db->xmit_in <= 9) {
-		printk("%2d [_dely] In %u Pkt %u zero-in %u\n", db->xmit_in,
+		printk("%2d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 			db->xmit_in, db->xmit_tc, db->xmit_zc);
 	}
 
@@ -2338,7 +2357,7 @@ static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 			db->xmit_thrd++;
 			db->xmit_ttc += ntx;
 			if (db->xmit_thrd <= 9) {
-				printk("%2d [_THrd] In %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
+				printk("%2d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
 					db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
 			}
 		}
@@ -2911,6 +2930,8 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->xmit_in = 0;
 	db->xmit_tc = 0;
 	db->xmit_zc = 0;
+	db->xmit_thrd0 = 0;
+	db->xmit_ttc0 = 0;
 	db->xmit_thrd = 0;
 	db->xmit_ttc = 0;
 }

@@ -302,7 +302,8 @@ struct eng_config {
 #define HEAD_LOG_BUFSIZE	62
 
 #define TX_DELAY		1 // by .ndo_start_xmit
-#define TX_THREAD		2 // in rx loop
+#define TX_THREAD0		2 // in rx loop0
+#define TX_THREAD		3 // in rx loop
 
 struct rx_ctl_mach
 {
@@ -421,6 +422,8 @@ struct board_info
 	unsigned int xmit_in; //
 	unsigned int xmit_tc; //
 	unsigned int xmit_zc; //zero count
+	unsigned int xmit_thrd0;
+	unsigned int xmit_ttc0; //zero count
 	unsigned int xmit_thrd;
 	unsigned int xmit_ttc; //zero count
 	unsigned int bmsr;
