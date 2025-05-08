@@ -1464,6 +1464,9 @@ void dm9051_ptp_init(struct board_info *db)
 	//Stone add for 1588 TX 1-Step checksum enable (register 0x63 bit 7 0:enable, 1:disable => 0x80)
 	dm9051_set_reg(db, DM9051_1588_1_STEP_CHK, 0x00);
 
+#ifdef DMPLUG_PPS_CLKOUT 
+	dm9051_set_reg(db, 0x3C, 0xB0);
+#endif
 }
 
 void dm9051_ptp_stop(struct board_info *db)

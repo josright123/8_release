@@ -246,6 +246,9 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 #define POLL_OPERATE_NUM		1
 
 /* Configuration structures */
+struct driver_config {
+	const char *release_version;
+};
 struct eng_config {
         int force_monitor_rxb;
         int force_monitor_rxc;

@@ -22,61 +22,31 @@
 #define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
+
+  #define PLUG_PTP_PPS
+  #ifdef PLUG_PTP_PPS
+  #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
+  #endif
 #endif
 
-#if 1
-	#ifdef MAIN_DATA
-	/*
-	 * MAIN Data: 
-	 */
-
-	struct driver_config
-	{
-		const char *release_version;
-	};
-	const struct driver_config confdata = {
-		.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-	};
-	const struct eng_config engdata = {
-		.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
-		.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
-		.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
-		.sched = {
-			.delayF = {0, 1, 0, 0, 1}, 
-			.nTargetMaxNum = POLL_OPERATE_NUM},
-		.tx_timeout_us = 210000, //2100,
-	};
-	const struct eng_config *econf = &engdata;
-	const struct eng_sched csched = engdata.sched;
-	#endif
-
-#if 0
-	/*
-	 * SPI sync: 
-	 */
-
-	int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb); //used in the plug section
-	/*
-	 * Polling: 
-	 */
-	#ifdef DMPLUG_INT
-	void dm9051_rx_irq_servicep(struct work_struct *work);
-	irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
-	#else //~DMPLUG_INT =POLL
-	void dm9051_poll_servicep(struct work_struct *work); //.dm9051_poll_delay_plat()
-
-	void INIT_RX_POLL_DELAY_SETUP(struct board_info *db);
-	void INIT_RX_POLL_SCHED_DELAY(struct board_info *db);
-	#endif
-
-	/*
-	 * Interrupt: 
-	 */
-
-	void INIT_RX_INT2_DELAY_SETUP(struct board_info *db);
-	int INIT_REQUEST_IRQ(struct net_device *ndev);
-	void END_FREE_IRQ(struct net_device *ndev);
-#endif
+#ifdef MAIN_DATA
+/*
+ * MAIN Data: 
+ */
+const struct driver_config confdata = {
+	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
+};
+const struct eng_config engdata = {
+	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
+	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
+	.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
+	.sched = {
+		.delayF = {0, 1, 0, 0, 1}, 
+		.nTargetMaxNum = POLL_OPERATE_NUM},
+	.tx_timeout_us = 210000, //2100,
+};
+const struct eng_config *econf = &engdata;
+const struct eng_sched csched = engdata.sched;
 #endif
 
 /*
