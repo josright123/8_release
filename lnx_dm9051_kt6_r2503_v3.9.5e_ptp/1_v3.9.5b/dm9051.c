@@ -32,6 +32,7 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 
 /* Tx 'wb' do skb protect */
 #define DM9051_SKB_PROTECT
+#define STICK_SKB_CHG_NOTE
 
 /* Helper macros */
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
@@ -2191,7 +2192,9 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	int ret;
 
 #if !defined(DMPLUG_CONTI)
+#if defined(STICK_SKB_CHG_NOTE)
 	skb = dm9051_pad_txreq(db, skb);
+#endif
 #endif
 
 	/* 6 tx ptpc */
@@ -2223,8 +2226,9 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	#endif
 	#endif
 
+#if defined(STICK_SKB_CHG_NOTE)
 	dev_kfree_skb(skb);
-
+#endif
 	return ret;
 }
 
