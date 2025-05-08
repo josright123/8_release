@@ -38,7 +38,6 @@
 #include <linux/of.h>
 #include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
-#include "dm9051_plug.h"
 
 #warning "DMPLUG: dm9051 plug-in encrypt bus work"
 

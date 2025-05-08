@@ -20,7 +20,6 @@
 #include <linux/of.h>
 #include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
-#include "dm9051_plug.h"
 
 void dm9051_dump_data0(struct board_info *db, u8 *packet_data, int packet_len)
 {

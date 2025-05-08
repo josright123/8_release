@@ -21,8 +21,7 @@
 #include <linux/ptp_clock_kernel.h>
 
 #include "dm9051.h"
-//#include "dm9051_plug.h"
-//#include "dm9051_ptpd.h"
+#include "dm9051_ptpd.h"
 
 #ifdef DMCONF_DIV_HLPR_32
 /* Implement the missing ARM EABI division helper */
