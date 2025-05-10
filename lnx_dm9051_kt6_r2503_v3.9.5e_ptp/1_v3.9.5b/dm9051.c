@@ -105,13 +105,12 @@ int get_dts_irqf(struct board_info *db)
 void SHOW_MODE(struct spi_device *spi)
 {
 	dev_info(&spi->dev, "Davicom: %s", dmplug_rx_mach);
-		dev_info(&spi->dev, "Davicom: %s", dmplug_rx_mach);
 
 	#ifdef DMPLUG_INT
+	dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt2);
 	do {
 		unsigned int intdata[2];
 		of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-		dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt2);
 		dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
 		dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
 	} while(0);
@@ -130,10 +129,29 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi)
 		SHOW_MODE(spi);
 	} while (0);
 	printk("\n");
-	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
-	dev_info(dev, "LXR: %s, BUILD: %s\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
+	//dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
+#if defined(__x86_64__) || defined(__aarch64__)
+	// 64-bit code
+	#ifdef CONFIG_64BIT
+	// 64-bit specific code
+	dev_info(dev, "LXR: %s, BUILD: %s (64 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
+	#else
+	// 32-bit specific code
+	dev_info(dev, "LXR: %s, BUILD: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)\n", utsname()->release, utsname()->release);
+	#endif
+#else
+	// 32-bit code
+	#ifdef CONFIG_64BIT
+	// 64-bit specific code
+	dev_info(dev, "LXR: %s, BUILD: %s (32 bit, warn: but kernel config has CONFIG_64BIT?)\n", utsname()->release, utsname()->release);
+	#else
+	// 32-bit specific code
+	dev_info(dev, "LXR: %s, BUILD: %s (32 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
+	#endif
+#endif
 	DEV_INFO_TX_ALIGN(dev);
 	DEV_INFO_RX_ALIGN(dev);
+	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 }
 
 static void SHOW_OPTION_MODE(struct spi_device *spi)
