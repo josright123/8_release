@@ -102,6 +102,32 @@ int get_dts_irqf(struct board_info *db)
 		netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
 			__func__, ret, pstr, reg, BLKLEN)
 
+void SHOW_DRIVER(struct device *dev)
+{
+	/* driver version log */
+	printk("\n");
+	//dev_info(dev, "Davicom: %s", confdata.release_version);
+#if defined(__x86_64__) || defined(__aarch64__)
+	// 64-bit code
+	#ifdef CONFIG_64BIT
+	// 64-bit specific code
+	dev_info(dev, "Davicom: %s (64 bit)", confdata.release_version);
+	#else
+	// 32-bit specific code
+	dev_info(dev, "Davicom: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)", confdata.release_version);
+	#endif
+#else
+	// 32-bit code
+	#ifdef CONFIG_64BIT
+	// 64-bit specific code
+	dev_info(dev, "Davicom: %s (32 bit, warn: but kernel config has CONFIG_64BIT?))", confdata.release_version);
+	#else
+	// 32-bit specific code
+	dev_info(dev, "Davicom: %s (32 bit)", confdata.release_version);
+	#endif
+#endif
+}
+
 void SHOW_MODE(struct spi_device *spi)
 {
 	dev_info(&spi->dev, "Davicom: %s", dmplug_rx_mach);
@@ -121,8 +147,9 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi)
 {
 	struct device *dev = &spi->dev;
 
-	/* [dbg] spi.speed */
+	SHOW_DRIVER(dev);
 	do {
+		/* [dbg] spi.speed */
 		unsigned int speed;
 		of_property_read_u32(spi->dev.of_node, "spi-max-frequency", &speed);
 		dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
@@ -151,6 +178,11 @@ static void SHOW_CONFIG_MODE(struct spi_device *spi)
 #endif
 	DEV_INFO_TX_ALIGN(dev);
 	DEV_INFO_RX_ALIGN(dev);
+}
+
+static void SHOW_PLAT_MODE(struct device *dev)
+{
+	printk("\n");
 	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 }
 
@@ -3107,12 +3139,9 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	/* platform log */
-	printk("\n");
-	dev_info(dev, "Davicom: %s", confdata.release_version);
-
 	SHOW_CONFIG_MODE(spi);
 
+	SHOW_PLAT_MODE(dev);
 	ret = dm9051_map_chipid(db);
 	if (ret)
 		return ret;
