@@ -3080,7 +3080,7 @@ static int dm9051_probe(struct spi_device *spi)
 
 	db = netdev_priv(ndev);
 
-	db->msg_enable = 0;
+	db->msg_enable = NETIF_MSG_DRV; //0; //NETIF_MSG_DRV for netif_err(adb, drv, adb->ndev, .., netif_warn(adb, drv, adb->ndev, ...
 	db->spidev = spi;
 	db->ndev = ndev;
 
