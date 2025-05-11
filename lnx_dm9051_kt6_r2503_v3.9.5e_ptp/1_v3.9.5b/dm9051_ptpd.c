@@ -65,7 +65,29 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
 //    return ptp_hdr[0] & 0x0f;
 //}
 
-u8 get_ptp_message_type005(struct sk_buff *skb) {
+//static int is_ptp_packet(const u8 *packet) {
+//    struct ethhdr *eth = (struct ethhdr *)packet;
+
+//    // 檢查 Layer 2 PTP
+//    if (ntohs(eth->h_proto) == PTP_ETHERTYPE) {
+//        return 1;
+//    }
+
+//    // 檢查 Layer 4 UDP PTP
+//    if (ntohs(eth->h_proto) == ETH_P_IP) {
+//        struct iphdr *ip = (struct iphdr *)(packet + ETH_HLEN);
+//        if (ip->protocol == IPPROTO_UDP) {
+//            struct udphdr *udp = (struct udphdr *)(packet + ETH_HLEN + sizeof(struct iphdr));
+//            if (ntohs(udp->dest) == PTP_EVENT_PORT || ntohs(udp->dest) == PTP_GENERAL_PORT) {
+//                return 1;
+//            }
+//        }
+//    }
+
+//    return 0;
+//}
+
+static struct ptp_header *get_ptp_header(struct sk_buff *skb) {
     u8 *p = skb->data;
     struct ethhdr *eth = (struct ethhdr *)p;
     u8 *ptp_hdr;
@@ -77,8 +99,9 @@ u8 get_ptp_message_type005(struct sk_buff *skb) {
 
     // Check for Layer 2 PTP
     if (proto == PTP_ETHERTYPE) {
-        ptp_hdr = p;
-        return ptp_hdr[0] & 0x0f;
+	return (struct ptp_header *) p;
+        //ptp_hdr = p;
+        //return ptp_hdr[0] & 0x0f;
     }
 
     // Handle IPv4
@@ -88,7 +111,8 @@ u8 get_ptp_message_type005(struct sk_buff *skb) {
             struct udphdr *udp = (struct udphdr *)(p + sizeof(struct iphdr));
             if (ntohs(udp->dest) == PTP_EVENT_PORT || ntohs(udp->dest) == PTP_GENERAL_PORT) {
                 ptp_hdr = (u8 *)udp + sizeof(struct udphdr);
-                return ptp_hdr[0] & 0x0f;
+                return (struct ptp_header *) ptp_hdr;
+		//return ptp_hdr[0] & 0x0f;
             }
         }
     }
@@ -99,12 +123,24 @@ u8 get_ptp_message_type005(struct sk_buff *skb) {
             struct udphdr *udp = (struct udphdr *)(p + sizeof(struct ipv6hdr));
             if (ntohs(udp->dest) == PTP_EVENT_PORT || ntohs(udp->dest) == PTP_GENERAL_PORT) {
                 ptp_hdr = (u8 *)udp + sizeof(struct udphdr);
-                return ptp_hdr[0] & 0x0f;
+		return (struct ptp_header *) ptp_hdr;
+                //return ptp_hdr[0] & 0x0f;
             }
         }
     }
 
-    return 0; // Not a PTP packet
+    return NULL;
+    //return 0; // Not a PTP packet
+}
+
+u8 get_ptp_message_type005(struct ptp_header *ptp_hdr) {
+	//struct ptp_header *ptp_hdr = get_ptp_header(skb);
+
+	//if (!ptp_hdr)
+	//	return 0;
+
+	//return ptp_hdr[0] & 0x0f;
+	return ptp_hdr->tsmt & 0x0f;
 }
 
 //u8 get_ptp_message_type0050(struct sk_buff *skb) {
@@ -119,28 +155,6 @@ u8 get_ptp_message_type005(struct sk_buff *skb) {
 //    return ptp_hdr[0] & 0x0f;
 //}
 //printk("B.udp %x, ptp %x\n", (unsigned int) p_udp_hdr, (unsigned int) ptp_hdr);
-
-int is_ptp_packet(const u8 *packet) {
-    struct ethhdr *eth = (struct ethhdr *)packet;
-
-    // 檢查 Layer 2 PTP
-    if (ntohs(eth->h_proto) == PTP_ETHERTYPE) {
-        return 1;
-    }
-
-    // 檢查 Layer 4 UDP PTP
-    if (ntohs(eth->h_proto) == ETH_P_IP) {
-        struct iphdr *ip = (struct iphdr *)(packet + ETH_HLEN);
-        if (ip->protocol == IPPROTO_UDP) {
-            struct udphdr *udp = (struct udphdr *)(packet + ETH_HLEN + sizeof(struct iphdr));
-            if (ntohs(udp->dest) == PTP_EVENT_PORT || ntohs(udp->dest) == PTP_GENERAL_PORT) {
-                return 1;
-            }
-        }
-    }
-
-    return 0;
-}
 
 #if 0 //Saved
 //bool is_ptp_packet(struct sk_buff *skb) {
@@ -266,13 +280,14 @@ int is_ptp_packet(const u8 *packet) {
 #ifdef DMPLUG_PTP
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 {
-	if (is_ptp_packet(skb->data))
+	struct ptp_header *ptp_hdr = get_ptp_header(skb);
+	if (ptp_hdr) //is_ptp_packet(skb->data)
 	{
 		static int slave_get_ptpFrame = 9;
 		static int slave_get_ptpFrameResp3 = 3;
 		static int master_get_delayReq6 = 6; //5;
 		static int slave_get_ptpMisc = 9;
-		u8 message_type = get_ptp_message_type005(skb); //for rx monitor
+		u8 message_type = get_ptp_message_type005(ptp_hdr); //for rx monitor
 		
 		if (is_ptp_sync_packet(message_type)) {
 			if (slave_get_ptpFrame)
@@ -909,6 +924,7 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 }
 
 #if 1
+#if 0
 static unsigned int ptp_packet_classify(struct sk_buff *skb)
 {
 	unsigned int ptp_class;
@@ -935,12 +951,16 @@ static unsigned int ptp_packet_classify(struct sk_buff *skb)
 
 static struct ptp_header *dm9051_ptp_udphdr(struct sk_buff *skb)
 {
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
+	//get_ptp_header(); ...
+#else
 	unsigned int ptp_class = ptp_packet_classify(skb);
 
 	if (ptp_class == PTP_CLASS_NONE)
 		return NULL;
 
 	return ptp_parse_header(skb, ptp_class);
+#endif
 }
 
 static u8 dm9051_ptp_step(struct board_info *db, struct sk_buff *skb)
@@ -965,6 +985,7 @@ static u8 dm9051_ptp_step(struct board_info *db, struct sk_buff *skb)
 //	}
 //	return db->ptp_packet;
 //}
+#endif
 
 int is_ptp_sync_packet(u8 msgtype)
 {
@@ -977,24 +998,30 @@ int is_ptp_delayreq_packet(u8 msgtype)
 
 void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 {
-	db->tcr_wr = TCR_TXREQ; // TCR register value
-	db->ptp_step = dm9051_ptp_step(db, skb);
-	if (db->ptp_step) {
-		u8 message_type = get_ptp_message_type005(skb); //for tx send
+	struct ptp_header *ptp_hdr;
 
-		//if (dm9051_ptp_frame(db, skb)) {
-			//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-			if (is_ptp_sync_packet(message_type)) {
-				if (db->ptp_step == 2) {
-					db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
-				} else {
-					db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
-				}
-			} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
-				db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
+	db->tcr_wr = TCR_TXREQ; // TCR register value
+
+	ptp_hdr = get_ptp_header(skb);
+	if (ptp_hdr) {
+		//db->ptp_step = dm9051_ptp_step(db, skb);
+		//if (db->ptp_step) {
+			u8 message_type = get_ptp_message_type005(ptp_hdr); //for tx send
+			//if (dm9051_ptp_frame(db, skb)) {
+				//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+				if (is_ptp_sync_packet(message_type)) {
+					db->ptp_step = (u8)(ptp_hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
+					if (db->ptp_step == 2) {
+						db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
+					} else {
+						db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
+					}
+				} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
+					db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
+				//}
 			//}
+			//return message_type;
 		//}
-		//return message_type;
 	}
 }
 

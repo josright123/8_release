@@ -105,13 +105,13 @@ enum ptp_sync_type {
 #define PTP_MSGTYPE_ANNOUNCE         0xB
 #define PTP_MSGTYPE_SIGNALING        0xC
 #define PTP_MSGTYPE_MANAGEMENT       0xD
-u8 get_ptp_message_type005(struct sk_buff *skb);
+u8 get_ptp_message_type005(struct ptp_header *ptp_hdr);
 
 // PTP ????
 #define PTP_ETHERTYPE 0x88F7    // Layer 2 PTP
 #define PTP_EVENT_PORT 319      // UDP ?????
 #define PTP_GENERAL_PORT 320    // UDP ?????
-int is_ptp_packet(const u8 *packet);
+//static int is_ptp_packet(const u8 *packet);
 
 //void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
 //void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
