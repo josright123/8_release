@@ -74,6 +74,10 @@ int get_dts_irqf(struct board_info *db)
 #define DEV_INFO_RX_ALIGN(dev) \
 		dev_info(dev, "RX: %s blk %u\n", \
 			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk)
+#define PRINT_BURST_INFO(n) \
+		printk("___[rx/tx %s mode] nRxc %d\n", \
+			   dmplug_tx, \
+			   n)
 #define PRINT_ALIGN_INFO(n) \
 		printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
 			dmplug_tx, \
@@ -189,9 +193,7 @@ static void SHOW_OPTION_MODE(struct device *dev)
 static void SHOW_MONITOR_RXC(struct board_info *db)
 {
 	if (dm9051_modedata->align.burst_mode == BURST_MODE_FULL)
-		printk("___[rx/tx %s mode] nRxc %d\n",
-			   dmplug_tx,
-			   db->bc.nRxcF);
+		PRINT_BURST_INFO(db->bc.nRxcF);
 	else if (dm9051_modedata->align.burst_mode == BURST_MODE_ALIGN)
 		PRINT_ALIGN_INFO(db->bc.nRxcF);
 }
