@@ -1,0 +1,55 @@
+pi@raspberrypi:~/pi/ptp/build $ sudo ./ptp4l -i eth0 -m -H -s
+ptp4l[89818.439]: selected /dev/ptp0 as PTP clock
+ptp4l[89818.440]: port 1 (eth0): INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[89818.440]: port 0 (/var/run/ptp4l): INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[89818.440]: port 0 (/var/run/ptp4lro): INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[89819.328]: port 1 (eth0): new foreign master dca632.fffe.22ffb3-1
+ptp4l[89819.331]: port 1 (eth0): received SYNC without timestamp
+ptp4l[89820.331]: port 1 (eth0): received SYNC without timestamp
+ptp4l[89821.331]: port 1 (eth0): received SYNC without timestamp
+ptp4l[89822.331]: port 1 (eth0): received SYNC without timestamp
+^Cpi@raspberrypi:~/pi/ptp/build $ sudo ./ptp4l -i eth0 -m -S -s
+ptp4l[89828.488]: port 1 (eth0): INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[89828.488]: port 0 (/var/run/ptp4l): INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[89828.488]: port 0 (/var/run/ptp4lro): INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[89829.329]: port 1 (eth0): new foreign master dca632.fffe.22ffb3-1
+ptp4l[89833.330]: selected best master clock dca632.fffe.22ffb3
+ptp4l[89833.330]: foreign master not using PTP timescale
+ptp4l[89833.330]: port 1 (eth0): LISTENING to UNCALIBRATED on RS_SLAVE
+ptp4l[89834.333]: master offset    1592597 s0 freq   -3988 path delay     71889
+ptp4l[89835.333]: master offset    1596164 s0 freq   -3988 path delay     71889
+ptp4l[89836.333]: master offset    1605510 s0 freq   -3988 path delay     73295
+ptp4l[89837.334]: master offset    1593263 s0 freq   -3988 path delay     74701
+ptp4l[89838.334]: master offset    1597235 s0 freq   -3988 path delay     75055
+ptp4l[89839.334]: master offset    1593357 s0 freq   -3988 path delay     75055
+^Cpi@raspberrypi:~/pi/ptp/build $ sudo ./ptp4l -i eth0 -m -S -s
+ptp4l[90267.567]: port 1 (eth0): INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[90267.567]: port 0 (/var/run/ptp4l): INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[90267.567]: port 0 (/var/run/ptp4lro): INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[90269.372]: port 1 (eth0): new foreign master dca632.fffe.22ffb3-1
+ptp4l[90273.372]: selected best master clock dca632.fffe.22ffb3
+ptp4l[90273.372]: foreign master not using PTP timescale
+ptp4l[90273.372]: port 1 (eth0): LISTENING to UNCALIBRATED on RS_SLAVE
+ptp4l[90274.406]: master offset    1673481 s0 freq   -3988 path delay     80001
+ptp4l[90275.406]: master offset    1679719 s0 freq   -3988 path delay     75378
+ptp4l[90276.407]: master offset    1682609 s0 freq   -3988 path delay     76160
+ptp4l[90277.407]: master offset    1682578 s0 freq   -3988 path delay     76160
+ptp4l[90278.407]: master offset    1681656 s0 freq   -3988 path delay     76550
+ptp4l[90279.408]: master offset    1691173 s0 freq   -3988 path delay     76835
+ptp4l[90280.407]: master offset    1678809 s0 freq   -3988 path delay     76835
+ptp4l[90281.408]: master offset    1712595 s0 freq   -3988 path delay     76887
+ptp4l[90282.408]: master offset    1682025 s0 freq   -3988 path delay     76887
+ptp4l[90283.408]: master offset    1677489 s0 freq   -3988 path delay     76835
+ptp4l[90284.408]: master offset    1688297 s0 freq   -3988 path delay     76497
+ptp4l[90285.408]: master offset    1681726 s0 freq   -3988 path delay     76887
+ptp4l[90286.408]: master offset    1680176 s0 freq   -3988 path delay     76925
+ptp4l[90287.408]: master offset    1677982 s0 freq   -3988 path delay     77013
+ptp4l[90288.409]: master offset    1685441 s0 freq   -3988 path delay     76801
+ptp4l[90289.409]: master offset    1684686 s0 freq   -3988 path delay     76801
+ptp4l[90290.409]: master offset    1677338 s1 freq   -3747 path delay     76801
+ptp4l[90291.409]: master offset     -13863 s2 freq   -5147 path delay     76801
+ptp4l[90291.409]: port 1 (eth0): UNCALIBRATED to SLAVE on MASTER_CLOCK_SELECTED
+ptp4l[90292.409]: master offset     -24794 s2 freq   -6265 path delay     76801
+ptp4l[90293.409]: master offset     -48824 s2 freq   -8717 path delay     77314
+^Cpi@raspberrypi:~/pi/ptp/build $ 
+
