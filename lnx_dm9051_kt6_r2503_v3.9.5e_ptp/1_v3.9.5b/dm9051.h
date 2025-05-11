@@ -273,12 +273,6 @@ struct eng_config {
 #endif
 
 /* driver config */
-//#define	FORCE_TX_CONTI_OFF	0
-//#define	FORCE_TX_CONTI_ON	1
-
-#define	DEFAULT_CHECKSUM_OFF		0
-#define	DEFAULT_CHECKSUM_ON		1
-
 #define MI_FIX                          1
 
 #define AMDIX_LOG_BUFSIZE		72
@@ -519,6 +513,14 @@ enum
 
 enum
 {
+//#define	DEFAULT_CHECKSUM_OFF		0
+//#define	DEFAULT_CHECKSUM_ON		1
+	DEFAULT_CHECKSUM_OFF = 0,
+	DEFAULT_CHECKSUM_ON = 1,
+};
+
+enum
+{
 	BURST_MODE_ALIGN = 0,
 	BURST_MODE_FULL = 1,
 };
@@ -555,8 +557,8 @@ const struct mod_config driver_misc_mode = {
 
 /* INT and INT two_step */
 #ifdef DMPLUG_INT
-//#warning "dm9051 INT"
 #pragma message("dm9051 INT")
+
 #ifdef INT_CLKOUT
 #warning "INT: INT_CLKOUT"
 #endif

@@ -6,6 +6,7 @@
 /*#define DMPLUG_CONTI */ //(conti)
 /*#define DMPLUG_CRYPT */ //(crypt)
 /*#define DMPLUG_PTP */ //(ptp1588)
+/*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
 
 /* Macro for already known platforms
  */ 
@@ -76,9 +77,13 @@ const struct eng_sched csched = engdata.sched;
 
 #ifdef DMPLUG_PTP
 #pragma message("dm9051 PTP")
-//#warning "dm9051 PTP"
+
+#ifdef DMPLUG_PPS_CLKOUT
+#pragma message("dm9051 PPS")
+//#warning "dm9051 PPS"
 #endif
 #endif
+#endif //MAIN_DATA
 
 //inline
 #ifdef DMPLUG_CRYPT
