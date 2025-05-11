@@ -109,47 +109,46 @@ void SHOW_DRIVER(struct device *dev)
 #endif
 }
 
-void SHOW_RX_MATCH_MODE(struct spi_device *spi)
+void SHOW_RX_MATCH_MODE(struct device *dev)
 {
-	dev_info(&spi->dev, "Davicom: %s", dmplug_rx_mach);
+	dev_info(dev, "Davicom: %s", dmplug_rx_mach);
 }
 
-void SHOW_RX_INT_MODE(struct spi_device *spi)
+void SHOW_RX_INT_MODE(struct device *dev)
 {
 	#ifdef DMPLUG_INT
-	dev_info(&spi->dev, "Davicom: %s", dmplug_intterrpt2);
+	dev_info(dev, "Davicom: %s", dmplug_intterrpt2);
 	#endif
 }
 
-void SHOW_DTS_SPEED(struct spi_device *spi)
+void SHOW_DTS_SPEED(struct device *dev)
 {
 	/* [dbg] spi.speed */
 	unsigned int speed;
-	of_property_read_u32(spi->dev.of_node, "spi-max-frequency", &speed);
+	of_property_read_u32(dev->of_node, "spi-max-frequency", &speed);
 	dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
 }
 
-void SHOW_DTS_INT(struct spi_device *spi)
+void SHOW_DTS_INT(struct device *dev)
 {
 	#ifdef DMPLUG_INT
 	unsigned int intdata[2];
-	of_property_read_u32_array(spi->dev.of_node, "interrupts", &intdata[0], 2);
-	dev_info(&spi->dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
-	dev_info(&spi->dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
+	of_property_read_u32_array(dev->of_node, "interrupts", &intdata[0], 2);
+	dev_info(dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
+	dev_info(dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
 	#endif
 }
 
-static void SHOW_CONFIG_MODE(struct spi_device *spi)
+static void SHOW_CONFIG_MODE(struct device *dev)
 {
-	struct device *dev = &spi->dev;
-
 	SHOW_DRIVER(dev);
 	do {
-		SHOW_DTS_SPEED(spi);
-		SHOW_RX_MATCH_MODE(spi);
-		SHOW_RX_INT_MODE(spi);
-		SHOW_DTS_INT(spi);
+		SHOW_DTS_SPEED(dev);
+		SHOW_RX_MATCH_MODE(dev);
+		SHOW_RX_INT_MODE(dev);
+		SHOW_DTS_INT(dev);
 	} while (0);
+
 	printk("\n");
 	//dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 #if defined(__x86_64__) || defined(__aarch64__)
@@ -180,10 +179,8 @@ static void SHOW_PLAT_MODE(struct device *dev)
 	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 }
 
-static void SHOW_OPTION_MODE(struct spi_device *spi)
+static void SHOW_OPTION_MODE(struct device *dev)
 {
-	struct device *dev = &spi->dev;
-
 	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", econf->tx_timeout_us, dmplug_tx,
 			econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
 			econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
@@ -3097,7 +3094,7 @@ static int dm9051_probe(struct spi_device *spi)
 
 	/* conti */
 	#ifdef DMPLUG_CONTI
-	dev_info(&db->spidev->dev, "DMPLUG_CONTI Version\n");
+	dev_info(dev, "DMPLUG_CONTI Version\n");
 	#endif
 
 	/* 2 ptpc */
@@ -3105,8 +3102,8 @@ static int dm9051_probe(struct spi_device *spi)
 	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
 	if (db->ptp_enable) {
 		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
-		dev_info(&db->spidev->dev, "DMPLUG_PTP Version\n");
-		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
+		dev_info(dev, "DMPLUG_PTP Version\n");
+		dev_info(dev, "Enable PTP must COERCE to disable checksum_offload\n");
 	}
 	#endif
 
@@ -3133,7 +3130,7 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	SHOW_CONFIG_MODE(spi);
+	SHOW_CONFIG_MODE(dev);
 
 	printk("\n");
 	SHOW_PLAT_MODE(dev);
@@ -3141,7 +3138,7 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	SHOW_OPTION_MODE(spi);
+	SHOW_OPTION_MODE(dev);
 
 	ret = dm9051_map_etherdev_par(ndev, db);
 	if (ret < 0)
