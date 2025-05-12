@@ -873,9 +873,9 @@ static int dm9051_all_restart(struct board_info *db)
  *    0 - no error, caller need stop further rx operation
  *  -EBUSY - read data error, caller escape from rx operation
  */
-static void log_array(char *head, struct board_info *db, void *ptr, uint16_t len)
+static void log_rx_array(struct board_info *db, void *ptr, uint16_t len)
 {
-	sprintf(db->bc.head, "%s", head);
+	sprintf(db->bc.head, "log_rx, LEN= %u", len);
 	dm9051_dump_data1(db, ptr, len)
 }
 static inline void sa_log_array(void *ptr, uint16_t len)
@@ -963,7 +963,7 @@ static int dm9051_loop_rx(struct board_info *db)
 			return ret;
 		}
 
-		log_array("loop_rx", db, skb->data, skb->len);
+		log_rx_array(db, skb->data, skb->len);
 		sa_log_array(skb->data, skb->len);
 		skb->protocol = eth_type_trans(skb, db->ndev);
 		if (db->ndev->features & NETIF_F_RXCSUM)
