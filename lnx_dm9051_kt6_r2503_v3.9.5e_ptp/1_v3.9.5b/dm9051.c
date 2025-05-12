@@ -68,12 +68,6 @@ int get_dts_irqf(struct board_info *db)
 #endif
 
 /* log */
-#define DEV_INFO_TX_ALIGN(dev) \
-		dev_info(dev, "TX: %s blk %u\n", \
-			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk)
-#define DEV_INFO_RX_ALIGN(dev) \
-		dev_info(dev, "RX: %s blk %u\n", \
-			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk)
 #define PRINT_BURST_INFO(n) \
 		printk("___[rx/tx %s mode] nRxc %d\n", \
 			   dmplug_tx, \
@@ -96,33 +90,21 @@ void SHOW_DRIVER(struct device *dev)
 	// 64-bit code
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_info(dev, "Davicom: %s (64 bit)", confdata.release_version);
+	dev_crit(dev, "Davicom: %s (64 bit)", confdata.release_version);
 	#else
 	// 32-bit specific code
-	dev_info(dev, "Davicom: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)", confdata.release_version);
+	dev_crit(dev, "Davicom: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)", confdata.release_version);
 	#endif
 #else
 	// 32-bit code
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_info(dev, "Davicom: %s (32 bit, warn: but kernel config has CONFIG_64BIT?))", confdata.release_version);
+	dev_crit(dev, "Davicom: %s (32 bit, warn: but kernel config has CONFIG_64BIT?))", confdata.release_version);
 	#else
 	// 32-bit specific code
-	dev_info(dev, "Davicom: %s (32 bit)", confdata.release_version);
+	dev_crit(dev, "Davicom: %s (32 bit)", confdata.release_version);
 	#endif
 #endif
-}
-
-void SHOW_RX_MATCH_MODE(struct device *dev)
-{
-	dev_info(dev, "Davicom: %s", dmplug_rx_mach);
-}
-
-void SHOW_RX_INT_MODE(struct device *dev)
-{
-	#ifdef DMPLUG_INT
-	dev_info(dev, "Davicom: %s", dmplug_intterrpt2);
-	#endif
 }
 
 void SHOW_DTS_SPEED(struct device *dev)
@@ -130,7 +112,19 @@ void SHOW_DTS_SPEED(struct device *dev)
 	/* [dbg] spi.speed */
 	unsigned int speed;
 	of_property_read_u32(dev->of_node, "spi-max-frequency", &speed);
-	dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
+	dev_crit(dev, "SPI speed from DTS: %d Hz\n", speed);
+}
+
+void SHOW_RX_MATCH_MODE(struct device *dev)
+{
+	dev_warn(dev, "Davicom: %s", dmplug_rx_mach);
+}
+
+void SHOW_RX_INT_MODE(struct device *dev)
+{
+	#ifdef DMPLUG_INT
+	dev_warn(dev, "Davicom: %s", dmplug_intterrpt2);
+	#endif
 }
 
 void SHOW_DTS_INT(struct device *dev)
@@ -138,10 +132,17 @@ void SHOW_DTS_INT(struct device *dev)
 	#ifdef DMPLUG_INT
 	unsigned int intdata[2];
 	of_property_read_u32_array(dev->of_node, "interrupts", &intdata[0], 2);
-	dev_info(dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
-	dev_info(dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
+	dev_crit(dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
+	dev_crit(dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
 	#endif
 }
+
+#define DEV_INFO_TX_ALIGN(dev) \
+		dev_warn(dev, "TX: %s blk %u\n", \
+			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk)
+#define DEV_INFO_RX_ALIGN(dev) \
+		dev_warn(dev, "RX: %s blk %u\n", \
+			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk)
 
 static void SHOW_CONFIG_MODE(struct device *dev)
 {
@@ -159,19 +160,19 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 	// 64-bit code
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_info(dev, "LXR: %s, BUILD: %s (64 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
+	dev_err(dev, "LXR: %s, BUILD: %s (64 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
 	#else
 	// 32-bit specific code
-	dev_info(dev, "LXR: %s, BUILD: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)\n", utsname()->release, utsname()->release);
+	dev_err(dev, "LXR: %s, BUILD: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)\n", utsname()->release, utsname()->release);
 	#endif
 #else
 	// 32-bit code
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_info(dev, "LXR: %s, BUILD: %s (32 bit, warn: but kernel config has CONFIG_64BIT?)\n", utsname()->release, utsname()->release);
+	dev_err(dev, "LXR: %s, BUILD: %s (32 bit, warn: but kernel config has CONFIG_64BIT?)\n", utsname()->release, utsname()->release);
 	#else
 	// 32-bit specific code
-	dev_info(dev, "LXR: %s, BUILD: %s (32 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
+	dev_err(dev, "LXR: %s, BUILD: %s (32 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
 	#endif
 #endif
 	DEV_INFO_TX_ALIGN(dev);
@@ -180,7 +181,19 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 
 static void SHOW_PLAT_MODE(struct device *dev)
 {
-	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
+	dev_err(dev, "Davicom: %s", driver_align_mode.test_info);
+}
+
+int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
+{
+	if (wid != DM9051_ID)
+	{
+		dev_err(dev, "chipid error as %04x !\n", wid);
+		return -ENODEV;
+	}
+
+	dev_warn(dev, "chip %04x found\n", wid);
+	return 0;
 }
 
 static void SHOW_OPTION_MODE(struct device *dev)
@@ -188,6 +201,13 @@ static void SHOW_OPTION_MODE(struct device *dev)
 	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", econf->tx_timeout_us, dmplug_tx,
 			econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
 			econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
+}
+
+void SHOW_MAC(struct board_info *db, u8 *addr)
+{
+	dev_warn(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+			 addr[0], addr[1], addr[2],
+			 addr[3], addr[4], addr[5]);
 }
 
 static void SHOW_MONITOR_RXC(struct board_info *db)
@@ -1401,14 +1421,7 @@ static int dm9051_map_chipid(struct board_info *db)
 		return ret;
 
 	wid = get_unaligned_le16(buff + 2);
-	if (wid != DM9051_ID)
-	{
-		dev_err(dev, "chipid error as %04x !\n", wid);
-		return -ENODEV;
-	}
-
-	dev_info(dev, "chip %04x found\n", wid);
-	return 0;
+	return SHOW_MAP_CHIPID(dev, wid);
 }
 
 /* Read DM9051_PAR registers which is the mac address loaded from EEPROM while power-on
@@ -1446,10 +1459,7 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 #else
 	ether_addr_copy(ndev->dev_addr, addr);
 #endif
-
-	dev_info(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
-			 addr[0], addr[1], addr[2],
-			 addr[3], addr[4], addr[5]);
+	SHOW_MAC(db, addr);
 	return 0;
 }
 
@@ -3095,7 +3105,20 @@ static int dm9051_probe(struct spi_device *spi)
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 
 	/* version log */
+#if 1	//[Test]
+	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP | 
+		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_INTR | NETIF_MSG_RX_STATUS | NETIF_MSG_PKTDATA; //0;
+
 	printk("\n");
+	dev_info(dev, "dev_info Version\n");
+	dev_notice(dev, "dev_notice Version\n");
+	//dev_alert(dev, "dev_alert Version\n"); //(available)
+	//dev_emerg(dev, "dev_emerg Version\n");
+	dev_crit(dev, "dev_crit Version\n");
+	dev_warn(dev, "dev_warn Version\n");
+	dev_err(dev, "dev_err Version\n");
+	printk("\n");
+#endif
 
 	/* conti */
 	#ifdef DMPLUG_CONTI
@@ -3166,6 +3189,26 @@ static int dm9051_probe(struct spi_device *spi)
 		phy_disconnect(db->phydev);
 		return dev_err_probe(dev, ret, "device register failed");
 	}
+	
+	//[if (netif_running(ndev)) ...]
+#if 1
+//[.] netif_msg_drv
+	printk("\n");
+	netif_info(db, probe, ndev, "netif_info Version\n");
+	netif_notice(db, probe, ndev, "netif_notice Version\n");
+	//netif_alert(db, probe, ndev, "netif_alert Version\n"); //(available)
+	//netif_emerg(db, probe, ndev, "netif_emerg Version\n");
+	netif_crit(db, probe, ndev, "netif_crit Version\n");
+	netif_warn(db, probe, ndev, "netif_warn Version\n");
+	netif_err(db, probe, ndev, "netif_err Version\n");
+	printk("\n");
+
+//	netdev_info(ndev, "netdev_info Version\n");
+//	netdev_err(ndev, "netdev_err Version\n");
+
+//	netif_dbg(db, probe, ndev, "netif_dbg Version\n");
+//	netdev_dbg(ndev, "netdev_dbg Version\n");
+#endif
 
 	/* 2.1 ptpc */
 	#if 1 //0
