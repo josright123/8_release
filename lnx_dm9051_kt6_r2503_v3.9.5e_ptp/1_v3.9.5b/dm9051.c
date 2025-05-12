@@ -3106,8 +3106,9 @@ static int dm9051_probe(struct spi_device *spi)
 
 	/* version log */
 #if 1	//[Test]
+	//[NETIF_MSG_HW is play for phylib...]
 	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP | 
-		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_INTR | NETIF_MSG_RX_STATUS | NETIF_MSG_PKTDATA; //0;
+		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_INTR | NETIF_MSG_RX_STATUS | NETIF_MSG_PKTDATA | NETIF_MSG_HW /*| NETIF_MSG_HW*/; //0;
 
 	printk("\n");
 	dev_info(dev, "dev_info Version\n");
