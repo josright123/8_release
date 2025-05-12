@@ -1585,6 +1585,13 @@ const static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
         "fifo_rst",
 };
 
+static void log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2)
+{
+	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
+	dm9051_dump_reg2s(db, reg1, reg2);
+}
+
 static void dm9051_get_strings(struct net_device *netdev, u32 sget, u8 *data)
 {
 	if (sget == ETH_SS_STATS)
@@ -1624,13 +1631,9 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	mutex_lock(&db->spi_lockm);
 #endif
 	printk("rx_psckets: %llu\n", data[0]);
-	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump rcr registers:");
-	dm9051_dump_reg2s(db, DM9051_RCR, DM9051_RCR);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump wdr registers:");
-	dm9051_dump_reg2s(db, 0x24, 0x25);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump mrr registers:");
-	dm9051_dump_reg2s(db, DM9051_MRRL, DM9051_MRRH);
+	log_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
+	log_regs("dump wdr registers:", db, 0x24, 0x25);
+	log_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
 
 	printk("%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 		db->xmit_in, db->xmit_tc, db->xmit_zc);
