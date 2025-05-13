@@ -14,7 +14,10 @@ obj-m	:=	dm9051a.o
 #dm9051a-objs := dm9051.o dm9051_open.o ((dm9051_conti.o)) (dm9051_ptpd.o) (dm9051_crypt.o)
 #dm9051a-objs := dm9051.o dm9051_open.o dm9051_ptpd.o
 #dm9051a-objs := dm9051.o
-dm9051a-objs := dm9051.o dm9051_ptpd.o dm9051_poll.o
+
+dm9051a-objs := dm9051.o dm9051_ptpd.o
+#dm9051a-objs := dm9051.o dm9051_ptpd.o dm9051_poll.o dm9051_int2.o
+
 # dm9051_open.o
 # dm9051_ptpd.o
 # dm9051_conti.o

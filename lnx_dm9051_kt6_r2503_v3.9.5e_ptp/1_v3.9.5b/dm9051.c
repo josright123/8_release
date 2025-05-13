@@ -52,16 +52,16 @@ int get_dts_irqf(struct board_info *db)
 }
 
 #if defined(DMPLUG_INT)
-  #ifdef INT_CLKOUT
-  #define dmplug_rx_mach "interrupt clkout mode"
-  #else
+  #if !defined(INT_CLKOUT)
   #define dmplug_rx_mach "interrupt polarity ctrl mode"
+  #else
+  #define dmplug_rx_mach "interrupt clkout mode"
   #endif
 
-  #ifdef INT_TWO_STEP
-  #define dmplug_intterrpt2 "interrupt two step"
-  #else
+  #if !defined(INT_TWO_STEP)
   #define dmplug_intterrpt2 "interrupt direct step"
+  #else
+  #define dmplug_intterrpt2 "interrupt two step"
   #endif
 #else
 #define dmplug_rx_mach "poll mode"
@@ -1254,7 +1254,7 @@ static int dm9051_core_init(struct board_info *db)
 	/* Diagnostic contribute: In dm9051_enable_interrupt()
 	 * (or located in the core reset subroutine is better!!)
 	 */
-	#if defined(INT_CLKOUT)
+	#ifdef INT_CLKOUT
 		netif_info(db, intr, db->ndev, "_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		if (ret)
@@ -2505,34 +2505,8 @@ out_unlock:
 int thread_servicep_done = 1;
 int thread_servicep_re_enter;
 
-#ifdef INT_TWO_STEP
-void dm9051_rx_irq_servicep(struct work_struct *work) //optional: INT: TWO_STEP SRVEICE
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
-
-	dm9051_rx_int2_plat(0, db); // 0 is no-used //.(macro)_rx_tx_plat()
-	thread_servicep_done = 1;
-
-}
-
-irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STEP
-{
-	struct board_info *db = pw;
-
-	if (thread_servicep_done) {
-		thread_servicep_done = 0;
-		if (!thread_servicep_re_enter)
-			netif_warn(db, intr, db->ndev, "_.int2   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++);
-		schedule_delayed_work(&db->irq_servicep, 0); //dm9051_rx_int2_plat(voidirq, pw);
-	}
-	else {
-		if (thread_servicep_re_enter <= 10)
-			netif_warn(db, intr, db->ndev, "_.int2   [%s] re-enter %d\n", __func__, thread_servicep_re_enter++);
-	}
-	return IRQ_HANDLED;
-}
-#endif //INT_TWO_STEP
+//#ifdef _INT_TWO_STEP
+//#endif //_INT_TWO_STEP
 
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 {
@@ -2555,35 +2529,31 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 /*
  * Interrupt: 
  */
-void INIT_RX_INT2_DELAY_SETUP(struct board_info *db)
-{
-	#ifdef INT_TWO_STEP
-	INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_servicep);
-	#endif //INT_TWO_STEP
-}
+//#ifdef _INT_TWO_STEP
+//#endif //_INT_TWO_STEP
 
 int INIT_REQUEST_IRQ(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
 	int ret;
-	#ifdef INT_TWO_STEP
-		netif_crit(db, intr, db->ndev, "request_threaded_irq(INT_TWO_STEP)\n");
-		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_int2_delay,
-									get_dts_irqf(db) | IRQF_ONESHOT,
-									ndev->name, db);
-		//ret = request_irq(ndev->irq, dm9051_rx_int2_delay,
-		//							get_dts_irqf(db) | IRQF_ONESHOT,
-		//							ndev->name, db);
-		if (ret < 0)
-			netdev_err(ndev, "failed to rx request irq setup\n");
-	#else //INT_TWO_STEP
+	#if !defined(INT_TWO_STEP)
 		netif_crit(db, intr, db->ndev, "request_threaded_irq(INT_THREAD)\n");
-		ret = request_threaded_irq(ndev->irq, NULL, /*dm9051_rx_threaded_plat*/ /*dm9051_rx_int2_delay*/ dm9051_rx_threaded_plat,
+		ret = request_threaded_irq(ndev->irq, NULL, /*dm9051_rx_threaded_plat*/ /*_dm9051_rx_int2_delay*/ dm9051_rx_threaded_plat,
 		 						   get_dts_irqf(db) | IRQF_ONESHOT,
 		 						   ndev->name, db);
 		if (ret < 0)
 			netdev_err(ndev, "failed to rx request threaded irq setup\n");
-	#endif //INT_TWO_STEP
+	#else //_INT_TWO_STEP
+		netif_crit(db, intr, db->ndev, "request_threaded_irq(INT TWO_STEP)\n");
+		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_int2_delay,
+									get_dts_irqf(db) | IRQF_ONESHOT,
+									ndev->name, db);
+		//ret = request_irq(ndev->irq, _dm9051_rx_int2_delay,
+		//							get_dts_irqf(db) | IRQF_ONESHOT,
+		//							ndev->name, db);
+		if (ret < 0)
+			netdev_err(ndev, "failed to rx request irq setup\n");
+	#endif //_INT_TWO_STEP
 	return ret;
 }
 
@@ -2736,10 +2706,10 @@ static int dm9051_stop(struct net_device *ndev)
 	phy_stop(db->phydev);
 
 	/* schedule delay work */
-	#if defined(DMPLUG_INT)
+	#ifdef DMPLUG_INT
 	#ifdef INT_TWO_STEP
 		cancel_delayed_work_sync(&db->irq_servicep);
-	#endif //INT_TWO_STEP
+	#endif //_INT_TWO_STEP
 	#else //_DMPLUG_INT
 		cancel_delayed_work_sync(&db->irq_workp);
 	#endif //_DMPLUG_INT
@@ -2784,9 +2754,9 @@ static int dm9051_stop(struct net_device *ndev)
 
 //	/* schedule delay work */
 //	#ifdef _DMPLUG_INT
-//	#ifdef INT_TWO_STEP
+//	#ifdef _INT_TWO_STEP
 //		cancel_delayed_work_sync(&db->irq_servicep); //.if (_dm9051_cmode_int)
-//	#endif //INT_TWO_STEP
+//	#endif //_INT_TWO_STEP
 //	#else //_DMPLUG_INT
 //		cancel_delayed_work_sync(&db->irq_workp); //.if (!_dm9051_cmode_int)
 //	#endif 
@@ -3123,7 +3093,7 @@ static int dm9051_probe(struct spi_device *spi)
 	INIT_WORK(&db->rxctrl_work, dm9051_rxctl_delay);
 	INIT_WORK(&db->tx_work, dm9051_tx_delay);
 
-	#if defined(DMPLUG_INT)
+	#ifdef DMPLUG_INT
 	#ifdef INT_TWO_STEP
 		INIT_RX_INT2_DELAY_SETUP(db);
 	#endif

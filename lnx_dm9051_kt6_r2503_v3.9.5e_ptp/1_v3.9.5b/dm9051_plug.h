@@ -94,6 +94,14 @@ void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
 #define BUS_OPS(db, buff, crlen)	//empty
 #endif
 
+#if defined(DMPLUG_INT)
+#ifdef INT_TWO_STEP
+void INIT_RX_INT2_DELAY_SETUP(struct board_info *db);
+void dm9051_rx_irq_servicep(struct work_struct *work);
+irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
+#endif
+#endif
+
 #ifndef DMPLUG_INT
 void dm9051_poll_servicep(struct work_struct *work);
 #endif

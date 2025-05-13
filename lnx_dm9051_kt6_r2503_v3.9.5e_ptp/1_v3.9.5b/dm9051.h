@@ -38,10 +38,11 @@
 #define DMPLUG_INT //(INT39)
 
   //#define PLUG_INT_CLKOUT
-  //#define PLUG_INT_2STEP
   #ifdef PLUG_INT_CLKOUT
   #define INT_CLKOUT //(INT39_CLKOUT)
   #endif
+
+  //#define PLUG_INT_2STEP
   #ifdef PLUG_INT_2STEP
   #define INT_TWO_STEP //(INT39_TWO_STEP)
   #endif
@@ -278,7 +279,7 @@ struct eng_config {
 #define AMDIX_LOG_BUFSIZE		72
 
 #if 1 //sticked fixed here is better!
-#include "dm9051_plug.h" //for definition of 'INT_TWO_STEP'
+#include "dm9051_plug.h" //for definition of '_INT_TWO_STEP'
 /* 0.1 ptpc */
 //#if 1 //0
 //#ifdef DMPLUG_PTP
@@ -392,7 +393,7 @@ struct board_info
 	#if defined(DMPLUG_INT)
 	#ifdef INT_TWO_STEP
 	struct delayed_work irq_servicep;
-	#endif //INT_TWO_STEP
+	#endif
 	#else
 	struct delayed_work irq_workp;
 	#endif

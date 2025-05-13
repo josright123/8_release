@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2025 Davicom Semiconductor,Inc.
+ * Davicom DM9051 SPI Fast Ethernet Linux driver
+ */
+#include <linux/etherdevice.h>
+#include <linux/ethtool.h>
+#include <linux/interrupt.h>
+#include <linux/iopoll.h>
+#include <linux/irq.h>
+#include <linux/mii.h>
+#include <linux/module.h>
+#include <linux/utsname.h>
+#include <generated/utsrelease.h> // For newer kernels
+#include <linux/netdevice.h>
+#include <linux/phy.h>
+#include <linux/regmap.h>
+#include <linux/skbuff.h>
+#include <linux/spinlock.h>
+#include <linux/spi/spi.h>
+#include <linux/types.h>
+#include <linux/of.h>
+#include <linux/version.h>
+#include <linux/ptp_clock_kernel.h>
+#include "dm9051.h"
+
+extern int thread_servicep_done;
+extern int thread_servicep_re_enter;
+
+#ifdef INT_TWO_STEP
+void INIT_RX_INT2_DELAY_SETUP(struct board_info *db)
+{
+	
+	INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_servicep);
+}
+
+void dm9051_rx_irq_servicep(struct work_struct *work) //optional: INT: TWO_STEP SRVEICE
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
+
+	dm9051_rx_int2_plat(0, db); // 0 is no-used //.(macro)_rx_tx_plat()
+	thread_servicep_done = 1;
+
+}
+
+irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STEP
+{
+	struct board_info *db = pw;
+
+	if (thread_servicep_done) {
+		thread_servicep_done = 0;
+		if (!thread_servicep_re_enter)
+			netif_warn(db, intr, db->ndev, "_.int2   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++);
+		schedule_delayed_work(&db->irq_servicep, 0); //dm9051_rx_int2_plat(voidirq, pw);
+	}
+	else {
+		if (thread_servicep_re_enter <= 10)
+			netif_warn(db, intr, db->ndev, "_.int2   [%s] re-enter %d\n", __func__, thread_servicep_re_enter++);
+	}
+	return IRQ_HANDLED;
+}
+#endif
