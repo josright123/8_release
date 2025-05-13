@@ -94,6 +94,12 @@ void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
 #define BUS_OPS(db, buff, crlen)	//empty
 #endif
 
+#ifdef DMPLUG_PTP
+void ptp_new(struct board_info *db, struct net_device *ndev);
+void ptp_init(struct board_info *db);
+void ptp_end(struct board_info *db);
+#endif
+
 #if defined(DMPLUG_INT)
 #ifdef INT_TWO_STEP
 void INIT_RX_INT2_DELAY_SETUP(struct board_info *db);
