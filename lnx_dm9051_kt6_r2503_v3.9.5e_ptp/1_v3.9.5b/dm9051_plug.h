@@ -85,11 +85,11 @@ const struct eng_sched csched = engdata.sched;
 #endif
 #endif //MAIN_DATA
 
-//inline of main
+//raw to main
 #define BUS_SETUP(db)	0		//empty(NoError)
 #define BUS_OPS(db, buff, crlen)	//empty
 
-//inline of main
+//overlay by plug/
 #ifdef DMPLUG_CRYPT
 #undef BUS_SETUP(db)
 #define BUS_SETUP(db) bus_setup(struct board_info *db)
@@ -97,6 +97,7 @@ const struct eng_sched csched = engdata.sched;
 #define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
 #endif
 
+//implement in plug/
 #ifdef DMPLUG_CRYPT
 int bus_setup(struct board_info *db);
 void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);

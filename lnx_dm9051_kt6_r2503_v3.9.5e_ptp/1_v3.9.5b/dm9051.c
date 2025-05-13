@@ -1236,10 +1236,7 @@ static unsigned int dm9051_init_intcr_value(struct board_info *db)
 
 static int dm9051_core_init(struct board_info *db)
 {
-	int ret;
-
-//	db->bc.fifo_rst_counter++;
-	ret = BUS_SETUP(db); //reserved customization
+	int ret = BUS_SETUP(db); //reserved, customization, raw empty or overlay
 	if (ret)
 		return ret;
 
