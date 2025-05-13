@@ -616,14 +616,14 @@ static int dm9051_ptp_set_timestamp_mode(struct board_info *db,
 	case HWTSTAMP_TX_ONESTEP_SYNC:
 //.		db->ptp_onestep = true;
 		db->ptp_on = 1;
-		dev_info(&db->spidev->dev, "Enable PTP - hw tstamp tx one step, Driver support, Set db->ptp_on %d\n", db->ptp_on);
+		netif_info(db, hw, db->ndev, "Enable PTP - hw tstamp tx one step, Driver support, Set db->ptp_on %d\n", db->ptp_on);
 		//gem_ptp_set_one_step_sync(bp, 1);
 		//tx_bd_control = TSTAMP_ALL_FRAMES;
 		break;
 	case HWTSTAMP_TX_ON:
 //.		db->ptp_onestep = false;
 		db->ptp_on = 1;
-		dev_info(&db->spidev->dev, "Enable PTP - hw tstamp tx on, Driver support, Set db->ptp_on %d\n", db->ptp_on);
+		netif_info(db, hw, db->ndev, "Enable PTP - hw tstamp tx on, Driver support, Set db->ptp_on %d\n", db->ptp_on);
 		//gem_ptp_set_one_step_sync(bp, 0);
 		//tx_bd_control = TSTAMP_ALL_FRAMES;
 		break;
@@ -741,7 +741,7 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 	//int index;
 
 	if (!ifr) {
-		netif_err(adb, drv, adb->ndev,
+		netif_err(adb, hw, adb->ndev,
 			  "SIOCSHWTSTAMP, ifr == NULL\n");
 		return -EINVAL;
 	}
@@ -750,7 +750,7 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 		return -EFAULT;
 
 	if (config.flags) {
-		netif_warn(adb, drv, adb->ndev,
+		netif_warn(adb, hw, adb->ndev,
 			   "ignoring hwtstamp_config.flags == 0x%08X, expected 0\n",
 			   config.flags);
 	}
@@ -758,31 +758,31 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 	switch (config.tx_type) {
 		case HWTSTAMP_TX_OFF:
 			//dev_info(&adb->spidev->dev, "IOCtl - Now db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
-			printk("IOCtl - Now db->ptp_on %d, NOTE: Stop tx sync !\n", adb->ptp_on);
+			netif_info(adb, hw, adb->ndev, "IOCtl - Now db->ptp_on %d, NOTE: Stop tx sync !\n", adb->ptp_on);
 			//lan743x_ptp_set_sync_ts_insert(adapter, false);
 			break;
 		case HWTSTAMP_TX_ONESTEP_SYNC:
 	//.		db->ptp_onestep = true;
 			adb->ptp_on = 1;
 			//dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", adb->ptp_on);
-			printk("IOCtl: Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", adb->ptp_on);
+			netif_info(adb, hw, adb->ndev, "IOCtl: Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", adb->ptp_on);
 			//gem_ptp_set_one_step_sync(bp, 1);
 			//lan743x_ptp_set_sync_ts_insert(adapter, true);
 			break;
 		case HWTSTAMP_TX_ON:
 	//.		db->ptp_onestep = false;
 			adb->ptp_on = 1;
-			dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
+			netif_info(adb, hw, adb->ndev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
 			//gem_ptp_set_one_step_sync(bp, 0);
 			//lan743x_ptp_set_sync_ts_insert(adapter, false);
 			break;
 		case HWTSTAMP_TX_ONESTEP_P2P:
 			//ret = -ERANGE;
-			netif_warn(adb, drv, adb->ndev, "IOCtl - Now db->ptp_on %d, Error Range!\n", adb->ptp_on);
+			netif_warn(adb, hw, adb->ndev, "IOCtl - Now db->ptp_on %d, Error Range!\n", adb->ptp_on);
 			return -ERANGE;
 			//break;
 		default:
-			netif_warn(adb, drv, adb->ndev,
+			netif_warn(adb, hw, adb->ndev,
 				   "  tx_type = %d, UNKNOWN\n", config.tx_type);
 			return -EINVAL;
 			//ret = -EINVAL;
@@ -806,17 +806,17 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 		case HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ:
 		case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
 			//dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_PTP_V2_EVENT\n"); //~ db->ptp_on = 1;
-			printk("config->rx_filter: Master.Slave.Has, to be HWTSTAMP_FILTER_PTP_V2_EVENT\n");
+			netif_info(adb, hw, adb->ndev, "config->rx_filter: Master.Slave.Has, to be HWTSTAMP_FILTER_PTP_V2_EVENT\n");
 			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
 			break;
 		case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
 		case HWTSTAMP_FILTER_ALL:
 			//db->ptp_on = 1;
-			dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_ALL\n");
+			netif_info(adb, hw, adb->ndev, "config->rx_filter - to be, HWTSTAMP_FILTER_ALL\n");
 			config.rx_filter = HWTSTAMP_FILTER_ALL;
 			break;
 		default:
-			netif_warn(adb, drv, adb->ndev,
+			netif_warn(adb, hw, adb->ndev,
 					   "  rx_filter = %d, UNKNOWN\n", config.rx_filter);
 			config.rx_filter = HWTSTAMP_FILTER_NONE;
 			return -ERANGE;
@@ -1448,7 +1448,7 @@ void dm9051_ptp_init(struct board_info *db)
 		(1 << HWTSTAMP_TX_OFF);
 	#endif
 
-	dev_info(&db->spidev->dev, "DM9051A Driver PTP Init\n");
+	netif_info(db, hw, db->ndev, "DM9051A Driver PTP Init\n");
 
 	db->ptp_caps = dm9051a_ptp_info;
 
@@ -1505,7 +1505,8 @@ void dm9051_ptp_stop(struct board_info *db)
 	if (db->ptp_clock) {
 		ptp_clock_unregister(db->ptp_clock);
 		db->ptp_clock = NULL;
-		printk("_[ptp] remove: PTP clock!!!\r\n");
+		//printk("_[ptp] remove: PTP clock!!!\r\n");
+		netif_info(db, hw, db->ndev, "_[ptp] remove: PTP clock!!!\r\n");
 	}
 }
 #endif

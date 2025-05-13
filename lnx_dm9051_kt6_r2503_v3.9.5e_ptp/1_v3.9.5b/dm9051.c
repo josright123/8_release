@@ -822,20 +822,23 @@ char *get_log_addr(struct board_info *db)
 	
 	return &db->automdix_log[2][0];
 }
-static void show_log_data(char *head, char *data)
+static void show_log_data(char *head, char *data, struct board_info *db)
 {
-		printk("<%s> %s\n", head, &data[1]);
+	//struct device *dev1 = &db->spidev->dev; //= &spi->dev;
+	//struct device *dev2 = db->ndev->dev.parent; //= ndev->dev.parent;
+
+	netif_crit(db, link, db->ndev, "<%s> %s\n", head, &data[1]);
 }
 static void show_log_addr(char *head, struct board_info *db)
 {
 	if (db->automdix_log[0][0]) {
 		printk("\n");
-		show_log_data(head, &db->automdix_log[0][0]); //printk("<%s> %s\n", head, &db->automdix_log[0][1]);
+		show_log_data(head, &db->automdix_log[0][0], db); //printk("<%s> %s\n", head, &db->automdix_log[0][1]);
 	}
 	if (db->automdix_log[1][0])
-		show_log_data(head, &db->automdix_log[1][0]); //printk("<%s> %s\n", head, &db->automdix_log[1][1]);
+		show_log_data(head, &db->automdix_log[1][0], db); //printk("<%s> %s\n", head, &db->automdix_log[1][1]);
 	if (db->automdix_log[2][0])
-		show_log_data(head, &db->automdix_log[2][0]); //printk("<%s> %s\n", head, &db->automdix_log[2][1]);
+		show_log_data(head, &db->automdix_log[2][0], db); //printk("<%s> %s\n", head, &db->automdix_log[2][1]);
 }
 void amdix_log_reset(struct board_info *db)
 {
@@ -864,11 +867,16 @@ void amdix_log_reset(struct board_info *db)
 
 void amdix_bmsr_change_up(struct board_info *db, unsigned int bmsr)
 {
+	//struct device *dev1 = &db->spidev->dev; //= &spi->dev;
+	//struct device *dev2 = db->ndev->dev.parent; //= ndev->dev.parent;
+
 	if (!(bmsr & BIT(2))) {
 		show_log_addr("hist", db);
-		printk("<link_phylib. on %02u to %02u>, current lpa %04x [bmsr] %04x to %04x found reach link\n", db->stop_automdix_flag,
-			db->n_automdix, db->lpa, bmsr, db->bmsr);
-		printk("[link] clear log...");
+		//dev_crit(dev1, "<link_phylib. on %02u to %02u>, current lpa %04x [bmsr] %04x to %04x found reach link\n", db->stop_automdix_flag,
+		//	db->n_automdix, db->lpa, bmsr, db->bmsr);
+		netif_crit(db, link, db->ndev, "<phylib BMSR> lpa %04x [bmsr] %04x\n",
+			db->lpa, db->bmsr);
+		netif_crit(db, link, db->ndev, "[link] clear log...");
 		amdix_log_reset(db);
 	}
 }
@@ -1120,6 +1128,7 @@ static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 {
 	struct board_info *db = bus->priv;
+	//struct device *dev1 = &db->spidev->dev; //= &spi->dev;
 
 	if (addr == DM9051_PHY_ADDR)
 	{
@@ -1137,13 +1146,15 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 		do {
 			/* NOT next with printk for dm9051_phywr(regnum, val) */
 			if ((regnum == 0) && (val & 0x800)) {
-				printk("[mdio phywr] %d %04x: power down (warn)\n", regnum, val);
+				netif_crit(db, link, db->ndev, "[mdio phywr] %d %04x: power down (warn)\n", regnum, val);
+				//printk("[mdio phywr] %d %04x: power down (warn)\n", regnum, val);
 				//printk("\n");
 				break;
 			}
 
 			if (mdio_write_count <= 9)
-				printk("[count%d] mdio phywr %d %04x\n", mdio_write_count++, regnum, val);
+				netif_crit(db, link, db->ndev, "[count%d] mdio phywr %d %04x\n", mdio_write_count++, regnum, val);
+				//printk("[count%d] mdio phywr %d %04x\n", mdio_write_count++, regnum, val);
 		} while(0);
 		ret = dm9051_phywrite(db, regnum, val);
 
@@ -2601,7 +2612,8 @@ void END_FREE_IRQ(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
 	free_irq(db->spidev->irq, db);
-	printk("_[stop] remove: free irq %d\n", db->spidev->irq);
+	//printk("_[stop] remove: free irq %d\n", db->spidev->irq);
+	netif_err(db, intr, ndev, "_[stop] remove: free irq %d\n", db->spidev->irq);
 }
 #endif
 
@@ -2753,7 +2765,8 @@ static int dm9051_stop(struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	int ret;
 
-	dev_info(&db->spidev->dev, "dm9051_stop\n");
+	netif_err(db, probe, ndev, "dm9051_stop\n"); //as 'probe' type
+	//dev_info(&db->spidev->dev, "dm9051_stop\n");
 	phy_stop(db->phydev);
 
 	/* schedule delay work */
@@ -3106,10 +3119,6 @@ static int dm9051_probe(struct spi_device *spi)
 
 	/* version log */
 #if 1	//[Test]
-	//[NETIF_MSG_HW is play for phylib...]
-	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP | 
-		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_INTR | NETIF_MSG_RX_STATUS | NETIF_MSG_PKTDATA | NETIF_MSG_HW /*| NETIF_MSG_HW*/; //0;
-
 	printk("\n");
 	dev_info(dev, "dev_info Version\n");
 	dev_notice(dev, "dev_notice Version\n");
@@ -3119,6 +3128,10 @@ static int dm9051_probe(struct spi_device *spi)
 	dev_warn(dev, "dev_warn Version\n");
 	dev_err(dev, "dev_err Version\n");
 	printk("\n");
+
+	//[NETIF_MSG_HW is play for phylib...]
+	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP | 
+		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_INTR | NETIF_MSG_RX_STATUS | NETIF_MSG_PKTDATA | NETIF_MSG_HW /*| NETIF_MSG_HW*/; //0;
 #endif
 
 	/* conti */
