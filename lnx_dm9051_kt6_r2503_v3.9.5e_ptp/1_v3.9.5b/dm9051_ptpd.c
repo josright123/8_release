@@ -1458,7 +1458,7 @@ void dm9051_ptp_init(struct board_info *db)
 		db->ptp_clock = NULL;
 		dev_err(&db->spidev->dev, "ptp_clock_register failed\n");
 	}  else if (db->ptp_clock) {
-		printk("ptp_clock_register added PHC, index %d on %s\n",
+		netif_warn(db, hw, db->ndev, "ptp_clock_register added PHC, index %d on %s\n",
 		       ptp_clock_index(db->ptp_clock), db->ndev->name);
 		
 	}
