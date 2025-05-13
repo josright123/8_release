@@ -87,7 +87,7 @@ static int dm9051_setup_bus_work(struct board_info *db)
 	return 0;
 }
 
-int BUS_SETUP(struct board_info *db)
+int bus_setup(struct board_info *db)
 {
 	return dm9051_setup_bus_work(db);
 }
@@ -101,7 +101,7 @@ static void bus_work(u8 bus_word, u8 *buff, unsigned int crlen)
 	}
 }
 
-void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen)
+void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
 {
 	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
 }

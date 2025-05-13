@@ -85,13 +85,21 @@ const struct eng_sched csched = engdata.sched;
 #endif
 #endif //MAIN_DATA
 
-//inline
-#ifdef DMPLUG_CRYPT
-int BUS_SETUP(struct board_info *db);
-void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
-#else
+//inline of main
 #define BUS_SETUP(db)	0		//empty(NoError)
 #define BUS_OPS(db, buff, crlen)	//empty
+
+//inline of main
+#ifdef DMPLUG_CRYPT
+#undef BUS_SETUP(db)
+#define BUS_SETUP(db) bus_setup(struct board_info *db)
+#undef BUS_OPS(db, buff, crlen)
+#define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
+#endif
+
+#ifdef DMPLUG_CRYPT
+int bus_setup(struct board_info *db);
+void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #endif
 
 #ifdef DMPLUG_PTP
