@@ -51,7 +51,7 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
-#ifdef DMPLUG_INT
+#if defined(DMPLUG_INT)
   #ifdef INT_CLKOUT
   #define dmplug_rx_mach "interrupt clkout mode"
   #else
@@ -122,14 +122,14 @@ void SHOW_RX_MATCH_MODE(struct device *dev)
 
 void SHOW_RX_INT_MODE(struct device *dev)
 {
-	#ifdef DMPLUG_INT
+	#if defined(DMPLUG_INT)
 	dev_warn(dev, "Davicom: %s", dmplug_intterrpt2);
 	#endif
 }
 
 void SHOW_DTS_INT(struct device *dev)
 {
-	#ifdef DMPLUG_INT
+	#if defined(DMPLUG_INT)
 	unsigned int intdata[2];
 	of_property_read_u32_array(dev->of_node, "interrupts", &intdata[0], 2);
 	dev_crit(dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
@@ -2576,7 +2576,7 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 }
 #endif
 
-#ifdef DMPLUG_INT
+#if defined(DMPLUG_INT)
 /*
  * Interrupt: 
  */
@@ -2639,7 +2639,7 @@ void INIT_RX_POLL_SCHED_DELAY(struct board_info *db)
 
 int DM9051_OPEN_REQUEST(struct board_info *db)
 {
-	#ifdef DMPLUG_INT
+	#if defined(DMPLUG_INT)
 	/*
 	 * Interrupt: 
 	 */
@@ -2668,7 +2668,7 @@ static int dm9051_open(struct net_device *ndev)
 	printk("\n");
 	netdev_info(db->phydev->attached_dev, "dm9051_open\n");
 	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_rx_mach);
-	#ifdef DMPLUG_INT
+	#if defined(DMPLUG_INT)
 	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_intterrpt2);
 	#endif
 	/* amdix_log_reset(db); */ //(to be determined)
@@ -2774,19 +2774,19 @@ static int dm9051_stop(struct net_device *ndev)
 	phy_stop(db->phydev);
 
 	/* schedule delay work */
-	#ifdef DMPLUG_INT
+	#if defined(DMPLUG_INT)
 	#ifdef INT_TWO_STEP
 		cancel_delayed_work_sync(&db->irq_servicep);
 	#endif //INT_TWO_STEP
-	#else //DMPLUG_INT
+	#else //_DMPLUG_INT
 		cancel_delayed_work_sync(&db->irq_workp);
-	#endif //DMPLUG_INT
+	#endif //_DMPLUG_INT
 
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
 
 
-	#ifdef DMPLUG_INT
+	#if defined(DMPLUG_INT)
 	END_FREE_IRQ(ndev);
 	#endif
 
@@ -2821,11 +2821,11 @@ static int dm9051_stop(struct net_device *ndev)
 //		return ret;
 
 //	/* schedule delay work */
-//	#ifdef DMPLUG_INT
+//	#ifdef _DMPLUG_INT
 //	#ifdef INT_TWO_STEP
 //		cancel_delayed_work_sync(&db->irq_servicep); //.if (_dm9051_cmode_int)
 //	#endif //INT_TWO_STEP
-//	#else //DMPLUG_INT
+//	#else //_DMPLUG_INT
 //		cancel_delayed_work_sync(&db->irq_workp); //.if (!_dm9051_cmode_int)
 //	#endif 
 
@@ -2836,7 +2836,7 @@ static int dm9051_stop(struct net_device *ndev)
 //	phy_stop(db->phydev);
 ////	mutex_unlock(&db->spi_lockm);
 
-//	#ifdef DMPLUG_INT
+//	#ifdef _DMPLUG_INT
 //	END_FREE_IRQ(ndev);
 //	#endif
 
@@ -3161,7 +3161,7 @@ static int dm9051_probe(struct spi_device *spi)
 	INIT_WORK(&db->rxctrl_work, dm9051_rxctl_delay);
 	INIT_WORK(&db->tx_work, dm9051_tx_delay);
 
-	#ifdef DMPLUG_INT
+	#if defined(DMPLUG_INT)
 	#ifdef INT_TWO_STEP
 		INIT_RX_INT2_DELAY_SETUP(db);
 	#endif

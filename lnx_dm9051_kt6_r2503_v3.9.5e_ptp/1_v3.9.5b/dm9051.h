@@ -389,7 +389,7 @@ struct board_info
 	struct work_struct rxctrl_work;
 	struct work_struct tx_work;
 
-	#ifdef DMPLUG_INT
+	#if defined(DMPLUG_INT)
 	#ifdef INT_TWO_STEP
 	struct delayed_work irq_servicep;
 	#endif //INT_TWO_STEP
@@ -556,7 +556,7 @@ const struct mod_config driver_misc_mode = {
 };
 
 /* INT and INT two_step */
-#ifdef DMPLUG_INT
+#if defined(DMPLUG_INT)
 #pragma message("dm9051 INT")
 
 #ifdef INT_CLKOUT
