@@ -69,11 +69,11 @@ int get_dts_irqf(struct board_info *db)
 
 /* log */
 #define PRINT_BURST_INFO(n) \
-		printk("___[rx/tx %s mode] nRxc %d\n", \
+		netif_warn(db, rx_status, db->ndev, "___[rx/tx %s mode] nRxc %d\n", \
 			   dmplug_tx, \
 			   n)
 #define PRINT_ALIGN_INFO(n) \
-		printk("___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
+		netif_warn(db, rx_status, db->ndev, "___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
 			dmplug_tx, \
 			dm9051_modedata->align.rx_blk, \
 			dm9051_modedata->align.tx_blk, \
