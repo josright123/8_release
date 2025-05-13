@@ -1448,6 +1448,7 @@ void dm9051_ptp_init(struct board_info *db)
 		(1 << HWTSTAMP_TX_OFF);
 	#endif
 
+	printk("\n");
 	netif_info(db, hw, db->ndev, "DM9051A Driver PTP Init\n");
 
 	db->ptp_caps = dm9051a_ptp_info;
