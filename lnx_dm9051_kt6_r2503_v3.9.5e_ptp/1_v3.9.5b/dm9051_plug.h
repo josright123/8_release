@@ -94,6 +94,10 @@ void BUS_OPS(struct board_info *db, u8 *buff, unsigned int crlen);
 #define BUS_OPS(db, buff, crlen)	//empty
 #endif
 
+#ifndef DMPLUG_INT
+void dm9051_poll_servicep(struct work_struct *work);
+#endif
+
 /*
  * Conti: 
  */

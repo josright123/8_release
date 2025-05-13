@@ -2499,33 +2499,8 @@ out_unlock:
 	//return IRQ_HANDLED;
 }
 
-#ifndef DMPLUG_INT //=POLL
-/* !Interrupt: Poll delay work */
-/* [DM_TIMER_EXPIRE2] poll extream.fast */
-/* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
- * This is by CPU scheduling-poll, so is software driven!
- */
-#define DM_TIMER_EXPIRE1 1
-#define DM_TIMER_EXPIRE2 0
-#define DM_TIMER_EXPIRE3 0
-
-void dm9051_poll_servicep(struct work_struct *work) //.dm9051_poll_delay_plat()
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
-
-	mutex_lock(&db->spi_lockm);
-
-	dm9051_delayp_looping_rx_tx(db);
-
-	mutex_unlock(&db->spi_lockm);
-
-	if (db->bc.ndelayF >= csched.nTargetMaxNum)
-		db->bc.ndelayF = POLL_OPERATE_INIT;
-
-	schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
-}
-#endif
+//#ifndef DMPLUG_INT //=POLL
+//#endif
 
 int thread_servicep_done = 1;
 int thread_servicep_re_enter;
@@ -2621,21 +2596,8 @@ void END_FREE_IRQ(struct net_device *ndev)
 }
 #endif
 
-#ifndef DMPLUG_INT
-/*
- * Polling: 
- */
-void INIT_RX_POLL_DELAY_SETUP(struct board_info *db)
-{
-	/* schedule delay work */
-	INIT_DELAYED_WORK(&db->irq_workp, dm9051_poll_servicep); //.dm9051_poll_delay_plat()
-}
-
-void INIT_RX_POLL_SCHED_DELAY(struct board_info *db)
-{
-	schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
-}
-#endif
+//#ifndef DMPLUG_INT
+//#endif
 
 int DM9051_OPEN_REQUEST(struct board_info *db)
 {

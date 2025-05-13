@@ -1,0 +1,67 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2025 Davicom Semiconductor,Inc.
+ * Davicom DM9051 SPI Fast Ethernet Linux driver
+ */
+#include <linux/etherdevice.h>
+#include <linux/ethtool.h>
+#include <linux/interrupt.h>
+#include <linux/iopoll.h>
+#include <linux/irq.h>
+#include <linux/mii.h>
+#include <linux/module.h>
+#include <linux/utsname.h>
+#include <generated/utsrelease.h> // For newer kernels
+#include <linux/netdevice.h>
+#include <linux/phy.h>
+#include <linux/regmap.h>
+#include <linux/skbuff.h>
+#include <linux/spinlock.h>
+#include <linux/spi/spi.h>
+#include <linux/types.h>
+#include <linux/of.h>
+#include <linux/version.h>
+#include <linux/ptp_clock_kernel.h>
+#include "dm9051.h"
+
+#ifndef DMPLUG_INT
+/* !Interrupt: Poll delay work */
+/* [DM_TIMER_EXPIRE2] poll extream.fast */
+/* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
+ * This is by CPU scheduling-poll, so is software driven!
+ */
+#define DM_TIMER_EXPIRE1 1
+#define DM_TIMER_EXPIRE2 0
+#define DM_TIMER_EXPIRE3 0
+
+void dm9051_poll_servicep(struct work_struct *work) //.dm9051_poll_delay_plat()
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
+
+	mutex_lock(&db->spi_lockm);
+
+	dm9051_delayp_looping_rx_tx(db);
+
+	mutex_unlock(&db->spi_lockm);
+
+	if (db->bc.ndelayF >= csched.nTargetMaxNum)
+		db->bc.ndelayF = POLL_OPERATE_INIT;
+
+	schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
+}
+
+/*
+ * Polling: 
+ */
+void INIT_RX_POLL_DELAY_SETUP(struct board_info *db)
+{
+	/* schedule delay work */
+	INIT_DELAYED_WORK(&db->irq_workp, dm9051_poll_servicep); //.dm9051_poll_delay_plat()
+}
+
+void INIT_RX_POLL_SCHED_DELAY(struct board_info *db)
+{
+	schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
+}
+#endif
