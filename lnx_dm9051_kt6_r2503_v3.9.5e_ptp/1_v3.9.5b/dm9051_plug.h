@@ -109,6 +109,10 @@ void ptp_init(struct board_info *db);
 void ptp_end(struct board_info *db);
 #endif
 
+#ifdef DMPLUG_CONTI
+void tx_contu_new(struct board_info *db);
+#endif
+
 #if defined(DMPLUG_INT)
 #ifdef INT_TWO_STEP
 void INIT_RX_INT2_DELAY_SETUP(struct board_info *db);

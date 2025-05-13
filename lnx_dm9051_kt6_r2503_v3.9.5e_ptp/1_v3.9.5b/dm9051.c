@@ -36,6 +36,15 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
 
+/* fake tx_conti */
+#define TX_CONTI_NEW(d)
+
+/* re-direct conti */
+#ifdef DMPLUG_CONTI
+#undef TX_CONTI_NEW(d)
+#define TX_CONTI_NEW(d) tx_contu_new(d)
+#endif
+
 /* fake ptpc */
 #define PTP_NEW(d, n)
 #define PTP_INIT(d)
@@ -3083,9 +3092,7 @@ static int dm9051_probe(struct spi_device *spi)
 #endif
 
 	/* conti */
-	#ifdef DMPLUG_CONTI
-	dev_info(dev, "DMPLUG_CONTI Version\n");
-	#endif
+	TX_CONTI_NEW(db);
 
 	/* 2 ptpc */
 	PTP_NEW(db, ndev);
