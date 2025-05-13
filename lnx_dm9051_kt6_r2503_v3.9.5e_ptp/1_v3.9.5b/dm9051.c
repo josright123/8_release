@@ -433,7 +433,7 @@ void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len)
 	int rlen; //remain/row length 
 	char line[120];
 
-	printk("%s\n", db->bc.head);
+	netif_info(db, pktdata, db->ndev, "%s\n", db->bc.head);
 	for (i = 0; i < packet_len; i += rlen) {
 		//rlen = print_line(packet_data+i, min(rowsize, skb->len - i)); ...
 		rlen =  packet_len - i;
@@ -446,7 +446,7 @@ void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len)
 			if (!(j % 16)) splen += sprintf(line + splen, " ");
 			splen += sprintf(line + splen, " %02x", packet_data[i+j]);
 		}
-		printk("%s\n", line);
+		netif_info(db, pktdata, db->ndev, "%s\n", line);
 	}
 }
 
@@ -456,7 +456,7 @@ void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int re
 
 	dm9051_get_reg(db, reg1, &v1);
 	dm9051_get_reg(db, reg2, &v2);
-	printk("%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
 }
 
 static int dm9051_ncr_poll(struct board_info *db)
@@ -591,7 +591,7 @@ static int dm9051_eeprom_read(struct board_info *db, int offset, u8 *to)
 
 	ret = dm9051_epcr_poll(db);
 	if (ret) {
-		printk("timeout of dm9051_eeprom_write %d %04x\n", offset, to[0] | to[1] << 8);
+		netif_info(db, timer, db->ndev, "timeout of dm9051_eeprom_write %d %04x\n", offset, to[0] | to[1] << 8);
 		return ret;
 	}
 
@@ -620,7 +620,7 @@ static int dm9051_eeprom_write(struct board_info *db, int offset, u8 *data)
 
 	ret = dm9051_epcr_poll(db);
 	if (ret) {
-		printk("timeout of dm9051_eeprom_write %d %04x\n", offset, data[0] | data[1] << 8);
+		netif_info(db, timer, db->ndev, "timeout of dm9051_eeprom_write %d %04x\n", offset, data[0] | data[1] << 8);
 		return ret;
 	}
 
@@ -642,7 +642,7 @@ static int dm9051_phyread(void *context, unsigned int reg, unsigned int *val)
 
 	ret = dm9051_epcr_poll(db);
 	if (ret) {
-		printk("timeout of dm9051_phyrd %d %04x\n", reg, *val);
+		netif_info(db, timer, db->ndev, "timeout of dm9051_phyrd %d %04x\n", reg, *val);
 		return ret;
 	}
 
@@ -676,7 +676,7 @@ static int dm9051_phywrite(void *context, unsigned int reg, unsigned int val)
 
 	ret = dm9051_epcr_poll(db);
 	if (ret) {
-		printk("timeout of dm9051_phywrite %d %04x\n", reg, val);
+		netif_info(db, timer, db->ndev, "timeout of dm9051_phywrite %d %04x\n", reg, val);
 		return ret;
 	}
 
@@ -1144,7 +1144,7 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 
 		/* [dbg] mdio.wr BMCR */
 		do {
-			/* NOT next with printkk for dm9051_phywr(regnum, val) */
+			/* NOT next with k for dm9051_phywr(regnum, val) */
 			if ((regnum == 0) && (val & 0x800)) {
 				netif_crit(db, link, db->ndev, "[mdio phywr] %d %04x: power down (warn)\n", regnum, val);
 				//k("[mdio phywr] %d %04x: power down (warn)\n", regnum, val);
@@ -1176,25 +1176,25 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 
 	if ((features & NETIF_F_RXCSUM) && (features & NETIF_F_HW_CSUM))
 	{
-		printk("_ndo set and write [Enabling TX/RX checksum]\n");
+		netif_info(db, drv, db->ndev, "_ndo set and write [Enabling TX/RX checksum]\n");
 		db->csum_gen_val = 0x7; //dm9051_set_reg(db, 0x31, 0x7);
 		db->csum_rcv_val = 0x3; //dm9051_set_reg(db, 0x32, 0x3);
 	}
 	else if (features & NETIF_F_RXCSUM)
 	{
-		printk("_ndo set and write [Enabling RX checksum only]\n");
+		netif_info(db, drv, db->ndev, "_ndo set and write [Enabling RX checksum only]\n");
 		db->csum_gen_val = 0x0; //dm9051_set_reg(db, 0x31, 0x0);
 		db->csum_rcv_val = 0x3; //dm9051_set_reg(db, 0x32, 0x3);
 	}
 	else if (features & NETIF_F_HW_CSUM)
 	{
-		printk("_ndo set and write [Enabling TX checksum only]\n");
+		netif_info(db, drv, db->ndev, "_ndo set and write [Enabling TX checksum only]\n");
 		db->csum_gen_val = 0x7; //dm9051_set_reg(db, 0x31, 0x7);
 		db->csum_rcv_val = 0x0; //dm9051_set_reg(db, 0x32, 0x0);
 	}
 	else
 	{
-		//printk("_ndo set and write [Disabling TX/RX checksum]\n");
+		//netif_info(db, drv, db->ndev, "_ndo set and write [Disabling TX/RX checksum]\n");
 		db->csum_gen_val = 0x0; //dm9051_set_reg(db, 0x31, 0x0);
 		db->csum_rcv_val = 0x0; //dm9051_set_reg(db, 0x32, 0x0);
 	}
@@ -1255,7 +1255,7 @@ static int dm9051_core_init(struct board_info *db)
 	 * (or located in the core reset subroutine is better!!)
 	 */
 	#if defined(INT_CLKOUT)
-		printk("_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
+		netif_info(db, intr, db->ndev, "_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 		if (ret)
 			return ret;
@@ -1348,12 +1348,14 @@ static int regmap_spi_async_write(void *context, //.V510_COMPLEX
 								  const void *val, size_t val_len,
 								  struct regmap_async *a)
 {
-	printk("NOT SUPPORT: regmap_spi_async_write(context,...)\n");
+	struct device *dev = context;
+	dev_warn(dev, "NOT SUPPORT: regmap_spi_async_write(context,...)\n");
 	return -1;
 }
 static struct regmap_async *regmap_spi_async_alloc(void)
 { //.V510_COMPLEX
-	printk("NOT SUPPORT: regmap_spi_async_alloc(void)\n");
+	//struct device *dev = context;
+	//dev_warn(dev, "NOT SUPPORT: regmap_spi_async_alloc(void)\n");
 	return NULL;
 }
 static int regmap_spi_read(void *context,
@@ -1651,16 +1653,16 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 #if MI_FIX //ee read
 	mutex_lock(&db->spi_lockm);
 #endif
-	printk("rx_psckets: %llu\n", data[0]);
+	netif_info(db, tx_done, db->ndev, "rx_psckets: %llu\n", data[0]);
 	log_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
 	log_regs("dump wdr registers:", db, 0x24, 0x25);
 	log_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
 
-	printk("%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
+	netif_info(db, tx_done, db->ndev, "%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 		db->xmit_in, db->xmit_tc, db->xmit_zc);
-	printk("%6d [_THrd0] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
+	netif_info(db, tx_done, db->ndev, "%6d [_THrd0] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
 		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
-	printk("%6d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
+	netif_info(db, tx_done, db->ndev, "%6d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
 		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
 #if MI_FIX //ee write
 	mutex_unlock(&db->spi_lockm);
@@ -1820,13 +1822,13 @@ int dm9051_all_reinit(struct board_info *db)
 
 void dm9051_all_restart_sum(struct board_info *db)
 {
-	struct net_device *ndev = db->ndev;
+	//struct net_device *ndev = db->ndev;
 
 	db->bc.fifo_rst_counter++;
-	printk("List: dm9.Show rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+	netif_warn(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
 	   db->bc.status_err_counter + db->bc.large_err_counter,
 	   db->bc.fifo_rst_counter);
-	netdev_dbg(ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+	netif_crit(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
 	   db->bc.status_err_counter + db->bc.large_err_counter,
 	   db->bc.fifo_rst_counter);
 	//k("_[_all_restart] rxb work around done\n");
@@ -1859,7 +1861,7 @@ static int trap_clr(struct board_info *db)
 	return 0;
 }
 
-static void monitor_rxb0(unsigned int rxbyte)
+static void monitor_rxb0(struct board_info *db, unsigned int rxbyte)
 {
 	if (econf->force_monitor_rxb)
 	{
@@ -1872,14 +1874,14 @@ static void monitor_rxb0(unsigned int rxbyte)
 		u8 *bf = (u8 *)&rxbyte; // tested
 
 		if (SCAN_BL(rxbyte) == 1 && SCAN_BH(rxbyte) != 1)
-			printk("-. ........ warn, spenser board ...BL %02lx BH %02lx.......... on .%s %2d\n",
+			netif_crit(db, rx_status, db->ndev, "-. ........ warn, spenser board ...BL %02lx BH %02lx.......... on .%s %2d\n",
 				   SCAN_BL(rxbyte), SCAN_BH(rxbyte), __func__, rxbz_counter);
 
 		if (SCAN_BL(rxbyte) == 1 || SCAN_BL(rxbyte) == 0)
 			return;
 
-		printk("_.moni   bf] %02x %02x\n", bf[0], bf[1]);						// tested
-		printk("_.moni rxbs] %02lx %02lx\n", SCAN_BL(rxbyte), SCAN_BH(rxbyte)); // tested
+		netif_crit(db, rx_status, db->ndev, "_.moni   bf] %02x %02x\n", bf[0], bf[1]);						// tested
+		netif_crit(db, rx_status, db->ndev, "_.moni rxbs] %02lx %02lx\n", SCAN_BL(rxbyte), SCAN_BH(rxbyte)); // tested
 
 		inval_rxb[rxbz_counter] = SCAN_BL(rxbyte);
 		rxbz_counter++;
@@ -1896,13 +1898,13 @@ static void monitor_rxb0(unsigned int rxbyte)
 			}
 			n += sprintf(pbff + n, " %02x", inval_rxb[i]);
 		}
-		printk("%s\n", pbff);
+		netif_crit(db, rx_status, db->ndev, "%s\n", pbff);
 
 		if (rxbz_counter >= TIMES_TO_RST)
 		{
 			rxbz_counter = 0;
 			memset(inval_rxb, 0, sizeof(inval_rxb));
-			printk("_[Less constrain of old SCAN_BL trap's, NOT _all_restart] only monitored.\n");
+			netif_err(db, rx_status, db->ndev, "_[Less constrain of old SCAN_BL trap's, NOT _all_restart] only monitored.\n");
 		}
 	}
 }
@@ -1952,7 +1954,7 @@ static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 			}
 			n += sprintf(pbff + n, " %02x", inval_rxb[i]);
 		}
-		printk("%s\n", pbff);
+		netif_warn(db, rx_status, db->ndev, "%s\n", pbff);
 
 		if (db->bc.evaluate_rxb_counter >= TIMES_TO_RST)
 		{
@@ -1964,31 +1966,30 @@ static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 	return 0;
 }
 
-static int rx_break(unsigned int rxbyte, netdev_features_t features)
+static int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t features)
 {
-	monitor_rxb0(rxbyte);
+	monitor_rxb0(db, rxbyte);
 	if (features & NETIF_F_RXCSUM)
 	{
-		//[ONly for if NOT discard checksum error packet, while REG32.D[0] is 0]
-		// if (SCAN_BH(rxbyte) & 0xe0) {
-		// if (SCAN_BH(rxbyte) & 0x20)
-		//	k("dm9.Monitor, on %d packet, IP_checksum error found\n", scanrr);
-		// if (SCAN_BH(rxbyte) & 0x40)
-		//	k("dm9.Monitor, on %d packet, TCP_checksum error found\n", scanrr);
-		// if (SCAN_BH(rxbyte) & 0x80)
-		//	k("dm9.Monitor, on %d packet, UDP_checksum error found\n", scanrr);
-		// dm9051_dumpblk..
-		//  continue
-		//}
-		DM9051_RX_BREAK(((SCAN_BH(rxbyte) & 0x03) == DM9051_PKT_RDY), return 0, printk("YES checksum check\n"); return -EINVAL);
+		//DM9051_RX_BREAK(((SCAN_BH(rxbyte) & 0x03) == DM9051_PKT_RDY), return 0, 
+		//	netif_warn(db, rx_status, db->ndev, "YES checksum check\n"); return -EINVAL);
+		
+		do {	\
+			if (((SCAN_BH(rxbyte) & 0x03) == DM9051_PKT_RDY)) {	\
+				return 0;	\
+			} else {	\
+				netif_warn(db, rx_status, db->ndev, "YES checksum check\n"); return -EINVAL;	\
+			}	\
+		} while(0);
 	}
 	else
-		DM9051_RX_BREAK((SCAN_BH(rxbyte) == DM9051_PKT_RDY), return 0, /*printk("NO checksum check\n");*/ return -EINVAL);
+		DM9051_RX_BREAK((SCAN_BH(rxbyte) == DM9051_PKT_RDY), return 0,
+			/*k("NO checksum check\n");*/ return -EINVAL);
 }
 
 static int rx_head_break(struct board_info *db)
 {
-	struct net_device *ndev = db->ndev;
+	//struct net_device *ndev = db->ndev;
 	int rxlen;
 
 	u8 err_bits = RSR_ERR_BITS;
@@ -2006,16 +2007,16 @@ static int rx_head_break(struct board_info *db)
 	rxlen = le16_to_cpu(db->rxhdr.rxlen);
 	if (db->rxhdr.status & err_bits || rxlen > DM9051_PKT_MAX)
 	{
-		printk("Err: [dm9.Monitor headbyte/status/rxlen %2x %2x %04x]\n",
+		netif_warn(db, rx_status, db->ndev, "Err: [dm9.Monitor headbyte/status/rxlen %2x %2x %04x]\n",
 			   db->rxhdr.headbyte,
 			   db->rxhdr.status,
 			   db->rxhdr.rxlen);
 
 		if (db->rxhdr.headbyte != 0 &&  db->rxhdr.headbyte != 0x01) {
-			printk("Err: rxhdr-byte (%02x)\n",
+			netif_warn(db, rx_status, db->ndev, "Err: rxhdr-byte (%02x)\n",
 					   db->rxhdr.headbyte);
-			netdev_dbg(ndev, "Err: rxhdr-byte (%02x)\n",
-					   db->rxhdr.headbyte);
+			//netdev_dbg(ndev, "Err: rxhdr-byte (%02x)\n",
+			//		   db->rxhdr.headbyte);
 		}
 
 		//if (db->rxhdr.status & RSR_ERR_BITS)
@@ -2030,17 +2031,17 @@ static int rx_head_break(struct board_info *db)
 		}
 
 		if (db->rxhdr.status & err_bits) {
-			printk("check rxstatus-error (%02x)\n",
+			netif_warn(db, rx_status, db->ndev, "check rxstatus-error (%02x)\n",
 					   db->rxhdr.status);
-			netdev_dbg(ndev, "check rxstatus-error (%02x)\n",
-					   db->rxhdr.status);
+			//netdev_dbg(ndev, "check rxstatus-error (%02x)\n",
+			//		   db->rxhdr.status);
 		}
 
 		if (rxlen > DM9051_PKT_MAX) {
-			printk("check rxlen large-error (%d > %d)\n",
+			netif_warn(db, rx_status, db->ndev, "check rxlen large-error (%d > %d)\n",
 					   rxlen, DM9051_PKT_MAX);
-			netdev_dbg(ndev, "check rxlen large-error (%d > %d)\n",
-					   rxlen, DM9051_PKT_MAX);
+			//netdev_dbg(ndev, "check rxlen large-error (%d > %d)\n",
+			//		   rxlen, DM9051_PKT_MAX);
 		}
 
 		return 1;
@@ -2050,7 +2051,7 @@ static int rx_head_break(struct board_info *db)
 	#if 1 //0
 	#ifdef DMPLUG_PTP
 	if (before_slave_ptp_packets && (!db->ptp_on) && (db->rxhdr.status & RSR_PTP_BITS)) {
-		printk("%d. On ptp_on is 0, ptp packet received!\n", before_slave_ptp_packets--);
+		netif_warn(db, hw, db->ndev, "%d. On ptp_on is 0, ptp packet received!\n", before_slave_ptp_packets--);
 	}
 	#endif
 	#endif
@@ -2085,7 +2086,7 @@ static int dm9051_loop_rx(struct board_info *db)
 			db->xmit_thrd0++;
 			db->xmit_ttc0 += ntx;
 			if (db->xmit_thrd0 <= 9) {
-				printk("%2d [_THrd0] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
+				netif_warn(db, tx_queued, db->ndev, "%2d [_THrd0] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
 					db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
 			}
 		}
@@ -2094,7 +2095,7 @@ static int dm9051_loop_rx(struct board_info *db)
 		if (ret)
 			return ret;
 
-		if (rx_break(rxbyte, ndev->features))
+		if (rx_break(db, rxbyte, ndev->features))
 		{
 			if (trap_rxb(db, &rxbyte)) {
 				//if (db->bc.evaluate_rxb_counter == 1) {
@@ -2200,7 +2201,7 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 		return skb2;
 	}
 
-	printk("[WB_SUPPORT] warn on len %d, skb_copy_expand get memory leak!\n", skb->len);
+	//.netif_warn(db, tx_queued, db->ndev, "[WB_SUPPORT] warn on len %d, skb_copy_expand get memory leak!\n", skb->len);
 	return skb;
 }
 #endif
@@ -2307,7 +2308,7 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
 		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
 		(db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
-		printk("%s. tx_send end_wr %02x\n", db->bc.head, db->tcr_wr);
+		netif_info(db, tx_queued, db->ndev, "%s. tx_send end_wr %02x\n", db->bc.head, db->tcr_wr);
 	}
 
 	/* 6.1 tx ptpc */
@@ -2384,13 +2385,14 @@ static void dm9051_tx_delay(struct work_struct *work)
 	sprintf(db->bc.head, "_dely");
 	db->bc.mode = TX_DELAY;
 	ntx = dm9051_loop_tx(db);
-	db->xmit_in++;
 	db->xmit_tc += ntx;
-	if (!ntx)
-		db->xmit_zc++;
-	if (/*ntx &&*/ db->xmit_in <= 9) {
-		printk("%2d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
-			db->xmit_in, db->xmit_tc, db->xmit_zc);
+	db->xmit_zc += ntx ? 0 : 1;
+	if (ntx) {
+		db->xmit_in++;
+		if (/*ntx &&*/ db->xmit_in <= 9) {
+			netif_info(db, tx_queued, db->ndev, "%2d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
+				db->xmit_in, db->xmit_tc, db->xmit_zc);
+		}
 	}
 
 //	int result;
@@ -2422,7 +2424,7 @@ static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 			db->xmit_thrd++;
 			db->xmit_ttc += ntx;
 			if (db->xmit_thrd <= 9) {
-				printk("%2d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
+				netif_warn(db, tx_queued, db->ndev, "%2d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
 					db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
 			}
 		}
@@ -2546,12 +2548,12 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
 		if (!thread_servicep_re_enter)
-			printk("_.int2   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++);
+			netif_warn(db, intr, db->ndev, "_.int2   [%s] first-enter %d\n", __func__, thread_servicep_re_enter++);
 		schedule_delayed_work(&db->irq_servicep, 0); //dm9051_rx_int2_plat(voidirq, pw);
 	}
 	else {
 		if (thread_servicep_re_enter <= 10)
-			printk("_.int2   [%s] re-enter %d\n", __func__, thread_servicep_re_enter++);
+			netif_warn(db, intr, db->ndev, "_.int2   [%s] re-enter %d\n", __func__, thread_servicep_re_enter++);
 	}
 	return IRQ_HANDLED;
 }
@@ -2697,7 +2699,7 @@ static int dm9051_open(struct net_device *ndev)
 	if (db->ptp_on) {
 		//_15888_ 
 		u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
-		printk("Pre-RateReg value = 0x%08X\n", rate_reg);
+		netif_warn(db, hw, db->ndev, "Pre-RateReg value = 0x%08X\n", rate_reg);
 	}
 	#endif
 	#endif
@@ -3250,7 +3252,8 @@ static void dm9051_drv_remove(struct spi_device *spi)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct board_info *db = to_dm9051_board(ndev);
 
-	printk("_[phy] remove: disconnect\r\n");
+	printk("\n");
+	netif_warn(db, probe, db->ndev, "_[phy] remove: disconnect\r\n"); //as 'probe' type
 	phy_disconnect(db->phydev);
 
 	/* 3 ptpc */
