@@ -52,6 +52,30 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
 }
 #endif
 
+#ifdef DMPLUG_PTP
+/* APIs */
+//#ifdef DMPLUG_PTP
+void ptp_new(struct board_info *db, struct net_device *ndev) {
+	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
+	if (db->ptp_enable) {
+		dev_info(&db->spidev->dev, "DMPLUG_PTP Version\n");
+		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
+		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
+	}
+}
+//#endif
+
+void ptp_init(struct board_info *db) {
+	/* Turn on by ptp4l run command
+	 * db->ptp_on = 1; */
+	db->ptp_on = 0;
+	dm9051_ptp_init(db); //_15888_
+}
+void ptp_end(struct board_info *db) {
+	dm9051_ptp_stop(db); //_15888_ todo
+}
+#endif
+
 /* ptpc - support functions-1 */
 #if 1 //1 //0
 #ifdef DMPLUG_PTP

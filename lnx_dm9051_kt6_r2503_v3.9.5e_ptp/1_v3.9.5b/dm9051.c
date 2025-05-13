@@ -36,6 +36,21 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
 
+/* fake ptpc */
+#define PTP_NEW(d, n)
+#define PTP_INIT(d)
+#define PTP_END(d)
+
+/* re-direct ptpc */
+#ifdef DMPLUG_PTP
+#undef PTP_NEW(d, n)
+#define PTP_NEW(d, n) ptp_new(d, n)
+#undef PTP_INIT(d)
+#define PTP_INIT(d) ptp_init(d)
+#undef PTP_END(d)
+#define PTP_END(d) ptp_end(d)
+#endif
+
 /*
  * Info: 
  */
@@ -3076,14 +3091,7 @@ static int dm9051_probe(struct spi_device *spi)
 	#endif
 
 	/* 2 ptpc */
-	#ifdef DMPLUG_PTP
-	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
-	if (db->ptp_enable) {
-		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
-		dev_info(dev, "DMPLUG_PTP Version\n");
-		dev_info(dev, "Enable PTP must COERCE to disable checksum_offload\n");
-	}
-	#endif
+	PTP_NEW(db, ndev);
 
 	ndev->hw_features |= ndev->features;
 
@@ -3161,14 +3169,7 @@ static int dm9051_probe(struct spi_device *spi)
 #endif
 
 	/* 2.1 ptpc */
-	#if 1 //0
-	#ifdef DMPLUG_PTP
-	/* Turn on by ptp4l run command
-	 * db->ptp_on = 1; */
-	db->ptp_on = 0;
-	dm9051_ptp_init(db); //_15888_
-	#endif
-	#endif
+	PTP_INIT(db);
 
 	ret = dm9051_phy_connect(db);
 	if (ret) {
@@ -3194,11 +3195,8 @@ static void dm9051_drv_remove(struct spi_device *spi)
 	phy_disconnect(db->phydev);
 
 	/* 3 ptpc */
-	#if 1 //0
-	#ifdef DMPLUG_PTP
-	dm9051_ptp_stop(db); //_15888_ todo
-	#endif
-	#endif
+	PTP_END(db);
+
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,0) || \
 	LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
 	return 0;
