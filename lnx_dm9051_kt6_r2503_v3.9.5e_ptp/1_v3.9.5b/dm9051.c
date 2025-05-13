@@ -3194,9 +3194,9 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	ret = dm9051_phy_connect(db);
-	if (ret)
-		return ret;
+	//ret = dm9051_phy_connect(db);
+	//if (ret)
+	//	return ret;
 
 	dm9051_operation_clear(db);
 	skb_queue_head_init(&db->txq);
@@ -3204,7 +3204,7 @@ static int dm9051_probe(struct spi_device *spi)
 	ret = devm_register_netdev(dev, ndev);
 	if (ret)
 	{
-		phy_disconnect(db->phydev);
+		//phy_disconnect(db->phydev);
 		return dev_err_probe(dev, ret, "device register failed");
 	}
 	
@@ -3237,6 +3237,11 @@ static int dm9051_probe(struct spi_device *spi)
 	dm9051_ptp_init(db); //_15888_
 	#endif
 	#endif
+
+	ret = dm9051_phy_connect(db);
+	if (ret) {
+		return ret;
+	}
 
 	return 0;
 }
