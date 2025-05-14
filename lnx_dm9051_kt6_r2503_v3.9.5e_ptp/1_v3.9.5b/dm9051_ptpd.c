@@ -608,32 +608,15 @@ int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
 }
 
 #if 0
+//static int dm9051_ptp_set_timestamp_mode(struct board_info *db,
+//					 struct hwtstamp_config *config);
+static int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr);
+static int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr);
+#endif
+#if 0
 static int dm9051_ptp_set_timestamp_mode(struct board_info *db,
 					 struct hwtstamp_config *config)
 {
-#if 0
-	//dm_printk("[in %s()] XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXconfig->tx_type = %X, config->rx_filter = %X, config->flags = %X", __FUNCTION__, config->tx_type, config->rx_filter, config->flags);
-
-	config->tx_type =
-		(1 << HWTSTAMP_TX_OFF);
-	config->rx_filter =
-		(1 << HWTSTAMP_FILTER_SOME) |
-		/* PTP v1, UDP, any kind of event packet */
-		(1 << HWTSTAMP_FILTER_PTP_V1_L4_EVENT) |
-		(1 << HWTSTAMP_FILTER_PTP_V2_EVENT);
-
-	//dm_printk("!!! 2. dm9051_ptp_set_timestamp_mode in config->tx_type=%x, config->rx_filter=%x\n", config->tx_type, config->rx_filter);
-#endif
-
-#if 0
-	config->tx_type =
-		(1 << HWTSTAMP_TX_ON);
-
-	config->rx_filter =
-		(1 << HWTSTAMP_FILTER_ALL) |
-		(1 << HWTSTAMP_FILTER_SOME);
-#endif
-
 	switch (config->tx_type) {
 	case HWTSTAMP_TX_OFF:
 		break;
@@ -707,7 +690,7 @@ static int dm9051_ptp_set_timestamp_mode(struct board_info *db,
  * of the last known settings.
  **/
 
-int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr)
+static int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr)
 {
 	struct board_info *db = netdev_priv(netdev);
 	struct hwtstamp_config *config = &db->tstamp_config;
@@ -723,7 +706,7 @@ int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr)
  * @ifreq:
  *
  **/
-int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
+static int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr)
 {
 	struct board_info *db = netdev_priv(netdev);
 	struct hwtstamp_config config;

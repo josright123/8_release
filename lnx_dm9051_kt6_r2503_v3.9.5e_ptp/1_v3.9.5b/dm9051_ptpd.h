@@ -72,20 +72,13 @@
  */
 //int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 
-#if 0
-//static int dm9051_ptp_set_timestamp_mode(struct board_info *db,
-//					 struct hwtstamp_config *config);
-int dm9051_ptp_get_ts_config(struct net_device *netdev, struct ifreq *ifr);
-int dm9051_ptp_set_ts_config(struct net_device *netdev, struct ifreq *ifr);
-#endif
-
 /* PTP message type classification */
-enum ptp_sync_type {
-    PTP_NOT_PTP = 0,      /* Not a PTP packet or no timestamp involved */
-    PTP_ONE_STEP = 1,     /* One-step sync message */
-    PTP_TWO_STEP = 2,     /* Two-step sync message */
-    PTP_NOT_SYNC = 3      /* Not a sync message but other PTP message */
-};
+//enum ptp_sync_type {
+//    PTP_NOT_PTP = 0,      /* Not a PTP packet or no timestamp involved */
+//    PTP_ONE_STEP = 1,     /* One-step sync message */
+//    PTP_TWO_STEP = 2,     /* Two-step sync message */
+//    PTP_NOT_SYNC = 3      /* Not a sync message but other PTP message */
+//};
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
 /* PTP header flag fields */
