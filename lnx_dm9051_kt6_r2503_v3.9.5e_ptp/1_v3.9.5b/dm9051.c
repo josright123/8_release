@@ -3035,13 +3035,36 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 	if (db->phydev->link)
 	{
 	#ifdef DMCONF_MRR_WR
-		#if 1
+		#if 0
 		printk("NOT _all_upstart\n");
 		#else
+		printk("_all_upstart\n"); //NOT to .netif_crit(db, rx_err, db->ndev, "_all_upstart\n");
 		do {
-			int ret = dm9051_all_upstart(db);
+			int ret = dm9051_ncr_reset(db);
 			if (ret)
 				goto dnf_end;
+			
+		//=	ret = dm9051_all_reinit(db); //up_restart
+		#if 1		
+			ret = dm9051_core_init(db);
+			if (ret)
+				goto dnf_end;
+		#endif
+			ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
+			if (ret)
+				goto dnf_end;
+
+			ret = dm9051_enable_interrupt(db);
+			if (ret)
+				goto dnf_end;
+
+			ret = dm9051_subconcl_and_rerxctrl(db);
+			if (ret)
+				goto dnf_end;
+			
+			//int ret = dm9051_all_upstart(db);
+			//if (ret)
+			//	goto dnf_end;
 		} while(0);
 		#endif
 		dm9051_update_fcr(db);
