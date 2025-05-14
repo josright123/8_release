@@ -115,6 +115,38 @@ int get_dts_irqf(struct board_info *db)
 		netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
 			__func__, ret, pstr, reg, BLKLEN)
 
+void SHOW_DEVLOG_REFER(struct device *dev)
+{
+#if 1	//[Test]
+	dev_info(dev, "dev_info Version\n");
+	dev_notice(dev, "dev_notice Version\n");
+	//dev_alert(dev, "dev_alert Version\n"); //(available)
+	//dev_emerg(dev, "dev_emerg Version\n");
+	dev_crit(dev, "dev_crit Version\n");
+	dev_err(dev, "dev_err Version\n");
+	dev_warn(dev, "dev_warn Version\n");
+	printk("\n");
+#endif
+}
+
+void SHOW_LOG_REFER(struct board_info *db)
+{
+#if 1
+	/* [.] netif_msg_drv
+	 */
+	printk("\n");
+	netif_info(db, probe, db->ndev, "netif_info Version\n");
+	netif_notice(db, probe, db->ndev, "netif_notice Version\n");
+	//netif_alert(db, probe, db->ndev, "netif_alert Version\n"); //(available)
+	//netif_emerg(db, probe, db->ndev, "netif_emerg Version\n");
+	netif_crit(db, probe, db->ndev, "netif_crit Version\n");
+	netif_warn(db, probe, db->ndev, "netif_warn Version\n");
+	netif_err(db, probe, db->ndev, "netif_err Version\n");
+//	netif_dbg(db, probe, ndev, "netif_dbg Version\n");
+//	netdev_dbg(ndev, "netdev_dbg Version\n");
+#endif
+}
+
 void SHOW_DRIVER(struct device *dev)
 {
 	/* driver version log */
@@ -2058,8 +2090,6 @@ static int rx_head_break(struct board_info *db)
 		if (db->rxhdr.headbyte != 0 &&  db->rxhdr.headbyte != 0x01) {
 			netif_warn(db, rx_status, db->ndev, "Err: rxhdr-byte (%02x)\n",
 					   db->rxhdr.headbyte);
-			//netdev_dbg(ndev, "Err: rxhdr-byte (%02x)\n",
-			//		   db->rxhdr.headbyte);
 		}
 
 		//if (db->rxhdr.status & RSR_ERR_BITS)
@@ -2076,15 +2106,11 @@ static int rx_head_break(struct board_info *db)
 		if (db->rxhdr.status & err_bits) {
 			netif_warn(db, rx_status, db->ndev, "check rxstatus-error (%02x)\n",
 					   db->rxhdr.status);
-			//netdev_dbg(ndev, "check rxstatus-error (%02x)\n",
-			//		   db->rxhdr.status);
 		}
 
 		if (rxlen > DM9051_PKT_MAX) {
 			netif_warn(db, rx_status, db->ndev, "check rxlen large-error (%d > %d)\n",
 					   rxlen, DM9051_PKT_MAX);
-			//netdev_dbg(ndev, "check rxlen large-error (%d > %d)\n",
-			//		   rxlen, DM9051_PKT_MAX);
 		}
 
 		return 1;
@@ -2859,13 +2885,13 @@ static void dm9051_set_rx_mode(struct net_device *ndev)
 	if (ndev->flags & IFF_PROMISC)
 	{
 		rcr |= RCR_PRMSC;
-		netdev_dbg(ndev, "set_multicast rcr |= RCR_PRMSC, rcr= %02x\n", rcr);
+		netif_crit(db, hw, db->ndev, "set_multicast rcr |= RCR_PRMSC, rcr= %02x\n", rcr);
 	}
 
 	if (ndev->flags & IFF_ALLMULTI)
 	{
 		rcr |= RCR_ALL;
-		netdev_dbg(ndev, "set_multicast rcr |= RCR_ALLMULTI, rcr= %02x\n", rcr);
+		netif_crit(db, hw, db->ndev, "set_multicast rcr |= RCR_ALLMULTI, rcr= %02x\n", rcr);
 	}
 
 	rxctrl.rcr_all = rcr;
@@ -3125,21 +3151,12 @@ static int dm9051_probe(struct spi_device *spi)
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 
 	/* version log */
-#if 1	//[Test]
 	printk("\n");
-	dev_info(dev, "dev_info Version\n");
-	dev_notice(dev, "dev_notice Version\n");
-	//dev_alert(dev, "dev_alert Version\n"); //(available)
-	//dev_emerg(dev, "dev_emerg Version\n");
-	dev_crit(dev, "dev_crit Version\n");
-	dev_err(dev, "dev_err Version\n");
-	dev_warn(dev, "dev_warn Version\n");
-	printk("\n");
+	SHOW_DEVLOG_REFER(dev);
 
 	//[NETIF_MSG_HW is play for phylib...]
 	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP | 
 		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_INTR | NETIF_MSG_RX_STATUS | NETIF_MSG_PKTDATA | NETIF_MSG_HW /*| NETIF_MSG_HW*/; //0;
-#endif
 
 	/* conti */
 	TX_CONTI_NEW(db);
@@ -3203,24 +3220,8 @@ static int dm9051_probe(struct spi_device *spi)
 	}
 	
 	//[if (netif_running(ndev)) ...]
-#if 1
-//[.] netif_msg_drv
+	SHOW_LOG_REFER(db);
 	printk("\n");
-	netif_info(db, probe, db->ndev, "netif_info Version\n");
-	netif_notice(db, probe, db->ndev, "netif_notice Version\n");
-	//netif_alert(db, probe, db->ndev, "netif_alert Version\n"); //(available)
-	//netif_emerg(db, probe, db->ndev, "netif_emerg Version\n");
-	netif_crit(db, probe, db->ndev, "netif_crit Version\n");
-	netif_warn(db, probe, db->ndev, "netif_warn Version\n");
-	netif_err(db, probe, db->ndev, "netif_err Version\n");
-	printk("\n");
-
-//	netdev_info(ndev, "netdev_info Version\n");
-//	netdev_err(ndev, "netdev_err Version\n");
-
-//	netif_dbg(db, probe, ndev, "netif_dbg Version\n");
-//	netdev_dbg(ndev, "netdev_dbg Version\n");
-#endif
 
 	/* 2.1 ptpc */
 	PTP_INIT(db);
