@@ -1637,14 +1637,9 @@ const static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
         "rx_bytes",
         "tx_bytes",
         "fifo_rst",
+        "dump BMSR register",
+        "dump BMSR register",
 };
-
-static void log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2)
-{
-	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
-	dm9051_dump_reg2s(db, reg1, reg2);
-}
 
 static void dm9051_get_strings(struct net_device *netdev, u32 sget, u8 *data)
 {
@@ -1657,6 +1652,12 @@ static int dm9051_get_sset_count(struct net_device *netdev, int sset)
 	return (sset == ETH_SS_STATS) ? ARRAY_SIZE(dm9051_stats_strings) : 0;
 }
 
+static void log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2)
+{
+	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
+	dm9051_dump_reg2s(db, reg1, reg2);
+}
 
 //void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2)
 //{
@@ -1671,6 +1672,7 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 									 struct ethtool_stats *stats, u64 *data)
 {
 	struct board_info *db = to_dm9051_board(ndev);
+	unsigned int val;
 
 	data[0] = ndev->stats.rx_packets;
 	data[1] = ndev->stats.tx_packets;
@@ -1695,6 +1697,14 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
 	netif_info(db, tx_done, db->ndev, "%6d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
 		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
+
+	dm9051_phyread(db, MII_BMSR, &val);
+	data[7] = val;
+	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
+	dm9051_phyread(db, MII_BMSR, &val);
+	data[8] = val;
+	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
+
 #if MI_FIX //ee write
 	mutex_unlock(&db->spi_lockm);
 #endif
@@ -1807,7 +1817,7 @@ static int dm9051_all_upstart(struct board_info *db) //todo
 {
 	int ret;
 
-	printk("_all_upstart\n");
+	printk("_all_upstart\n"); //NOT to .netif_crit(db, rx_err, db->ndev, "_all_upstart\n");
 
 	ret = dm9051_ncr_reset(db);
 	if (ret)
@@ -3030,7 +3040,8 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 		} while(0);
 		dm9051_update_fcr(db);
 dnf_end:
-	#else
+		netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation ok!\n");
+	#else //DMCONF_MRR_WR
 		dm9051_update_fcr(db);
 	#endif
 

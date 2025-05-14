@@ -1158,7 +1158,7 @@ int dm9051_hwtstamp_to_skb(struct sk_buff *skb, struct board_info *db)
 
 static struct ptp_clock_info dm9051a_ptp_info = {
     .owner = THIS_MODULE,
-    .name = "DM9051A PTP",
+    //.name = "DM9051A PTP",
     .max_adj = 50000000,
     .n_alarm = 0,
     .n_ext_ts = 0,
@@ -1475,7 +1475,8 @@ void dm9051_ptp_init(struct board_info *db)
 	printk("\n");
 	netif_info(db, hw, db->ndev, "DM9051A Driver PTP Init\n");
 
-	db->ptp_caps = dm9051a_ptp_info;
+	db->ptp_caps = dm9051a_ptp_info; //.name = "DM9051A PTP",
+	strncpy(db->ptp_caps.name, "DM9051A PTP", sizeof(db->ptp_caps.name));
 
 	db->ptp_clock = ptp_clock_register(&db->ptp_caps,
 					   &db->ndev->dev);
