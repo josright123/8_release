@@ -126,6 +126,9 @@ void INIT_RX_INT2_DELAY_SETUP(struct board_info *db);
 void dm9051_rx_irq_servicep(struct work_struct *work);
 irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
 #endif
+#else
+void INIT_RX_POLL_DELAY_SETUP(struct board_info *db);
+void INIT_RX_POLL_SCHED_DELAY(struct board_info *db);
 #endif
 
 #ifndef DMPLUG_INT
