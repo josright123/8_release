@@ -33,7 +33,7 @@
 //#define DMCONF_AARCH_64 //(64-bit OS)
 //#endif
 
-#define PLUG_ENABLE_INT
+//#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT39)
 
@@ -242,10 +242,6 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 #define	FORCE_SILENCE_TX_TIMEOUT	0
 #define	FORCE_MONITOR_TX_TIMEOUT	1
 
-#define POLL_TABLE_NUM			5
-#define POLL_OPERATE_INIT		0
-#define POLL_OPERATE_NUM		1
-
 /* Configuration structures */
 struct driver_config {
 	const char *release_version;
@@ -254,10 +250,10 @@ struct eng_config {
         int force_monitor_rxb;
         int force_monitor_rxc;
         int force_monitor_tx_timeout;
-        struct eng_sched {
-                unsigned long delayF[POLL_TABLE_NUM];
-                u16 nTargetMaxNum;
-        } sched;
+//        struct eng_sched {
+//                unsigned long delayF[POLL_TABLE_NUM];
+//                u16 nTargetMaxNum;
+//        } sched;
         u64 tx_timeout_us;
 };
 
@@ -313,7 +309,7 @@ struct rx_ctl_mach
 
 	u16 evaluate_rxb_counter;
 	int nRxcF;
-	u16 ndelayF;
+	u16 ndelayF; /* only for poll.o */
 	
 	char head[HEAD_LOG_BUFSIZE];
 	
@@ -481,6 +477,9 @@ int dm9051_nsr_poll(struct board_info *db);
 int dm9051_all_reinit(struct board_info *db);
 void dm9051_all_restart_sum(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
+
+/* operation functions */
+int dm9051_delayp_looping_rx_tx(struct board_info *db);
 
 /* amdix functions */
 //void amdix_link_change_up(struct board_info *db, unsigned int bmsr);

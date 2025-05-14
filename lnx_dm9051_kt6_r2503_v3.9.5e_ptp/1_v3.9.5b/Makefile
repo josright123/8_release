@@ -47,6 +47,9 @@ clean:
 ins install :
 	sudo insmod dm9051a.ko
 
+s:
+	ethtool -S eth1
+	
 rm remove :
 #	sudo ifconfig eth1 down
 	sudo rmmod dm9051a
