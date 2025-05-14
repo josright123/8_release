@@ -2371,7 +2371,7 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 #if !defined(DMPLUG_CONTI)
 	ret = TX_SEND(db, skb);
 #else
-	ret = TX_MODE2_CONTI_TCR(db, skb);
+	ret = TX_MODE2_CONTI_TCR(db, skb, econf->tx_timeout_us);
 #endif
 	
 	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 

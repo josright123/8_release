@@ -96,7 +96,7 @@ int TX_MOTE2_CONTI_RCR(struct board_info *db)
  *   0 - succeed
  *  -ETIMEDOUT - timeout error
  */
-static int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb)
+static int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us)
 {
 	//u8 *buff = skb->data;
 	//unsigned int len = skb->len;
@@ -109,7 +109,7 @@ static int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb)
 		const unsigned int tx_xxhead = 4;
 		unsigned int tx_xxbst = ((skb->len + 3) / 4) * 4;
 
-		if (!tx_free_poll_timeout(db, tx_xxhead + tx_xxbst, 1, econf->tx_timeout_us)) { // 2100 <- 20
+		if (!tx_free_poll_timeout(db, tx_xxhead + tx_xxbst, 1, tx_timeout_us)) { // 2100 <- 20
 			ret = -ENOMEM; //-ETIMEDOUT or
 			break;
 		}
@@ -124,12 +124,12 @@ static int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb)
 	return ret;
 }
 
-int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb)
+int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us)
 {
 	int ret;
 
 	do {
-		ret = TX_OPS_CONTI(db, skb); //skb->data, data_len); //'double_wb'
+		ret = TX_OPS_CONTI(db, skb, tx_timeout_us); //skb->data, data_len); //'double_wb'
 		if (ret)
 			break;
 

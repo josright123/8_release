@@ -117,7 +117,7 @@ void tx_contu_new(struct board_info *db);
 #endif
 #ifdef DMPLUG_CONTI
 int TX_MOTE2_CONTI_RCR(struct board_info *db);
-int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb);
+int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
 #endif
 
 #if defined(DMPLUG_INT)
