@@ -60,6 +60,15 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #define PTP_END(d) ptp_end(d)
 #endif
 
+/* raw(fake) bmsr_wr */
+#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
+
+/* re-direct bmsr_wr */
+#ifdef DMCONF_BMCR_WR
+#undef PHY_READ(d, n, av)
+#define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
+#endif
+
 /*
  * Info: 
  */
@@ -944,11 +953,14 @@ static int amdix_bmsr_change(struct board_info *db)
 	return 0;
 }
 
-static int dm9051_phyread_nt_bmsr(struct board_info *db,
-								   unsigned int *val)
+static int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val)
 {
 	int ret;
+	
+	if (regnum != MII_BMSR)
+		return dm9051_phyread(db, reg, val);
 
+	/* overlay implement */
 	ret = dm9051_phyread(db, MII_LPA, val);
 	if (ret)
 		return ret;
@@ -1130,12 +1142,7 @@ static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 		mutex_lock(&db->spi_lockm);
 		#endif
 
-#ifdef DMCONF_BMCR_WR
-		if (regnum == MII_BMSR)
-			ret = dm9051_phyread_nt_bmsr(db, &val);
-		else
-#endif
-			ret = dm9051_phyread(db, regnum, &val);
+		ret = PHY_READ(db, regnum, &val);
 
 		#if MI_FIX
 		mutex_unlock(&db->spi_lockm);
