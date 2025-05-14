@@ -41,7 +41,7 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 
 /* re-direct conti */
 #ifdef DMPLUG_CONTI
-#undef TX_CONTI_NEW(d)
+#undef TX_CONTI_NEW
 #define TX_CONTI_NEW(d) tx_contu_new(d)
 #endif
 
@@ -52,11 +52,11 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 
 /* re-direct ptpc */
 #ifdef DMPLUG_PTP
-#undef PTP_NEW(d, n)
+#undef PTP_NEW
 #define PTP_NEW(d, n) ptp_new(d, n)
-#undef PTP_INIT(d)
+#undef PTP_INIT
 #define PTP_INIT(d) ptp_init(d)
-#undef PTP_END(d)
+#undef PTP_END
 #define PTP_END(d) ptp_end(d)
 #endif
 
@@ -65,7 +65,7 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 
 /* re-direct bmsr_wr */
 #ifdef DMCONF_BMCR_WR
-#undef PHY_READ(d, n, av)
+#undef PHY_READ
 #define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
 #endif
 
@@ -1048,7 +1048,7 @@ static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsig
 
 int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val)
 {
-	if (regnum == MII_BMSR)
+	if (reg == MII_BMSR)
 		return dm9051_phyread_bmsr_wr(db, reg, val);
 
 	return dm9051_phyread(db, reg, val);		

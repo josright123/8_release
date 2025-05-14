@@ -91,9 +91,9 @@ const struct eng_sched csched = engdata.sched;
 
 //overlay by plug/
 #ifdef DMPLUG_CRYPT
-#undef BUS_SETUP(db)
+#undef BUS_SETUP
 #define BUS_SETUP(db) bus_setup(struct board_info *db)
-#undef BUS_OPS(db, buff, crlen)
+#undef BUS_OPS
 #define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
 #endif
 
