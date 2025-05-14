@@ -953,15 +953,10 @@ static int amdix_bmsr_change(struct board_info *db)
 	return 0;
 }
 
-static int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val)
+static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsigned int *val)
 {
-	int ret;
-	
-	if (regnum != MII_BMSR)
-		return dm9051_phyread(db, reg, val);
-
 	/* overlay implement */
-	ret = dm9051_phyread(db, MII_LPA, val);
+	int ret = dm9051_phyread(db, MII_LPA, val);
 	if (ret)
 		return ret;
 	db->lpa = *val;
@@ -1048,7 +1043,15 @@ static int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsig
 	} while (0);
 	#endif
 
-	return ret;			
+	return ret;	
+}
+
+static int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val)
+{
+	if (regnum == MII_BMSR)
+		return dm9051_phyread_bmsr_wr(db, reg, val);
+
+	return dm9051_phyread(db, reg, val);		
 }
 
 // dm9051_phyread.EXTEND
