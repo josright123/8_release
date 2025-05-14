@@ -33,7 +33,7 @@
 //#define DMCONF_AARCH_64 //(64-bit OS)
 //#endif
 
-//#define PLUG_ENABLE_INT
+#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT39)
 
@@ -42,7 +42,7 @@
   #define INT_CLKOUT //(INT39_CLKOUT)
   #endif
 
-  //#define PLUG_INT_2STEP
+  #define PLUG_INT_2STEP
   #ifdef PLUG_INT_2STEP
   #define INT_TWO_STEP //(INT39_TWO_STEP)
   #endif
@@ -53,7 +53,7 @@
 #define DMCONF_BMCR_WR //(bmcr-work around)
 #endif
 
-#define PLUG_MRR
+//#define PLUG_MRR
 #ifdef PLUG_MRR
 #define DMCONF_MRR_WR //(mrr-work around)
 #endif
@@ -479,6 +479,7 @@ void dm9051_all_restart_sum(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 /* operation functions */
+void dm9051_rx_int2_plat(int voidirq, void *pw);
 int dm9051_delayp_looping_rx_tx(struct board_info *db);
 
 /* amdix functions */

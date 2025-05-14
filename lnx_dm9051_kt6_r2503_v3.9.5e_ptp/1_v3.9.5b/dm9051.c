@@ -2507,7 +2507,7 @@ int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 
 /* Interrupt: Interrupt work */
 
-static void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat()
+void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat()
 {
 	struct board_info *db = pw;
 	int result;
