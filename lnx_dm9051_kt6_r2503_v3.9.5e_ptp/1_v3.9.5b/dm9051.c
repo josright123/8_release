@@ -1812,6 +1812,7 @@ static int dm9051_all_restart(struct board_info *db) //todo
 
 /* to reset while link change up
  */
+#if 0
 #ifdef DMCONF_MRR_WR
 static int dm9051_all_upstart(struct board_info *db) //todo
 {
@@ -1830,6 +1831,7 @@ static int dm9051_all_upstart(struct board_info *db) //todo
 	return 0;
 }
 #endif //DMCONF_MRR_WR
+#endif
 
 /* all reinit while rx error found
  */
@@ -3033,11 +3035,15 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 	if (db->phydev->link)
 	{
 	#ifdef DMCONF_MRR_WR
+		#if 1
+		printk("NOT _all_upstart\n");
+		#else
 		do {
 			int ret = dm9051_all_upstart(db);
 			if (ret)
 				goto dnf_end;
 		} while(0);
+		#endif
 		dm9051_update_fcr(db);
 dnf_end:
 		netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation ok!\n");

@@ -17,7 +17,7 @@
 /*#define INT_CLKOUT */ //(INT39 ClkOut)
 /*#define INT_TWO_STEP */ //(INT39 two_step)
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
-/*#define DMCONF_MRR_WR */ //(mrr-work around)
+/*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
 
 /* Macro for already known platforms
  */
@@ -53,7 +53,7 @@
 #define DMCONF_BMCR_WR //(bmcr-work around)
 #endif
 
-//#define PLUG_MRR
+#define PLUG_MRR
 #ifdef PLUG_MRR
 #define DMCONF_MRR_WR //(mrr-work around)
 #endif
