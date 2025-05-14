@@ -109,8 +109,15 @@ void ptp_init(struct board_info *db);
 void ptp_end(struct board_info *db);
 #endif
 
+/*
+ * Conti: 
+ */
 #ifdef DMPLUG_CONTI
 void tx_contu_new(struct board_info *db);
+#endif
+#ifdef DMPLUG_CONTI
+int TX_MOTE2_CONTI_RCR(struct board_info *db);
+int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb);
 #endif
 
 #if defined(DMPLUG_INT)
@@ -125,12 +132,8 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
 void dm9051_poll_servicep(struct work_struct *work);
 #endif
 
-/*
- * Conti: 
- */
-#ifdef DMPLUG_CONTI
-int TX_MOTE2_CONTI_RCR(struct board_info *db);
-int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb);
+#ifdef DMCONF_BMCR_WR
+int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val);
 #endif
 
 /* Log definitions */

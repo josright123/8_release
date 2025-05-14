@@ -1046,7 +1046,7 @@ static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsig
 	return ret;	
 }
 
-static int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val)
+int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val)
 {
 	if (regnum == MII_BMSR)
 		return dm9051_phyread_bmsr_wr(db, reg, val);
