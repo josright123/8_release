@@ -2436,7 +2436,7 @@ static void dm9051_tx_delay(struct work_struct *work)
 
 /* Common: looping rx and tx */
 
-static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
+int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 {
 	//static unsigned int xmit_thrd = 0;
 	int ntx;
@@ -2948,7 +2948,7 @@ static void dm9051_operation_clear(struct board_info *db)
 
 	trap_clr(db);
 	db->bc.nRxcF = 0;
-	db->bc.ndelayF = POLL_OPERATE_INIT;
+//	db->bc.ndelayF = POLL_OPERATE_INIT;
 
 	db->csum_gen_val = 0; //disabling
 	db->csum_rcv_val = 0; //disabling

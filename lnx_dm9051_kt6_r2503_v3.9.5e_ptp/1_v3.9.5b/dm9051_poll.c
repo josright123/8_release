@@ -25,6 +25,20 @@
 #include "dm9051.h"
 
 #ifndef DMPLUG_INT
+
+#define POLL_TABLE_NUM			5
+#define POLL_OPERATE_INIT		0
+#define POLL_OPERATE_NUM		1
+
+struct eng_sched {
+	unsigned long delayF[POLL_TABLE_NUM];
+	u16 nTargetMaxNum;
+};
+	
+struct eng_sched sched = {
+	.delayF = {0, 1, 0, 0, 1}, 
+	.nTargetMaxNum = POLL_OPERATE_NUM};
+
 /* !Interrupt: Poll delay work */
 /* [DM_TIMER_EXPIRE2] poll extream.fast */
 /* [DM_TIMER_EXPIRE1] consider not be 0, to alower and not occupy almost all CPU resource.
@@ -45,10 +59,10 @@ void dm9051_poll_servicep(struct work_struct *work) //.dm9051_poll_delay_plat()
 
 	mutex_unlock(&db->spi_lockm);
 
-	if (db->bc.ndelayF >= csched.nTargetMaxNum)
+	if (db->bc.ndelayF >= sched.nTargetMaxNum)
 		db->bc.ndelayF = POLL_OPERATE_INIT;
 
-	schedule_delayed_work(&db->irq_workp, csched.delayF[db->bc.ndelayF++]);
+	schedule_delayed_work(&db->irq_workp, sched.delayF[db->bc.ndelayF++]);
 }
 
 /*
@@ -57,6 +71,7 @@ void dm9051_poll_servicep(struct work_struct *work) //.dm9051_poll_delay_plat()
 void INIT_RX_POLL_DELAY_SETUP(struct board_info *db)
 {
 	/* schedule delay work */
+	db->bc.ndelayF = POLL_OPERATE_INIT;
 	INIT_DELAYED_WORK(&db->irq_workp, dm9051_poll_servicep); //.dm9051_poll_delay_plat()
 }
 

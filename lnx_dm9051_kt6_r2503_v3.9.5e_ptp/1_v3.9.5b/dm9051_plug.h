@@ -41,13 +41,13 @@ const struct eng_config engdata = {
 	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
 	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
 	.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
-	.sched = {
-		.delayF = {0, 1, 0, 0, 1}, 
-		.nTargetMaxNum = POLL_OPERATE_NUM},
+//	.sched = {
+//		.delayF = {0, 1, 0, 0, 1}, 
+//		.nTargetMaxNum = POLL_OPERATE_NUM},
 	.tx_timeout_us = 210000, //2100,
 };
 const struct eng_config *econf = &engdata;
-const struct eng_sched csched = engdata.sched;
+//const struct eng_sched csched = engdata.sched;
 #endif
 
 /*
