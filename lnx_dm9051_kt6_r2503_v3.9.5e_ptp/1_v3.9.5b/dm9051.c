@@ -2640,6 +2640,38 @@ void END_FREE_IRQ(struct net_device *ndev)
 }
 #endif
 
+static int dm9051_init_start(struct board_info *db)
+{
+//before [spi_lockm]
+//use [spi_lockm]
+	int ret;
+
+	#if MI_FIX
+	mutex_lock(&db->spi_lockm); //.open
+	#endif
+
+	ret = dm9051_all_start(db);
+	if (ret)
+		return ret;
+
+	/* -open ptpc */
+	#if 1 //0
+	#ifdef DMPLUG_PTP
+	if (db->ptp_on) {
+		//_15888_ 
+		u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
+		netif_warn(db, hw, db->ndev, "Pre-RateReg value = 0x%08X\n", rate_reg);
+	}
+	#endif
+	#endif
+
+	#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+	#endif
+
+	return ret;
+}
+
 static int dm9051_init_intr(struct board_info *db)
 {
 	int ret;
@@ -2708,30 +2740,10 @@ static int dm9051_open(struct net_device *ndev)
 	memset(db->rctl.hash_table, 0, sizeof(db->rctl.hash_table));
 
 	ndev->irq = spi->irq; /* by dts */
-//before [spi_lockm]
-//use [spi_lockm]
-	#if MI_FIX
-	mutex_lock(&db->spi_lockm); //.open
-	#endif
 
-	ret = dm9051_all_start(db);
+	ret = dm9051_init_start(db);
 	if (ret)
-		goto open_end;
-
-	/* -open ptpc */
-	#if 1 //0
-	#ifdef DMPLUG_PTP
-	if (db->ptp_on) {
-		//_15888_ 
-		u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
-		netif_warn(db, hw, db->ndev, "Pre-RateReg value = 0x%08X\n", rate_reg);
-	}
-	#endif
-	#endif
-
-	#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-	#endif
+		return ret;
 
 	phy_support_sym_pause(db->phydev);
 	phy_start(db->phydev);
