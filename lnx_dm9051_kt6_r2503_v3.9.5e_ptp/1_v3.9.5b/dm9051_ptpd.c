@@ -21,7 +21,25 @@
 #include <linux/ptp_clock_kernel.h>
 
 #include "dm9051.h"
-#include "dm9051_ptpd.h"
+//#include "dm9051_ptpd.h"
+
+u8 get_ptp_message_type005(struct ptp_header *ptp_hdr);
+
+int is_ptp_sync_packet(u8 msgtype);
+int is_ptp_delayreq_packet(u8 msgtype);
+
+void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb);
+
+int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm);
+int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta);
+int ptp_9051_gettime(struct ptp_clock_info *caps,
+	struct timespec64 *ts);
+int ptp_9051_settime(struct ptp_clock_info *caps,
+	const struct timespec64 *ts);
+int ptp_9051_feature_enable(struct ptp_clock_info *caps,
+	struct ptp_clock_request *rq, int on);
+int ptp_9051_verify_pin(struct ptp_clock_info *caps, unsigned int pin,
+    enum ptp_pin_function func, unsigned int chan);
 
 #ifdef DMCONF_DIV_HLPR_32
 /* Implement the missing ARM EABI division helper */
@@ -49,30 +67,6 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
     }
 
     return res;
-}
-#endif
-
-#ifdef DMPLUG_PTP
-/* APIs */
-//#ifdef DMPLUG_PTP
-void ptp_new(struct board_info *db, struct net_device *ndev) {
-	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
-	if (db->ptp_enable) {
-		dev_info(&db->spidev->dev, "DMPLUG_PTP Version\n");
-		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
-		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
-	}
-}
-//#endif
-
-void ptp_init(struct board_info *db) {
-	/* Turn on by ptp4l run command
-	 * db->ptp_on = 1; */
-	db->ptp_on = 0;
-	dm9051_ptp_init(db); //_15888_
-}
-void ptp_end(struct board_info *db) {
-	dm9051_ptp_stop(db); //_15888_ todo
 }
 #endif
 
@@ -511,7 +505,6 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 #endif
 }
 
-#if 1
 u64 rx_extract_ts(u8 *rxTSbyte)
 {
 	//u8 temp[12];
@@ -564,7 +557,6 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTS
 		//printk("<== dm9051_ptp_rx_hwtstamp out\r\n");
 	}
 }
-#endif
 
 /* ethtool_ops
  * tell timestamp info and types */
@@ -745,7 +737,6 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 	struct board_info *adb = netdev_priv(netdev);
 	struct hwtstamp_config config;
 	int ret = 0;
-	//int index;
 
 	if (!ifr) {
 		netif_err(adb, hw, adb->ndev,
@@ -1448,7 +1439,7 @@ int ptp_9051_verify_pin(struct ptp_clock_info *caps, unsigned int pin,
 	return 0;
 }
 
-void dm9051_ptp_init(struct board_info *db)
+static void dm9051_ptp_init(struct board_info *db)
 {
 	printk("\n");
 	netif_info(db, hw, db->ndev, "DM9051A Driver PTP Init\n");
@@ -1500,7 +1491,7 @@ void dm9051_ptp_init(struct board_info *db)
 #endif
 }
 
-void dm9051_ptp_stop(struct board_info *db)
+static void dm9051_ptp_stop(struct board_info *db)
 {
 	/* Disable PTP for if switch to standard version from PLUG_PTP version*/
 	//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x01); //Disable PTP function Register offset 0x60, value 0x01
@@ -1512,6 +1503,28 @@ void dm9051_ptp_stop(struct board_info *db)
 		//printk("_[ptp] remove: PTP clock!!!\r\n");
 		netif_info(db, hw, db->ndev, "_[ptp] remove: PTP clock!!!\r\n");
 	}
+}
+#endif
+
+#ifdef DMPLUG_PTP
+/* APIs */
+void ptp_new(struct board_info *db, struct net_device *ndev) {
+	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
+	if (db->ptp_enable) {
+		dev_info(&db->spidev->dev, "DMPLUG PTP Version\n");
+		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
+		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
+	}
+}
+
+void ptp_init(struct board_info *db) {
+	/* Turn on by ptp4l run command
+	 * db->ptp_on = 1; */
+	db->ptp_on = 0;
+	dm9051_ptp_init(db); //_15888_
+}
+void ptp_end(struct board_info *db) {
+	dm9051_ptp_stop(db); //_15888_ todo
 }
 #endif
 

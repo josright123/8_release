@@ -250,24 +250,8 @@ struct eng_config {
         int force_monitor_rxb;
         int force_monitor_rxc;
         int force_monitor_tx_timeout;
-//        struct eng_sched {
-//                unsigned long delayF[POLL_TABLE_NUM];
-//                u16 nTargetMaxNum;
-//        } sched;
         u64 tx_timeout_us;
 };
-
-#if 0
-//const struct eng_config engdata = {
-//	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
-//	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
-//	.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
-//	.sched = {
-//		.delayF = {0, 1, 0, 0, 1}, 
-//		.nTargetMaxNum = POLL_OPERATE_NUM},
-//	.tx_timeout_us = 2100,
-//};
-#endif
 
 /* driver config */
 #define MI_FIX                          1
@@ -275,17 +259,8 @@ struct eng_config {
 #define AMDIX_LOG_BUFSIZE		72
 
 #if 1 //sticked fixed here is better!
-#include "dm9051_plug.h" //for definition of '_INT_TWO_STEP'
-
-//#ifdef MAIN_DATA
-//#endif
-
-/* 0.1 ptpc */
-//#if 1 //0
-//#ifdef DMPLUG_PTP
-//#include "dm9051_ptpd.h"
-//#endif
-//#endif
+#include "dm9051_plug.h" /* for definition of '_INT_TWO_STEP' */
+#include "dm9051_ptpd.h" /* 0.1 ptpc */
 
 /**
  * struct rx_ctl_mach - rx activities record
@@ -486,9 +461,6 @@ int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 void dm9051_rx_int2_plat(int voidirq, void *pw);
 int dm9051_delayp_looping_rx_tx(struct board_info *db);
 
-/* amdix functions */
-//void amdix_link_change_up(struct board_info *db, unsigned int bmsr);
-
 #ifdef MAIN_DATA
 /* MAIN Data: 
  */
@@ -510,8 +482,7 @@ const struct eng_config *econf = &engdata;
 
 /* Driver configuration structure
  */
-struct mod_config
-{
+struct mod_config {
 	char *test_info;
 	int skb_wb_mode;
 	int checksuming;
@@ -529,22 +500,19 @@ struct mod_config
 //SPI_SYNC_BURST_MODE = 1,
 //SPI_SYNC_MISC_MODE = 2,
 //MODE_NUM = 3
-enum
-{
+enum {
 	SKB_WB_OFF = 0,
 	SKB_WB_ON = 1, //'wb'
 };
 
-enum
-{
+enum {
 //#define	DEFAULT_CHECKSUM_OFF		0
 //#define	DEFAULT_CHECKSUM_ON		1
 	DEFAULT_CHECKSUM_OFF = 0,
 	DEFAULT_CHECKSUM_ON = 1,
 };
 
-enum
-{
+enum {
 	BURST_MODE_ALIGN = 0,
 	BURST_MODE_FULL = 1,
 };
@@ -579,23 +547,6 @@ const struct mod_config driver_misc_mode = {
 		.tx_blk = 0, .rx_blk = 0},
 };
 
-/* Plug/ pragma messages: 
- */
-#ifdef DMPLUG_CONTI
-#warning "dm9051 CONTI"
-#endif
-
-#ifdef DMPLUG_CRYPT
-#warning "dm9051 CRYPT"
-#endif
-
-#ifdef DMPLUG_PTP
-#pragma message("dm9051 PTP")
-
-#ifdef DMPLUG_PPS_CLKOUT
-#pragma message("dm9051 PPS")
-#endif
-
 /* dm9051/ pragma messages: 
  */
 #if defined(DMPLUG_INT)
@@ -610,18 +561,38 @@ const struct mod_config driver_misc_mode = {
 /* INT two_step */
 #warning "INT: TWO_STEP"
 #endif
-#endif
-
-#else
-#warning "dm9051 POL" //.
-#endif
+#else //.
+/* POL */
+#pragma message("dm9051 POL")
+#endif //..
 
 #ifdef DMCONF_BMCR_WR
-#warning "WORKROUND: BMCR_WR"
+/* BMCR */
+#pragma message("WORKROUND: BMCR_WR")
 #endif
+
 #ifdef DMCONF_MRR_WR
-#warning "WORKROUND: MRR_WR"
+/* MRR */
+#pragma message("WORKROUND: MRR_WR")
 #endif
+
+/* Plug/ pragma messages: 
+ */
+#ifdef DMPLUG_CONTI
+#pragma message("dm9051 CONTI")
 #endif
+
+#ifdef DMPLUG_CRYPT
+#pragma message("dm9051 CRYPT")
+#endif
+
+#ifdef DMPLUG_PTP
+#pragma message("dm9051 PTP")
+
+#ifdef DMPLUG_PPS_CLKOUT
+#warning "dm9051 PPS"
+#endif
+#endif //..
+#endif //MAIN_DATA
 
 #endif /* _DM9051_H_ */

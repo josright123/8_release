@@ -22,8 +22,8 @@
 #include <linux/types.h>
 #include <linux/of.h>
 #include <linux/version.h>
-#define MAIN_DATA
 #include <linux/ptp_clock_kernel.h>
+#define MAIN_DATA
 #include "dm9051.h"
 
 const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configuration */
