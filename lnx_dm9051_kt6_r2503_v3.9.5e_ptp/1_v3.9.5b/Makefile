@@ -50,10 +50,14 @@ ins install :
 s:
 	ethtool eth1
 	ethtool -S eth1
-	
+
 rm remove :
 #	sudo ifconfig eth1 down
 	sudo rmmod dm9051a
+
+r:
+#   the old case
+	sudo rmmod dm9051
 
 ls:
 	lsmod | grep dm9
