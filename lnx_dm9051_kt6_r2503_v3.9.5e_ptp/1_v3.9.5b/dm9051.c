@@ -2640,8 +2640,27 @@ void END_FREE_IRQ(struct net_device *ndev)
 }
 #endif
 
-//#ifndef DMPLUG_INT
-//#endif
+static int dm9051_init_intr(struct board_info *db)
+{
+	int ret;
+
+	#if MI_FIX
+	mutex_lock(&db->spi_lockm);//.open's
+	#endif
+
+	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
+	if (ret)
+		goto intr_unlck;
+
+	ret = dm9051_enable_interrupt(db);
+
+intr_unlck:
+	#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+	#endif
+	
+	return ret;
+}
 
 int DM9051_OPEN_REQUEST(struct board_info *db)
 {
@@ -2717,17 +2736,9 @@ static int dm9051_open(struct net_device *ndev)
 	phy_support_sym_pause(db->phydev);
 	phy_start(db->phydev);
 
-	#if MI_FIX
-	mutex_lock(&db->spi_lockm);//.open
-	#endif
-
-	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
+	ret = dm9051_init_intr(db);
 	if (ret)
-		goto open_end;
-
-	ret = dm9051_enable_interrupt(db);
-	if (ret)
-		goto open_end;
+		return ret;
 
 //.	phy_support_sym_pause(db->phydev);
 //.	phy_start(db->phydev);
@@ -2743,25 +2754,9 @@ static int dm9051_open(struct net_device *ndev)
 	netif_wake_queue(ndev);
 
 	ret = DM9051_OPEN_REQUEST(db);
-	if (ret < 0) {
-		#if MI_FIX
-		mutex_unlock(&db->spi_lockm);
-		#endif
-
+	if (ret < 0)
 		phy_stop(db->phydev); //of 'dm9051_core_clear(db)' //
 
-		#if MI_FIX
-		mutex_lock(&db->spi_lockm); //.open
-		#endif
-		goto open_end;
-	}
-
-open_end:
-	//k("dm9051_open_end.done\n");
-
-	#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-	#endif
 	return ret;
 }
 
