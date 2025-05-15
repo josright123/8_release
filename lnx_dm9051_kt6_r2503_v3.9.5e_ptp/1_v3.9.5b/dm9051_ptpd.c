@@ -1458,37 +1458,6 @@ static void dm9051_ptp_init(struct board_info *db)
 		
 	}
 	//db->ptp_flags |= IGB_PTP_ENABLED;	// Spenser - no used
-
-//Spenser
-/*	
-	dm9051_set_reg(db, DM9051_1588_RX_CONF1,
-		       DM9051A_RC_SLAVE | DM9051A_RC_RX_EN | DM9051A_RC_RX2_EN);
-*/
-	dm9051_set_reg(db, DM9051_1588_RX_CONF1, 0x12);		//enable 8 bytes timestamp & multicast filter
-	
-	//Spenser - Reset Rate register, write 0x60 bit0=1, then write bit0=0 
-	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x01); //Disable PTP function Register offset 0x60, value 0x01
-	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00); //Enable PTP function Register offset 0x60, value 0x00
-	
-	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, 0x01); //Enable PTP clock function Register offset 0x61, value 0x01
-	
-	//Setup GP1 to edge trigger output!
-	//Register 0x60 to 0x0 (GP page (bit 1), PTP Function(bit 0))
-	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00);
-
-	//Register 0x6A to 0x06 (interrupt disable(bit 2), trigger or event enable(bit 1), trigger output(bit 0))
-	dm9051_set_reg(db, DM9051_1588_GPIO_CONF, 0x06);
-	
-	//Register 0x6B to 0x02(trigger out type: edge output(bit 3:2),  triger output active high(bit 1))
-	dm9051_set_reg(db, DM9051_1588_GPIO_TE_CONF, 0x02);
-	
-	//Stone add for 1588 Read 0x68 in one SPI cycle enable (register 0x63 bit 6 0:enable, 1:disable => 0x40)
-	//Stone add for 1588 TX 1-Step checksum enable (register 0x63 bit 7 0:enable, 1:disable => 0x80)
-	dm9051_set_reg(db, DM9051_1588_1_STEP_CHK, 0x00);
-
-#ifdef DMPLUG_PPS_CLKOUT 
-	dm9051_set_reg(db, 0x3C, 0xB0);
-#endif
 }
 
 static void dm9051_ptp_stop(struct board_info *db)
@@ -1522,9 +1491,44 @@ void ptp_init(struct board_info *db) {
 	 * db->ptp_on = 1; */
 	db->ptp_on = 0;
 	dm9051_ptp_init(db); //_15888_
+	dm9051_ptp_core_init(db); //only by _probe [for further functionality test, do eliminate here, put to _open, and further _core_init]
 }
 void ptp_end(struct board_info *db) {
 	dm9051_ptp_stop(db); //_15888_ todo
+}
+
+void dm9051_ptp_core_init(struct board_info *db)
+{
+//Spenser
+/*	
+	dm9051_set_reg(db, DM9051_1588_RX_CONF1,
+		       DM9051A_RC_SLAVE | DM9051A_RC_RX_EN | DM9051A_RC_RX2_EN);
+*/
+	dm9051_set_reg(db, DM9051_1588_RX_CONF1, 0x12);		//enable 8 bytes timestamp & multicast filter
+	
+	//Spenser - Reset Rate register, write 0x60 bit0=1, then write bit0=0 
+	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x01); //Disable PTP function Register offset 0x60, value 0x01
+	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00); //Enable PTP function Register offset 0x60, value 0x00
+	
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, 0x01); //Enable PTP clock function Register offset 0x61, value 0x01
+	
+	//Setup GP1 to edge trigger output!
+	//Register 0x60 to 0x0 (GP page (bit 1), PTP Function(bit 0))
+	dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x00);
+
+	//Register 0x6A to 0x06 (interrupt disable(bit 2), trigger or event enable(bit 1), trigger output(bit 0))
+	dm9051_set_reg(db, DM9051_1588_GPIO_CONF, 0x06);
+	
+	//Register 0x6B to 0x02(trigger out type: edge output(bit 3:2),  triger output active high(bit 1))
+	dm9051_set_reg(db, DM9051_1588_GPIO_TE_CONF, 0x02);
+	
+	//Stone add for 1588 Read 0x68 in one SPI cycle enable (register 0x63 bit 6 0:enable, 1:disable => 0x40)
+	//Stone add for 1588 TX 1-Step checksum enable (register 0x63 bit 7 0:enable, 1:disable => 0x80)
+	dm9051_set_reg(db, DM9051_1588_1_STEP_CHK, 0x00);
+
+#ifdef DMPLUG_PPS_CLKOUT 
+	dm9051_set_reg(db, 0x3C, 0xB0);
+#endif
 }
 #endif
 
