@@ -36,6 +36,10 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
 
+/* raw fake encrypt */
+#define BUS_SETUP(db)	0		//empty(NoError)
+#define BUS_OPS(db, buff, crlen)	//empty
+
 /* fake tx_conti */
 #define TX_CONTI_NEW(d)
 

@@ -85,25 +85,20 @@ const struct eng_config *econf = &engdata;
 #endif
 #endif //MAIN_DATA
 
-//raw to main
-#define BUS_SETUP(db)	0		//empty(NoError)
-#define BUS_OPS(db, buff, crlen)	//empty
-
-//overlay by plug/
+//[overlay]
 #ifdef DMPLUG_CRYPT
+//overlay by plug/
 #undef BUS_SETUP
 #define BUS_SETUP(db) bus_setup(struct board_info *db)
 #undef BUS_OPS
 #define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
-#endif
-
 //implement in plug/
-#ifdef DMPLUG_CRYPT
 int bus_setup(struct board_info *db);
 void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #endif
 
 #ifdef DMPLUG_PTP
+//implement in ptpd
 void ptp_new(struct board_info *db, struct net_device *ndev);
 void ptp_init(struct board_info *db);
 void ptp_end(struct board_info *db);
