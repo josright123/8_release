@@ -375,13 +375,13 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 u32 dm9051_get_rate_reg(struct board_info *db) {
 	u8 mRate[4];
 	u32 pre_rate;
-	//mutex_lock(&db->spi_lockm);
+	//_mutex_lock(&db->_spi_lockm);
 	dm9051_set_reg(db, 0x69, 0x01);
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);
 	regmap_noinc_read(db->regmap_dm, 0x68, mRate, 4);
 	pre_rate = ((uint32_t)mRate[3] << 24) | ((uint32_t)mRate[2] << 16) |
 		((uint32_t)mRate[1] << 8) | (uint32_t)mRate[0];
-	//mutex_unlock(&db->spi_lockm);
+	//_mutex_unlock(&db->_spi_lockm);
 	//printk("Pre-RateReg value = 0x%08X\n", pre_rate);
 
 	return pre_rate;
@@ -436,7 +436,7 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	//Spenser - Read TX timestamp from REG_68H
 	//remark6-slave
 
-//.	mutex_lock(&db->spi_lockm);
+//.	_mutex_lock(&db->_spi_lockm);
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);	// Reset Register 68H Index
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_IDX_RST);	// dummy reset to workaround unsync
 	dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x01); //Read TX Time Stamp Clock Register offset 0x62, value 0x01
@@ -446,7 +446,7 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	// 	regmap_read(db->regmap_dm, DM9051_1588_TS, &uIntTemp);
 	// 	temp[i] = (u8)(uIntTemp & 0xFF);
 	// }
-//.	mutex_unlock(&db->spi_lockm);
+//.	_mutex_unlock(&db->_spi_lockm);
 
 #if 0
 	if (!uIntTemp) {
