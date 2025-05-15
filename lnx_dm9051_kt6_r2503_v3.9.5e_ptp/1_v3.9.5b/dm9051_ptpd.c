@@ -932,52 +932,52 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 
 #if 1
 #if 0
-static unsigned int ptp_packet_classify(struct sk_buff *skb)
-{
-	unsigned int ptp_class;
+//static unsigned int ptp_packet_classify(struct sk_buff *skb)
+//{
+//	unsigned int ptp_class;
 
-	/* Early return if no hardware timestamp is involved */
-	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-		//printk("dm9051_ptp, no hardware timestamp involved\n");
-		return PTP_CLASS_NONE; //PTP_NOT_PTP;
-	}
- 
-	/* Validate skb length */
-	if (skb->len < sizeof(struct ptp_header)) {
-		printk("dm9051_ptp, packet too short for PTP header\n");
-		return PTP_CLASS_NONE; //PTP_NOT_PTP;
-	}
-    
-	/* Classify and parse PTP packet */
-	ptp_class = ptp_classify_raw(skb);
-	if (ptp_class == PTP_CLASS_NONE)
-		return PTP_CLASS_NONE; //PTP_NOT_PTP;
+//	/* Early return if no hardware timestamp is involved */
+//	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+//		//printk("dm9051_ptp, no hardware timestamp involved\n");
+//		return PTP_CLASS_NONE; //PTP_NOT_PTP;
+//	}
+// 
+//	/* Validate skb length */
+//	if (skb->len < sizeof(struct ptp_header)) {
+//		printk("dm9051_ptp, packet too short for PTP header\n");
+//		return PTP_CLASS_NONE; //PTP_NOT_PTP;
+//	}
+//    
+//	/* Classify and parse PTP packet */
+//	ptp_class = ptp_classify_raw(skb);
+//	if (ptp_class == PTP_CLASS_NONE)
+//		return PTP_CLASS_NONE; //PTP_NOT_PTP;
 
-	return ptp_class;
-}
+//	return ptp_class;
+//}
 
-static struct ptp_header *dm9051_ptp_udphdr(struct sk_buff *skb)
-{
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
-	//get_ptp_header(); ...
-#else
-	unsigned int ptp_class = ptp_packet_classify(skb);
+//static struct ptp_header *dm9051_ptp_udphdr(struct sk_buff *skb)
+//{
+//#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
+//	//get_ptp_header(); ...
+//#else
+//	unsigned int ptp_class = ptp_packet_classify(skb);
 
-	if (ptp_class == PTP_CLASS_NONE)
-		return NULL;
+//	if (ptp_class == PTP_CLASS_NONE)
+//		return NULL;
 
-	return ptp_parse_header(skb, ptp_class);
-#endif
-}
+//	return ptp_parse_header(skb, ptp_class);
+//#endif
+//}
 
-static u8 dm9051_ptp_step(struct board_info *db, struct sk_buff *skb)
-{
-	struct ptp_header *hdr = dm9051_ptp_udphdr(skb);
+//static u8 dm9051_ptp_step(struct board_info *db, struct sk_buff *skb)
+//{
+//	struct ptp_header *hdr = dm9051_ptp_udphdr(skb);
 
-	if (hdr)
-		return (u8)(hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
-	return 0;
-}
+//	if (hdr)
+//		return (u8)(hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
+//	return 0;
+//}
 
 //u8 dm9051_ptp_frame(struct board_info *db, struct sk_buff *skb)
 //{
@@ -993,6 +993,13 @@ static u8 dm9051_ptp_step(struct board_info *db, struct sk_buff *skb)
 //	return db->ptp_packet;
 //}
 #endif
+
+/* PTP message type classification */
+enum ptp_sync_type {
+    //PTP_NOT_PTP = 0,      /* Not a PTP packet or no timestamp involved */
+    PTP_ONE_STEP = 1,     /* One-step sync message */
+    PTP_TWO_STEP = 2,     /* Two-step sync message */
+};
 
 int is_ptp_sync_packet(u8 msgtype)
 {
