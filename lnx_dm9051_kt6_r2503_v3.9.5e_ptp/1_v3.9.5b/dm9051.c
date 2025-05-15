@@ -40,7 +40,8 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #define BUS_SETUP(db)	0		//empty(NoError)
 #define BUS_OPS(db, buff, crlen)	//empty
 
-/* fake tx_conti */
+/* fake normal tx mode */
+#define dmplug_tx "normal"
 #define TX_CONTI_NEW(d)
 
 /* re-direct conti */

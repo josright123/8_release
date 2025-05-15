@@ -1443,18 +1443,6 @@ int ptp_9051_verify_pin(struct ptp_clock_info *caps, unsigned int pin,
 
 void dm9051_ptp_init(struct board_info *db)
 {
-	#if 0					   
-	db->tstamp_config.flags = 0;
-	db->tstamp_config.rx_filter = 
-		(1 << HWTSTAMP_FILTER_ALL) |
-		(1 << HWTSTAMP_FILTER_SOME) |
-		(1 << HWTSTAMP_FILTER_NONE);
-		
-	db->tstamp_config.tx_type =
-		(1 << HWTSTAMP_TX_ON) |
-		(1 << HWTSTAMP_TX_OFF);
-	#endif
-
 	printk("\n");
 	netif_info(db, hw, db->ndev, "DM9051A Driver PTP Init\n");
 

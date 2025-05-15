@@ -276,6 +276,10 @@ struct eng_config {
 
 #if 1 //sticked fixed here is better!
 #include "dm9051_plug.h" //for definition of '_INT_TWO_STEP'
+
+//#ifdef MAIN_DATA
+//#endif
+
 /* 0.1 ptpc */
 //#if 1 //0
 //#ifdef DMPLUG_PTP
@@ -486,7 +490,26 @@ int dm9051_delayp_looping_rx_tx(struct board_info *db);
 //void amdix_link_change_up(struct board_info *db, unsigned int bmsr);
 
 #ifdef MAIN_DATA
-/* Driver configuration structure */
+/* MAIN Data: 
+ */
+const struct driver_config confdata = {
+	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
+};
+const struct eng_config engdata = {
+	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
+	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
+	.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
+//	.sched = {
+//		.delayF = {0, 1, 0, 0, 1}, 
+//		.nTargetMaxNum = POLL_OPERATE_NUM},
+//;const struct eng_sched csched = engdata.sched;
+	.tx_timeout_us = 210000, //2100,
+};
+
+const struct eng_config *econf = &engdata;
+
+/* Driver configuration structure
+ */
 struct mod_config
 {
 	char *test_info;
@@ -556,20 +579,49 @@ const struct mod_config driver_misc_mode = {
 		.tx_blk = 0, .rx_blk = 0},
 };
 
-/* INT and INT two_step */
+/* Plug/ pragma messages: 
+ */
+#ifdef DMPLUG_CONTI
+#warning "dm9051 CONTI"
+#endif
+
+#ifdef DMPLUG_CRYPT
+#warning "dm9051 CRYPT"
+#endif
+
+#ifdef DMPLUG_PTP
+#pragma message("dm9051 PTP")
+
+#ifdef DMPLUG_PPS_CLKOUT
+#pragma message("dm9051 PPS")
+#endif
+
+/* dm9051/ pragma messages: 
+ */
 #if defined(DMPLUG_INT)
+/* INT */
 #pragma message("dm9051 INT")
 
 #ifdef INT_CLKOUT
+/* INT CLKOUT */
 #warning "INT: INT_CLKOUT"
 #endif
 #ifdef INT_TWO_STEP
+/* INT two_step */
 #warning "INT: TWO_STEP"
 #endif
 #endif
 
 #else
-//.
+#warning "dm9051 POL" //.
+#endif
+
+#ifdef DMCONF_BMCR_WR
+#warning "WORKROUND: BMCR_WR"
+#endif
+#ifdef DMCONF_MRR_WR
+#warning "WORKROUND: MRR_WR"
+#endif
 #endif
 
 #endif /* _DM9051_H_ */

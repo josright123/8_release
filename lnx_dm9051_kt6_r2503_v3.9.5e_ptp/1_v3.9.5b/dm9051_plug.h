@@ -30,60 +30,52 @@
   #endif
 #endif
 
-#ifdef MAIN_DATA
-/*
- * MAIN Data: 
- */
-const struct driver_config confdata = {
-	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-};
-const struct eng_config engdata = {
-	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
-	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
-	.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
-//	.sched = {
-//		.delayF = {0, 1, 0, 0, 1}, 
-//		.nTargetMaxNum = POLL_OPERATE_NUM},
-	.tx_timeout_us = 210000, //2100,
-};
-const struct eng_config *econf = &engdata;
-//const struct eng_sched csched = engdata.sched;
-#endif
-
 /*
  * Engineering Verification
  */
-#ifdef MAIN_DATA
-//#ifdef DMCONF_AARCH_64
-//#pragma message("dm9051 AARCH_64")
-////#warning "dm9051 AARCH_64"
-//#else
-//#pragma message("dm9051 AARCH_32")
-////#warning "dm9051 AARCH_32"
-//#endif
+//#ifdef _MAIN_DATA
+ //#ifdef DMCONF_AARCH_64
+ //#pragma message("dm9051 AARCH_64")
+ //#else
+ //#pragma message("dm9051 AARCH_32")
+ //#endif
 
-//#ifdef DMCONF_DIV_HLPR_32
-//#pragma message("dm9051 DIV_HLPR_32")
-////#warning "dm9051 DIV_HLPR_32"
-//#endif
+ //#ifdef DMCONF_DIV_HLPR_32
+ //#pragma message("dm9051 DIV_HLPR_32")
+ //#endif
+//#endif //_MAIN_DATA
 
+#if defined(DMPLUG_INT)
+#ifdef INT_CLKOUT
+#endif
+#ifdef INT_TWO_STEP
+void INIT_RX_INT2_DELAY_SETUP(struct board_info *db);
+void dm9051_rx_irq_servicep(struct work_struct *work);
+irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
+#endif
+#else
+void dm9051_poll_servicep(struct work_struct *work);
+void INIT_RX_POLL_DELAY_SETUP(struct board_info *db);
+void INIT_RX_POLL_SCHED_DELAY(struct board_info *db);
+#endif
+
+#ifdef DMCONF_BMCR_WR
+int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val);
+#endif
+
+#ifdef DMCONF_MRR_WR
+#endif
+
+/*
+ * Conti: 
+ */
 #ifdef DMPLUG_CONTI
-#warning "dm9051 CONTI"
+/* Log definitions */
+#define dmplug_tx "continue"
+void tx_contu_new(struct board_info *db);
+int TX_MOTE2_CONTI_RCR(struct board_info *db);
+int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
 #endif
-
-#ifdef DMPLUG_CRYPT
-#warning "dm9051 CRYPT"
-#endif
-
-#ifdef DMPLUG_PTP
-#pragma message("dm9051 PTP")
-
-#ifdef DMPLUG_PPS_CLKOUT
-#pragma message("dm9051 PPS")
-//#warning "dm9051 PPS"
-#endif
-#endif
-#endif //MAIN_DATA
 
 //[overlay]
 #ifdef DMPLUG_CRYPT
@@ -97,58 +89,21 @@ int bus_setup(struct board_info *db);
 void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #endif
 
-#ifdef DMPLUG_PTP
-//implement in ptpd
-void ptp_new(struct board_info *db, struct net_device *ndev);
-void ptp_init(struct board_info *db);
-void ptp_end(struct board_info *db);
-#endif
-
-/*
- * Conti: 
- */
-#ifdef DMPLUG_CONTI
-void tx_contu_new(struct board_info *db);
-#endif
-#ifdef DMPLUG_CONTI
-int TX_MOTE2_CONTI_RCR(struct board_info *db);
-int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
-#endif
-
-#if defined(DMPLUG_INT)
-#ifdef INT_TWO_STEP
-void INIT_RX_INT2_DELAY_SETUP(struct board_info *db);
-void dm9051_rx_irq_servicep(struct work_struct *work);
-irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
-#endif
-#else
-void INIT_RX_POLL_DELAY_SETUP(struct board_info *db);
-void INIT_RX_POLL_SCHED_DELAY(struct board_info *db);
-#endif
-
-#ifndef DMPLUG_INT
-void dm9051_poll_servicep(struct work_struct *work);
-#endif
-
-#ifdef DMCONF_BMCR_WR
-int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val);
-#endif
-
-/* Log definitions */
-#ifdef DMPLUG_CONTI
-#define dmplug_tx "continue"
-#else
-#define dmplug_tx "normal"
-#endif
-
-/* 0.1 ptpc */
-#if 1 //0
+/* 0.0 ptpc */
 #ifdef DMPLUG_PTP
 //=
 //of #include "dm9051_ptpd.h"
 #include <linux/ptp_classify.h>
 #include <linux/ip.h>
 #include <linux/udp.h>
+//implement in ptpd
+void ptp_new(struct board_info *db, struct net_device *ndev);
+void ptp_init(struct board_info *db);
+void ptp_end(struct board_info *db);
+#endif
+
+/* 0.1 ptpc */
+#ifdef DMPLUG_PTP
 // bits defines
 // 06H RX Status Reg
 // BIT(5),PTP use the same bit, timestamp is available
@@ -177,6 +132,4 @@ u32 dm9051_get_rate_reg(struct board_info *db);
 void dm9051_ptp_init(struct board_info *db);
 void dm9051_ptp_stop(struct board_info *db);
 #endif
-#endif
-
 #endif //_DM9051_PLUG_H_
