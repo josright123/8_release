@@ -1791,15 +1791,21 @@ static int dm9051_all_start(struct board_info *db)
 	 * after GPR power on, delay 1 ms is essential
 	 */
 	msleep(1);
-
+#if 1
 	ret = dm9051_ncr_reset(db);
 	if (ret)
 		return ret;
-
+#endif
+#if 1
 	ret = dm9051_phy_reset(db);
 	if (ret)
 		return ret;
-
+#endif
+#if 0
+	ret = dm9051_phywrite(db, 0, 0x3100);
+	if (ret)
+		return ret;
+#endif
 	return dm9051_core_init(db);
 }
 
@@ -2683,14 +2689,16 @@ static int dm9051_init_intr(struct board_info *db)
 	ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
 	if (ret)
 		goto intr_unlck;
-
+#if 0
 	ret = dm9051_enable_interrupt(db);
-
+#endif
 intr_unlck:
 	#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
 	#endif
-	
+#if 1
+	ret = dm9051_enable_interrupt(db);
+#endif
 	return ret;
 }
 
