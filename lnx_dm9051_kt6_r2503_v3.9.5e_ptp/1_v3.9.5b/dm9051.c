@@ -197,6 +197,17 @@ void SHOW_RX_INT_MODE(struct device *dev)
 	#endif
 }
 
+void SHOW_OPEN(struct board_info *db)
+{
+	printk("\n");
+	netdev_info(db->phydev->attached_dev, "dm9051_open\n");
+	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_rx_mach);
+	#if defined(DMPLUG_INT)
+	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_intterrpt2);
+	#endif
+	/* amdix_log_reset(db); */ //(to be determined)
+}
+
 void SHOW_DTS_INT(struct device *dev)
 {
 	#if defined(DMPLUG_INT)
@@ -2729,14 +2740,8 @@ static int dm9051_open(struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	struct spi_device *spi = db->spidev;
 	int ret;
-	
-	printk("\n");
-	netdev_info(db->phydev->attached_dev, "dm9051_open\n");
-	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_rx_mach);
-	#if defined(DMPLUG_INT)
-	netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_intterrpt2);
-	#endif
-	/* amdix_log_reset(db); */ //(to be determined)
+
+	SHOW_OPEN(db);
 
 	db->imr_all = IMR_PAR | IMR_PRM;
 	db->lcr_all = LMCR_MODE1;
