@@ -52,6 +52,7 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 
 /* fake ptpc */
 #define PTP_NEW(d, n)
+#define PTP_INIT_RCR(d)
 #define PTP_INIT(d)
 #define PTP_END(d)
 
@@ -59,6 +60,8 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #ifdef DMPLUG_PTP
 #undef PTP_NEW
 #define PTP_NEW(d, n) ptp_new(d, n)
+#undef PTP_INIT_RCR
+#define PTP_INIT_RCR(d) ptp_init_rcr(d)
 #undef PTP_INIT
 #define PTP_INIT(d) ptp_init(d)
 #undef PTP_END
@@ -2737,11 +2740,8 @@ static int dm9051_open(struct net_device *ndev)
 
 	db->imr_all = IMR_PAR | IMR_PRM;
 	db->lcr_all = LMCR_MODE1;
-	#ifdef DMPLUG_PTP
-	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)
-	#else
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN;
-	#endif
+	PTP_INIT_RCR(db);
 	memset(db->rctl.hash_table, 0, sizeof(db->rctl.hash_table));
 
 	ndev->irq = spi->irq; /* by dts */

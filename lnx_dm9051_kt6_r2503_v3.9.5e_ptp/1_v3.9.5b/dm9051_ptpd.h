@@ -118,6 +118,7 @@ u32 dm9051_get_rate_reg(struct board_info *db);
 
 //implement in ptpd
 void ptp_new(struct board_info *db, struct net_device *ndev);
+void ptp_init_rcr(struct board_info *db);
 void ptp_init(struct board_info *db);
 void ptp_end(struct board_info *db);
 void dm9051_ptp_core_init(struct board_info *db);
