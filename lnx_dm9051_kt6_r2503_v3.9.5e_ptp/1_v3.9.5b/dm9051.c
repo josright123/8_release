@@ -2753,9 +2753,9 @@ static int dm9051_open(struct net_device *ndev)
 	phy_support_sym_pause(db->phydev);
 	phy_start(db->phydev);
 
-	ret = dm9051_init_intr(db);
-	if (ret)
-		return ret;
+//	ret = dm9051_init_intr(db);
+//	if (ret)
+//		return ret;
 
 //.	phy_support_sym_pause(db->phydev);
 //.	phy_start(db->phydev);
@@ -2771,8 +2771,14 @@ static int dm9051_open(struct net_device *ndev)
 	netif_wake_queue(ndev);
 
 	ret = DM9051_OPEN_REQUEST(db);
-	if (ret < 0)
+	if (ret < 0) {
 		phy_stop(db->phydev); //of 'dm9051_core_clear(db)' //
+		return ret;
+	}
+
+	ret = dm9051_init_intr(db);
+	if (ret)
+		phy_stop(db->phydev);
 
 	return ret;
 }
