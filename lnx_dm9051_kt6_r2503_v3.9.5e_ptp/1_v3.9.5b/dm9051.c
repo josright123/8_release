@@ -1668,15 +1668,9 @@ static int dm9051_set_pauseparam(struct net_device *ndev,
 		return ret;
 	}
 
-//#if MI_FIX //fcr
-//	mutex_lock(&db->spi_lockm); //.aneg
-//#endif
 	phy_set_sym_pause(db->phydev, pause->rx_pause, pause->tx_pause,
 					  pause->autoneg);
 	phy_start_aneg(db->phydev);
-//#if MI_FIX //fcr
-//	mutex_unlock(&db->spi_lockm);
-//#endif
 	return 0;
 }
 
@@ -3056,24 +3050,59 @@ static int dm9051_mdio_register(struct board_info *db)
 	return ret;
 }
 
-static void dm9051_handle_link_change(struct net_device *ndev)
+void MRR_WR_FCR_UPSTART(struct board_info *db)
 {
-	struct board_info *db = to_dm9051_board(ndev);
-
 	#if MI_FIX
 	mutex_lock(&db->spi_lockm);
 	#endif
+#ifdef DMCONF_MRR_WR
+	//int ret = dm9051_all_upstart(db);
+	//if (ret)
+	//	goto dnf_end;
+	printk("_all_upstart\n"); //NOT to .netif_crit(db, rx_err, db->ndev, "_all_upstart\n");
+	do {
+		int ret = dm9051_ncr_reset(db);
+		if (ret)
+			goto dnf_end;
+		
+	//=	ret = dm9051_all_reinit(db); //up_restart
+	#if 1		
+		ret = dm9051_core_init(db);
+		if (ret)
+			goto dnf_end;
+	#endif
+		ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
+		if (ret)
+			goto dnf_end;
+
+		ret = dm9051_enable_interrupt(db);
+		if (ret)
+			goto dnf_end;
+
+		ret = dm9051_subconcl_and_rerxctrl(db);
+		if (ret)
+			goto dnf_end;
+	} while(0);
+	dm9051_update_fcr(db);
+dnf_end:
+	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation done!\n");
+#else //DMCONF_MRR_WR
+	dm9051_update_fcr(db);
+	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation not applied!\n");
+#endif
+	#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+	#endif
+}
+
+static void dm9051_handle_link_change(struct net_device *ndev)
+{
+	struct board_info *db = to_dm9051_board(ndev);
 
 	if (db->phydev->link)
 	{
 		printk("\n");
 		printk("LOCK_MUTEX\n");
-
-		if (db->phydev->pause)
-		{
-			db->pause.rx_pause = true;
-			db->pause.tx_pause = true;
-		}
 	}
 
 	phy_print_status(db->phydev);
@@ -3083,53 +3112,15 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 	 */
 	if (db->phydev->link)
 	{
-	#ifdef DMCONF_MRR_WR
-		#if 0
-		printk("NOT _all_upstart\n");
-		#else
-		printk("_all_upstart\n"); //NOT to .netif_crit(db, rx_err, db->ndev, "_all_upstart\n");
-		do {
-			int ret = dm9051_ncr_reset(db);
-			if (ret)
-				goto dnf_end;
-			
-		//=	ret = dm9051_all_reinit(db); //up_restart
-		#if 1		
-			ret = dm9051_core_init(db);
-			if (ret)
-				goto dnf_end;
-		#endif
-			ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
-			if (ret)
-				goto dnf_end;
-
-			ret = dm9051_enable_interrupt(db);
-			if (ret)
-				goto dnf_end;
-
-			ret = dm9051_subconcl_and_rerxctrl(db);
-			if (ret)
-				goto dnf_end;
-			
-			//int ret = dm9051_all_upstart(db);
-			//if (ret)
-			//	goto dnf_end;
-		} while(0);
-		#endif
-		dm9051_update_fcr(db);
-dnf_end:
-		netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation ok!\n");
-	#else //DMCONF_MRR_WR
-		dm9051_update_fcr(db);
-	#endif
+		if (db->phydev->pause) {
+			db->pause.rx_pause = true;
+			db->pause.tx_pause = true;
+		}
+		MRR_WR_FCR_UPSTART(db);
 
 		printk("UNLOCK_MUTEX\n");
 		printk("\n");
 	}
-
-	#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-	#endif
 }
 
 /* phy connect as poll mode
