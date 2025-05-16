@@ -242,21 +242,25 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 	//dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 #if defined(__x86_64__) || defined(__aarch64__)
 	// 64-bit code
+	dev_err(dev, "LXR: %s, BUILD: %s __aarch64__ (64 bit)\n", utsname()->release, utsname()->release); //(compile-time)
+	
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_err(dev, "LXR: %s, BUILD: %s (64 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
+	dev_err(dev, "LXR: %s, BUILD: %s CONFIG_64BIT (64 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
 	#else
 	// 32-bit specific code
-	dev_err(dev, "LXR: %s, BUILD: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)\n", utsname()->release, utsname()->release);
+	dev_err(dev, "LXR: %s, BUILD: %s CONFIG_32BIT (32 bit, warn: because config has no CONFIG_64BIT ?)\n", utsname()->release, utsname()->release);
 	#endif
 #else
 	// 32-bit code
+	dev_err(dev, "LXR: %s, BUILD: %s __aarch32__ (32 bit)\n", utsname()->release, utsname()->release); //(compile-time)
+
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_err(dev, "LXR: %s, BUILD: %s (32 bit, warn: but kernel config has CONFIG_64BIT?)\n", utsname()->release, utsname()->release);
+	dev_err(dev, "LXR: %s, BUILD: %s (64 bit, warn: CONFIG_64BIT contrary to __aarch32__ ?)\n", utsname()->release, utsname()->release);
 	#else
 	// 32-bit specific code
-	dev_err(dev, "LXR: %s, BUILD: %s (32 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
+	dev_err(dev, "LXR: %s, BUILD: %s CONFIG_32BIT (32 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
 	#endif
 #endif
 	DEV_INFO_TX_ALIGN(dev);

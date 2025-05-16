@@ -5,7 +5,6 @@
  */
 #ifndef _DM9051_H_
 #define _DM9051_H_
-
 /* Standard Linux kernel headers */
 #include <linux/bits.h>
 #include <linux/netdevice.h>
@@ -18,7 +17,33 @@
 /*#define INT_TWO_STEP */ //(INT39 two_step)
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
 /*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
- 
+
+#if defined(MAIN_DATA)
+#if defined(__x86_64__) || defined(__aarch64__)
+// 64-bit code
+#ifdef CONFIG_64BIT
+// 64-bit specific code
+#pragma message("dm9051 @ __aarch64__")
+#pragma message("dm9051 @ CONFIG_64BIT")
+#else
+// 32-bit specific code
+#pragma message("dm9051 @ __aarch64__")
+#warning "dm9051 but is @ CONFIG_32BIT"
+#endif
+#else
+// 32-bit code
+#ifdef CONFIG_64BIT
+// 64-bit specific code
+#pragma message("dm9051 @ __aarch32__")
+#warning "dm9051 but is @ CONFIG_64BIT"
+#else
+// 32-bit specific code
+#pragma message("dm9051 @ __aarch32__")
+#pragma message("dm9051 @ CONFIG_32BIT")
+#endif
+#endif
+#endif
+
 /* Macro for already known platforms
  */
 /*#define DMCONF_DIV_HLPR_32 */	//(32-bit division helper, __aeabi_ldivmod()) 
