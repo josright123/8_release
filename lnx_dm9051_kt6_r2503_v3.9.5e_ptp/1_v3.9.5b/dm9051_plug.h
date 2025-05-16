@@ -20,6 +20,13 @@
 #define DMPLUG_CRYPT //(crypt)
 #endif
 
+#if defined(DMPLUG_CONTI) && defined(MAIN_DATA)
+#pragma message("dm9051 CONTI")
+#endif
+#if defined(DMPLUG_CRYPT) && defined(MAIN_DATA)
+#pragma message("dm9051 CRYPT")
+#endif
+
 #define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
@@ -28,6 +35,13 @@
   #ifdef PLUG_PTP_PPS
   #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
   #endif
+#endif
+
+#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
+#pragma message("dm9051 PTP")
+#endif
+#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
+#warning "dm9051 PPS"
 #endif
 
 /*

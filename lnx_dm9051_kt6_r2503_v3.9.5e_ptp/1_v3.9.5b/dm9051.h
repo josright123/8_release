@@ -18,7 +18,7 @@
 /*#define INT_TWO_STEP */ //(INT39 two_step)
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
 /*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
-
+ 
 /* Macro for already known platforms
  */
 /*#define DMCONF_DIV_HLPR_32 */	//(32-bit division helper, __aeabi_ldivmod()) 
@@ -48,6 +48,23 @@
   #endif
 #endif
 
+// #if defined(def) && defined(MAIN_DATA)
+// #pragma message(s)
+// #warning s
+// #endif
+#if defined(DMPLUG_INT) && defined(MAIN_DATA)
+#pragma message("dm9051 INT")
+#endif
+#if !defined(DMPLUG_INT) && defined(MAIN_DATA)
+#pragma message("dm9051 POL")
+#endif
+#if defined(INT_CLKOUT) && defined(MAIN_DATA)
+#warning "INT: INT_CLKOUT"
+#endif
+#if defined(INT_TWO_STEP) && defined(MAIN_DATA)
+#warning "INT: TWO_STEP"
+#endif
+
 #define PLUG_BMCR
 #ifdef PLUG_BMCR
 #define DMCONF_BMCR_WR //(bmcr-work around)
@@ -56,6 +73,13 @@
 //#define PLUG_MRR
 #ifdef PLUG_MRR
 #define DMCONF_MRR_WR //(mrr-work around)
+#endif
+
+#if defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
+#pragma message("WORKROUND: BMCR_WR")
+#endif
+#if defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
+#pragma message("WORKROUND: MRR_WR")
 #endif
 
 /* Device identification */
@@ -547,6 +571,7 @@ const struct mod_config driver_misc_mode = {
 		.tx_blk = 0, .rx_blk = 0},
 };
 
+#if 0
 /* dm9051/ pragma messages: 
  */
 #if defined(DMPLUG_INT)
@@ -593,6 +618,8 @@ const struct mod_config driver_misc_mode = {
 #warning "dm9051 PPS"
 #endif
 #endif //..
+#endif //0
+
 #endif //MAIN_DATA
 
 #endif /* _DM9051_H_ */
