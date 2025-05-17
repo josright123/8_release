@@ -12,7 +12,6 @@
 #include <linux/module.h>
 #include <linux/utsname.h>
 #include <generated/utsrelease.h> // For newer kernels
-//#include <linux/utsrelease.h>      // For older kernels
 #include <linux/netdevice.h>
 #include <linux/phy.h>
 #include <linux/regmap.h>
@@ -109,19 +108,30 @@ int get_dts_irqf(struct board_info *db)
 #endif
 
 /* log */
-#define PRINT_BURST_INFO(n) \
-		netif_warn(db, rx_status, db->ndev, "___[rx/tx %s mode] nRxc %d\n", \
-			   dmplug_tx, \
-			   n)
+#define DEV_INFO_RX_ALIGN(dev) \
+		dev_warn(dev, "RX: %s blk %u\n", \
+			dm9051_modedata->align.burst_mode_info, \
+			dm9051_modedata->align.rx_blk)
+#define DEV_INFO_TX_ALIGN(dev) \
+		dev_warn(dev, "TX: %s blk %u\n", \
+			dm9051_modedata->align.burst_mode_info, \
+			dm9051_modedata->align.tx_blk)
 #define PRINT_ALIGN_INFO(n) \
 		netif_warn(db, rx_status, db->ndev, "___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
 			dmplug_tx, \
 			dm9051_modedata->align.rx_blk, \
 			dm9051_modedata->align.tx_blk, \
 			n)
-#define PRINT_REGMAP_BLK_ERR(pstr, ret, reg, BLKLEN) \
+#define PRINT_BURST_INFO(n) \
+		netif_warn(db, rx_status, db->ndev, "___[rx/tx %s mode] nRxc %d\n", \
+			dmplug_tx, \
+			n)
+#define PRINT_REGMAP_BLK_ERR(evtstr, ret, r, n) \
 		netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
-			__func__, ret, pstr, reg, BLKLEN)
+			__func__, ret, \
+			evtstr, \
+			r, \
+			n)
 
 void SHOW_DEVLOG_REFER(struct device *dev)
 {
@@ -220,14 +230,6 @@ void SHOW_DTS_INT(struct device *dev)
 	dev_crit(dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
 	#endif
 }
-
-#define DEV_INFO_TX_ALIGN(dev) \
-		dev_warn(dev, "TX: %s blk %u\n", \
-			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.tx_blk)
-#define DEV_INFO_RX_ALIGN(dev) \
-		dev_warn(dev, "RX: %s blk %u\n", \
-			dm9051_modedata->align.burst_mode_info, dm9051_modedata->align.rx_blk)
-
 static void SHOW_CONFIG_MODE(struct device *dev)
 {
 	SHOW_DRIVER(dev);
@@ -545,6 +547,13 @@ void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int re
 	dm9051_get_reg(db, reg1, &v1);
 	dm9051_get_reg(db, reg2, &v2);
 	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+}
+
+static void dm9051_headlog_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2)
+{
+	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
+	dm9051_dump_reg2s(db, reg1, reg2);
 }
 
 static int dm9051_ncr_poll(struct board_info *db)
@@ -1701,22 +1710,6 @@ static int dm9051_get_sset_count(struct net_device *netdev, int sset)
 	return (sset == ETH_SS_STATS) ? ARRAY_SIZE(dm9051_stats_strings) : 0;
 }
 
-static void log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2)
-{
-	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
-	dm9051_dump_reg2s(db, reg1, reg2);
-}
-
-//void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2)
-//{
-//	unsigned int v1, v2;
-
-//	dm9051_get_reg(db, reg1, &v1);
-//	dm9051_get_reg(db, reg2, &v2);
-//	k("%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
-//}
-
 static void dm9051_get_ethtool_stats(struct net_device *ndev,
 									 struct ethtool_stats *stats, u64 *data)
 {
@@ -1736,9 +1729,9 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	mutex_lock(&db->spi_lockm);
 #endif
 	netif_info(db, tx_done, db->ndev, "rx_psckets: %llu\n", data[0]);
-	log_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
-	log_regs("dump wdr registers:", db, 0x24, 0x25);
-	log_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
+	dm9051_headlog_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
+	dm9051_headlog_regs("dump wdr registers:", db, 0x24, 0x25);
+	dm9051_headlog_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
 
 	netif_info(db, tx_done, db->ndev, "%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 		db->xmit_in, db->xmit_tc, db->xmit_zc);
@@ -1861,8 +1854,8 @@ static int dm9051_all_restart(struct board_info *db) //todo
 
 /* to reset while link change up
  */
-#if 0
 #ifdef DMCONF_MRR_WR
+#if 0
 static int dm9051_all_upstart(struct board_info *db) //todo
 {
 	int ret;
@@ -1879,8 +1872,8 @@ static int dm9051_all_upstart(struct board_info *db) //todo
 
 	return 0;
 }
-#endif //DMCONF_MRR_WR
 #endif
+#endif //DMCONF_MRR_WR
 
 /* all reinit while rx error found
  */
@@ -2585,14 +2578,8 @@ out_unlock:
 	//return IRQ_HANDLED;
 }
 
-//#ifndef DMPLUG_INT //=POLL
-//#endif
-
 int thread_servicep_done = 1;
 int thread_servicep_re_enter;
-
-//#ifdef _INT_TWO_STEP
-//#endif //_INT_TWO_STEP
 
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 {
