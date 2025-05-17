@@ -1696,7 +1696,12 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
 
 	/*PHY_LOG*/
+	dm9051_phyread_headlog("bmcr", db, 0);
+	dm9051_phyread_headlog("adv04", db, 4);
+	dm9051_phyread_headlog("lpa05", db, 5);
 	dm9051_phyread_headlog("phy17", db, 17);
+	dm9051_phyread_headlog("phy20", db, 20);
+
 	dm9051_phyread(db, 17, &val);
 	netif_warn(db, link, db->ndev, "phy17 %04x\n", val); //dscsr
 	/*BMSR*/
