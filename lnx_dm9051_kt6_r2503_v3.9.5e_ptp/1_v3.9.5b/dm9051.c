@@ -540,6 +540,8 @@ void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len)
 	}
 }
 
+/* 'rx_status'
+ */
 void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2)
 {
 	unsigned int v1, v2;
@@ -780,67 +782,23 @@ static int dm9051_phywrite(void *context, unsigned int reg, unsigned int val)
 	return regmap_write(db->regmap_dm, DM9051_EPCR, 0);
 }
 
-// dm9051_phyread.EXTEND
-//static int dm9051_phyread_log_reset(struct board_info *db,
+
+/* dm9051_phyread.EXTEND for 'link'
+ */
+static int dm9051_phyread_headlog(char *head, struct board_info *db,
+									unsigned int reg)
+//=static int dm9051_phyread_log_reset(struct board_info *db,
 //									unsigned int reg)
-//{
-//	unsigned int val;
-//	int ret = dm9051_phyread(db, reg, &val);
-//	if (ret)
-//	{
-//		k("_reset [_core_reset] dm9051_phyrd(%u), ret = %d (ERROR)\n", reg, ret);
-//		return ret;
-//	}
-//	k("_reset [_core_reset] dm9051_phyrd(%u), %04x\n", reg, val);
-//	return ret;
-//}
-
-// dm9051_phyread.EXTEND
-//static int dm9051_phyread_log_dscsr(struct board_info *db,
-//									unsigned int reg)
-//{
-//	unsigned int val;
-//	int ret = dm9051_phyread(db, reg, &val);
-//	if (ret)
-//	{
-//		k("_reset [_core_reset] dm9051_phyrd(dscsr), ret = %d (ERROR)\n", ret);
-//		return ret;
-//	}
-//	k("_reset [_core_reset] dm9051_phyrd(dscsr), %04x\n", val);
-
-//	if ((val & 0x01f0) == 0x0010)
-//	{
-//		k("_reset [_core_reset] PHY addr DOES 1\n");
-//	}
-//	else
-//	{
-//		k("_reset [_core_reset] PHY addr NOT 1 ?\n");
-
-//		/* write */
-//		k("_reset [_core_reset] PHY addr SETTO 1\n");
-//		ret = dm9051_phywrite(db, reg, 0xf210); // register 17
-//		if (ret)
-//			return ret;
-
-//		ret = dm9051_phyread(db, reg, &val);
-//		if (ret)
-//		{
-//			k("_reset [_core_reset] dm9051_phyrd-2(dscsr), ret = %d (ERROR)\n", ret);
-//			return ret;
-//		}
-//		k("_reset [_core_reset] dm9051_phyrd-2(dscsr), %04x\n", val);
-//		if ((val & 0x01f0) == 0x0010)
-//		{
-//			k("_reset [_core_reset] PHY addr DOES 1 [workaround fixed]\n");
-//		}
-//		else
-//		{
-//			k("_reset [_core_reset] PHY addr NOT 1 ? [second time]\n");
-//		}
-//	}
-
-//	return ret;
-//}
+{
+	unsigned int val;
+	int ret = dm9051_phyread(db, reg, &val);
+	if (ret) {
+		netif_err(db, link, db->ndev, "%s dm9051_phyrd(%u), ret = %d (ERROR)\n", head, reg, ret);
+		return ret;
+	}
+	netif_warn(db, link, db->ndev, "%s %04x\n", head, val);
+	return ret;
+}
 
 //static int PHY_LOG(struct board_info *db)
 //{
@@ -850,10 +808,6 @@ static int dm9051_phywrite(void *context, unsigned int reg, unsigned int val)
 //	ret = dm9051_phyread_log_reset(db, 3);
 //	if (ret)
 //		return ret;
-//	ret = dm9051_phyread_log_dscsr(db, 17);
-//	if (ret)
-//		return ret;
-
 //	return 0;
 //}
 
@@ -1710,6 +1664,7 @@ static int dm9051_get_sset_count(struct net_device *netdev, int sset)
 	return (sset == ETH_SS_STATS) ? ARRAY_SIZE(dm9051_stats_strings) : 0;
 }
 
+
 static void dm9051_get_ethtool_stats(struct net_device *ndev,
 									 struct ethtool_stats *stats, u64 *data)
 {
@@ -1740,12 +1695,18 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	netif_info(db, tx_done, db->ndev, "%6d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
 		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
 
+	/*PHY_LOG*/
+	dm9051_phyread_headlog("phy17", db, 17);
+	dm9051_phyread(db, 17, &val);
+	netif_warn(db, link, db->ndev, "phy17 %04x\n", val); //dscsr
+	/*BMSR*/
+	dm9051_phyread_headlog("bmsr", db, MII_BMSR);
 	dm9051_phyread(db, MII_BMSR, &val);
+	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
 	data[7] = val;
-	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
 	dm9051_phyread(db, MII_BMSR, &val);
-	data[8] = val;
 	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
+	data[8] = val;
 
 #if MI_FIX //ee write
 	mutex_unlock(&db->spi_lockm);
