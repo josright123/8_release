@@ -2599,8 +2599,12 @@ int INIT_REQUEST_IRQ(struct net_device *ndev)
 void END_FREE_IRQ(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
+
+	#ifdef INT_TWO_STEP
+	cancel_delayed_work_sync(&db->irq_servicep);
+	#endif //_INT_TWO_STEP
+
 	free_irq(db->spidev->irq, db);
-	//k("_[stop] remove: free irq %d\n", db->spidev->irq);
 	netif_err(db, intr, ndev, "_[stop] remove: free irq %d\n", db->spidev->irq);
 }
 #endif
@@ -2629,6 +2633,23 @@ static int dm9051_init_start(struct board_info *db)
 	}
 	#endif
 	#endif
+
+	#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+	#endif
+
+	return ret;
+}
+
+static int dm9051_close_all_stop(struct board_info *db)
+{
+	int ret;
+
+	#if MI_FIX
+	mutex_lock(&db->spi_lockm);
+	#endif
+
+	ret = dm9051_all_stop(db);
 
 	#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
@@ -2674,6 +2695,22 @@ int DM9051_OPEN_REQUEST(struct board_info *db)
 	/* Or schedule delay work */
 	INIT_RX_POLL_SCHED_DELAY(db);
 	return 0;
+	#endif
+}
+
+void DM9051_FREE_REQUEST_WORK(struct board_info *db)
+{
+	/* schedule delay work */
+	#if defined(DMPLUG_INT)
+	/*
+	 * Interrupt: 
+	 */
+	END_FREE_IRQ(db->ndev);
+	#else
+	/*
+	 * Polling: 
+	 */
+	cancel_delayed_work_sync(&db->irq_workp);
 	#endif
 }
 
@@ -2742,45 +2779,21 @@ static int dm9051_open(struct net_device *ndev)
 static int dm9051_stop(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
-	int ret;
 
 	netif_err(db, probe, ndev, "dm9051_stop\n"); //as 'probe' type, original dev_info()
-
-	phy_stop(db->phydev);
-
-	/* schedule delay work */
-	#ifdef DMPLUG_INT
-	#ifdef INT_TWO_STEP
-		cancel_delayed_work_sync(&db->irq_servicep);
-	#endif //_INT_TWO_STEP
-	#else //_DMPLUG_INT
-		cancel_delayed_work_sync(&db->irq_workp);
-	#endif //_DMPLUG_INT
 
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
 
+	phy_stop(db->phydev);
 
-	#if defined(DMPLUG_INT)
-	END_FREE_IRQ(ndev);
-	#endif
+	DM9051_FREE_REQUEST_WORK(db);
 
 	netif_stop_queue(ndev);
 
 	skb_queue_purge(&db->txq);
 
-
-	#if MI_FIX
-	mutex_lock(&db->spi_lockm);
-	#endif
-
-	ret = dm9051_all_stop(db);
-
-	#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-	#endif
-
-	return ret;
+	return dm9051_close_all_stop(db);
 }
 ////static int dm9051_stop001(struct net_device *ndev)
 ////{

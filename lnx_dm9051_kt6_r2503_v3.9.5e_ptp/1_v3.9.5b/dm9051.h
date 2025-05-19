@@ -595,56 +595,6 @@ const struct mod_config driver_misc_mode = {
 		.burst_mode = BURST_MODE_FULL,
 		.tx_blk = 0, .rx_blk = 0},
 };
-
-#if 0
-/* dm9051/ pragma messages: 
- */
-#if defined(DMPLUG_INT)
-/* INT */
-#pragma message("dm9051 INT")
-
-#ifdef INT_CLKOUT
-/* INT CLKOUT */
-#warning "INT: INT_CLKOUT"
-#endif
-#ifdef INT_TWO_STEP
-/* INT two_step */
-#warning "INT: TWO_STEP"
-#endif
-#else //.
-/* POL */
-#pragma message("dm9051 POL")
-#endif //..
-
-#ifdef DMCONF_BMCR_WR
-/* BMCR */
-#pragma message("WORKROUND: BMCR_WR")
-#endif
-
-#ifdef DMCONF_MRR_WR
-/* MRR */
-#pragma message("WORKROUND: MRR_WR")
-#endif
-
-/* Plug/ pragma messages: 
- */
-#ifdef DMPLUG_CONTI
-#pragma message("dm9051 CONTI")
-#endif
-
-#ifdef DMPLUG_CRYPT
-#pragma message("dm9051 CRYPT")
-#endif
-
-#ifdef DMPLUG_PTP
-#pragma message("dm9051 PTP")
-
-#ifdef DMPLUG_PPS_CLKOUT
-#warning "dm9051 PPS"
-#endif
-#endif //..
-#endif //0
-
 #endif //MAIN_DATA
 
 #endif /* _DM9051_H_ */
