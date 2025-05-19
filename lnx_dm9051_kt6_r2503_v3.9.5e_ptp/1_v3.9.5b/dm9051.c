@@ -2682,7 +2682,8 @@ intr_unlck:
 }
 
 #define dm9051_threaded_irq(d,h)	0
-#define dm9051_int2_irq(d,h)	0
+#define dm9051_int2_irq(d,h)		0
+#define dm9051_poll_sch(d)		0
 
 #if defined(DMPLUG_INT) && !defined(INT_TWO_STEP)
 #undef dm9051_threaded_irq
@@ -2725,17 +2726,16 @@ static int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler)
 }
 #endif
 
-static int DM9051_OPEN_POLL_SCHED(struct board_info *db)
+#ifndef  DMPLUG_INT
+#undef dm9051_poll_sch
+#define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
+
+static int DM9051_POLL_SCHED(struct board_info *db)
 {
-	#ifndef  DMPLUG_INT
-	/*
-	 * Polling: 
-	 */
-	/* Or schedule delay work */
-	OPEN_POLL_SCHED(db);
+	OPEN_POLL_SCHED(db); //#define dm9051_poll_sch(d) OPEN_POLL_SCHED(d) /* Schedule delay work */
 	return 0;
-	#endif
 }
+#endif
 
 void DM9051_FREE_REQUEST_WORK(struct board_info *db)
 {
@@ -2792,7 +2792,7 @@ static int dm9051_open(struct net_device *ndev)
 
 	ret = dm9051_threaded_irq(db, dm9051_rx_threaded_plat); /* near the bottom */
 	ret |= dm9051_int2_irq(db, dm9051_rx_int2_delay);
-	ret |= DM9051_OPEN_POLL_SCHED(db);
+	ret |= dm9051_poll_sch(db);
 	if (ret < 0) {
 		phy_stop(db->phydev); //of 'dm9051_core_clear(db)' //
 		return ret;
