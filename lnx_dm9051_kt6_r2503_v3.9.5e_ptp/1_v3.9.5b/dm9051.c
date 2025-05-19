@@ -2744,8 +2744,8 @@ static int dm9051_stop(struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	int ret;
 
-	netif_err(db, probe, ndev, "dm9051_stop\n"); //as 'probe' type
-	//dev_info(&db->spidev->dev, "dm9051_stop\n");
+	netif_err(db, probe, ndev, "dm9051_stop\n"); //as 'probe' type, original dev_info()
+
 	phy_stop(db->phydev);
 
 	/* schedule delay work */
@@ -2782,45 +2782,17 @@ static int dm9051_stop(struct net_device *ndev)
 
 	return ret;
 }
-//static int dm9051_stop001(struct net_device *ndev)
-//{
-//	struct board_info *db = to_dm9051_board(ndev);
-//	int ret;
-
-//	dev_info(&db->spidev->dev, "dm9051_stop\n");
-
-////	mutex_lock(&db->spi_lockm);
+////static int dm9051_stop001(struct net_device *ndev)
+////{
+//	mutex_lock(&db->spi_lockm);
 //	ret = dm9051_all_stop(db);
-////	mutex_unlock(&db->spi_lockm);
+//	mutex_unlock(&db->spi_lockm);
 //	if (ret)
 //		return ret;
-
-//	/* schedule delay work */
-//	#ifdef _DMPLUG_INT
-//	#ifdef _INT_TWO_STEP
-//		cancel_delayed_work_sync(&db->irq_servicep); //.if (_dm9051_cmode_int)
-//	#endif //_INT_TWO_STEP
-//	#else //_DMPLUG_INT
-//		cancel_delayed_work_sync(&db->irq_workp); //.if (!_dm9051_cmode_int)
-//	#endif 
-
-//	flush_work(&db->tx_work);
-//	flush_work(&db->rxctrl_work);
-
 ////	mutex_lock(&db->spi_lockm);
 //	phy_stop(db->phydev);
 ////	mutex_unlock(&db->spi_lockm);
-
-//	#ifdef _DMPLUG_INT
-//	END_FREE_IRQ(ndev);
-//	#endif
-
-//	netif_stop_queue(ndev);
-
-//	skb_queue_purge(&db->txq);
-
-//	return 0;
-//}
+////}
 
 /* event: play a schedule starter in condition
  */
