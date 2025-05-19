@@ -63,14 +63,14 @@
 #ifdef INT_CLKOUT
 #endif
 #ifdef INT_TWO_STEP
-void INIT_RX_INT2_DELAY_SETUP(struct board_info *db);
+void PROBE_INT2_DLY_SETUP(struct board_info *db);
 void dm9051_rx_irq_servicep(struct work_struct *work);
 irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
 #endif
 #else
 void dm9051_poll_servicep(struct work_struct *work);
-void INIT_RX_POLL_DELAY_SETUP(struct board_info *db);
-void INIT_RX_POLL_SCHED_DELAY(struct board_info *db);
+void PROBE_POLL_SETUP(struct board_info *db);
+void OPEN_POLL_SCHED(struct board_info *db);
 #endif
 
 #ifdef DMCONF_BMCR_WR

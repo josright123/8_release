@@ -68,14 +68,14 @@ void dm9051_poll_servicep(struct work_struct *work) //.dm9051_poll_delay_plat()
 /*
  * Polling: 
  */
-void INIT_RX_POLL_DELAY_SETUP(struct board_info *db)
+void PROBE_POLL_SETUP(struct board_info *db)
 {
 	/* schedule delay work */
 	db->bc.ndelayF = POLL_OPERATE_INIT;
 	INIT_DELAYED_WORK(&db->irq_workp, dm9051_poll_servicep); //.dm9051_poll_delay_plat()
 }
 
-void INIT_RX_POLL_SCHED_DELAY(struct board_info *db)
+void OPEN_POLL_SCHED(struct board_info *db)
 {
 	schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
 }
