@@ -2681,27 +2681,28 @@ intr_unlck:
 	return ret;
 }
 
+#define dm9051_threaded_irq(d,h)	0
+
+#if defined(DMPLUG_INT) && !defined(INT_TWO_STEP)
+#undef dm9051_threaded_irq
+#define dm9051_threaded_irq(d,h) DM9051_OPEN_REQUEST(d,h)
 static int DM9051_OPEN_REQUEST(struct board_info *db, irq_handler_t handler)
 {
-	int ret = 0;
-
-	#if defined(DMPLUG_INT) && !defined(INT_TWO_STEP)
-	/*
-	 * Interrupt: 
-	 */
-	/* interrupt work */
-	struct spi_device *spi = db->spidev;
 	//return OPEN_REQUEST_IRQ(db->ndev);=	
+	struct spi_device *spi = db->spidev;
+	int ret;
+
+	/* interrupt work */
 	netif_crit(db, intr, db->ndev, "request_irq(INT_THREAD)\n");
-	ret = request_threaded_irq(spi->irq /* db->ndev->irq */, NULL, handler,
+	ret = request_threaded_irq(spi->irq, NULL, handler,
 							   get_dts_irqf(db) | IRQF_ONESHOT,
 							   db->ndev->name, db);
 	if (ret < 0)
 		netif_err(db, intr, db->ndev, "failed to rx request threaded irq setup\n");
-	#endif
-
 	return ret;
 }
+#endif
+
 static int DM9051_OPEN_INT2_REQ(struct board_info *db, irq_handler_t handler)
 {
 	int ret = 0;
@@ -2786,7 +2787,7 @@ static int dm9051_open(struct net_device *ndev)
 
 	netif_wake_queue(ndev);
 
-	ret = DM9051_OPEN_REQUEST(db, dm9051_rx_threaded_plat); /* near the bottom */
+	ret = dm9051_threaded_irq(db, dm9051_rx_threaded_plat); /* near the bottom */
 	ret |= DM9051_OPEN_INT2_REQ(db, dm9051_rx_int2_delay);
 	ret |= DM9051_OPEN_POLL_SCHED(db);
 	if (ret < 0) {
