@@ -2396,6 +2396,8 @@ static int dm9051_loop_tx(struct board_info *db)
 	return ntx;
 }
 
+/* threaded_irq */
+
 /* schedule delay works */
 
 static void dm9051_rxctl_delay(struct work_struct *work)
@@ -2430,11 +2432,12 @@ static void dm9051_tx_delay(struct work_struct *work)
 	sprintf(db->bc.head, "_dely");
 	db->bc.mode = TX_DELAY;
 	ntx = dm9051_loop_tx(db);
+
 	db->xmit_tc += ntx;
 	db->xmit_zc += ntx ? 0 : 1;
 	if (ntx) {
 		db->xmit_in++;
-		if (/*ntx &&*/ db->xmit_in <= 9) {
+		if (db->xmit_in <= 9) {
 			netif_info(db, tx_queued, db->ndev, "%2d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 				db->xmit_in, db->xmit_tc, db->xmit_zc);
 		}
@@ -2452,7 +2455,6 @@ static void dm9051_tx_delay(struct work_struct *work)
 
 int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 {
-	//static unsigned int xmit_thrd = 0;
 	int ntx;
 	int result;
 
@@ -2487,6 +2489,15 @@ int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 //{
 //	dm9051_enable_interrupt(db);
 //}
+//static void dm9051_rx_plat_loop(struct board_info *db)
+//{
+//	int ret;
+//	ret = dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
+//	if (ret < 0)
+//		return;
+//	dm9051_enable_interrupt(db); //"dm9051_rx_plat_enable(struct board_info *db)"
+//}
+
 //static int dm9051_rx_plat_disable(struct board_info *db)
 //{
 //	int result = dm9051_disable_interrupt(db);
@@ -2498,16 +2509,9 @@ int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 //		return result;
 //	return result;
 //}
-//static void dm9051_rx_plat_loop(struct board_info *db)
-//{
-//	int ret;
-//	ret = dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
-//	if (ret < 0)
-//		return;
-//	dm9051_enable_interrupt(db); //"dm9051_rx_plat_enable(struct board_info *db)"
-//}
 
 /* Interrupt: Interrupt work */
+/* dm9051 rx_threaded irq */
 
 void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat()
 {
@@ -2516,7 +2520,7 @@ void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat()
 
 	mutex_lock(&db->spi_lockm);
 
-#if 1 //[REAL.'MI_FIX']	//(result is dm9051_rx_plat_disable(db))
+	//[REAL.'MI_FIX'] //(result is as 'dm9051_rx_plat_disable'(db))
 	result = dm9051_disable_interrupt(db);
 	if (result)
 		goto out_unlock;
@@ -2531,11 +2535,6 @@ void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat()
 	//	goto out_unlock;
 
 	dm9051_enable_interrupt(db);
-#else
-	//result = dm9051_clear_interrupt(db);
-	//if (result)
-	//	goto out_unlock;
-#endif
 
 	/* To exit and has mutex unlock while rx or tx error
 	 */
@@ -2543,6 +2542,8 @@ out_unlock:
 	mutex_unlock(&db->spi_lockm);
 	//return IRQ_HANDLED;
 }
+
+/* threaded_irq */
 
 int thread_servicep_done = 1;
 int thread_servicep_re_enter;
@@ -2568,22 +2569,19 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 /*
  * Interrupt: 
  */
-//#ifdef _INT_TWO_STEP
-//#endif //_INT_TWO_STEP
-
-int INIT_REQUEST_IRQ(struct net_device *ndev)
+int OPEN_REQUEST_IRQ(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
 	int ret;
 	#if !defined(INT_TWO_STEP)
-		netif_crit(db, intr, db->ndev, "request_threaded_irq(INT_THREAD)\n");
+		netif_crit(db, intr, db->ndev, "request_irq(INT_THREAD)\n");
 		ret = request_threaded_irq(ndev->irq, NULL, /*dm9051_rx_threaded_plat*/ /*_dm9051_rx_int2_delay*/ dm9051_rx_threaded_plat,
 		 						   get_dts_irqf(db) | IRQF_ONESHOT,
 		 						   ndev->name, db);
 		if (ret < 0)
 			netdev_err(ndev, "failed to rx request threaded irq setup\n");
 	#else //_INT_TWO_STEP
-		netif_crit(db, intr, db->ndev, "request_threaded_irq(INT TWO_STEP)\n");
+		netif_crit(db, intr, db->ndev, "request_irq(INT TWO_STEP)\n");
 		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_int2_delay,
 									get_dts_irqf(db) | IRQF_ONESHOT,
 									ndev->name, db);
@@ -2596,7 +2594,7 @@ int INIT_REQUEST_IRQ(struct net_device *ndev)
 	return ret;
 }
 
-void END_FREE_IRQ(struct net_device *ndev)
+void STOP_FREE_IRQ(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
 
@@ -2687,7 +2685,7 @@ int DM9051_OPEN_REQUEST(struct board_info *db)
 	 * Interrupt: 
 	 */
 	/* interrupt work */
-	return INIT_REQUEST_IRQ(db->ndev);
+	return OPEN_REQUEST_IRQ(db->ndev);
 	#else
 	/*
 	 * Polling: 
@@ -2705,7 +2703,7 @@ void DM9051_FREE_REQUEST_WORK(struct board_info *db)
 	/*
 	 * Interrupt: 
 	 */
-	END_FREE_IRQ(db->ndev);
+	STOP_FREE_IRQ(db->ndev);
 	#else
 	/*
 	 * Polling: 
@@ -2734,19 +2732,12 @@ static int dm9051_open(struct net_device *ndev)
 
 	ndev->irq = spi->irq; /* by dts */
 
-	ret = dm9051_init_start(db);
+	ret = dm9051_init_start(db); /* such as all start */
 	if (ret)
 		return ret;
 
 	phy_support_sym_pause(db->phydev);
 	phy_start(db->phydev);
-
-//	ret = dm9051_init_intr(db);
-//	if (ret)
-//		return ret;
-
-//.	phy_support_sym_pause(db->phydev);
-//.	phy_start(db->phydev);
 
 	/* flow control parameters init */
 	db->pause.rx_pause = true;
@@ -2758,13 +2749,13 @@ static int dm9051_open(struct net_device *ndev)
 
 	netif_wake_queue(ndev);
 
-	ret = DM9051_OPEN_REQUEST(db);
+	ret = DM9051_OPEN_REQUEST(db); /* near the bottom */
 	if (ret < 0) {
 		phy_stop(db->phydev); //of 'dm9051_core_clear(db)' //
 		return ret;
 	}
 
-	ret = dm9051_init_intr(db);
+	ret = dm9051_init_intr(db); /* near the bottom */
 	if (ret)
 		phy_stop(db->phydev);
 
@@ -2776,6 +2767,17 @@ static int dm9051_open(struct net_device *ndev)
  * work, shutdown the RX and TX process and then place the chip into a low
  * power state while it is not being used
  */
+////static int dm9051_stop001(struct net_device *ndev)
+////{
+//	mutex_lock(&db->spi_lockm);
+//	ret = dm9051_all_stop(db);
+//	mutex_unlock(&db->spi_lockm);
+//	if (ret)
+//		return ret;
+////	mutex_lock(&db->spi_lockm);
+//	phy_stop(db->phydev);
+////	mutex_unlock(&db->spi_lockm);
+////}
 static int dm9051_stop(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
@@ -2795,17 +2797,6 @@ static int dm9051_stop(struct net_device *ndev)
 
 	return dm9051_close_all_stop(db);
 }
-////static int dm9051_stop001(struct net_device *ndev)
-////{
-//	mutex_lock(&db->spi_lockm);
-//	ret = dm9051_all_stop(db);
-//	mutex_unlock(&db->spi_lockm);
-//	if (ret)
-//		return ret;
-////	mutex_lock(&db->spi_lockm);
-//	phy_stop(db->phydev);
-////	mutex_unlock(&db->spi_lockm);
-////}
 
 /* event: play a schedule starter in condition
  */
@@ -2819,8 +2810,7 @@ static netdev_tx_t dm9051_start_xmit(struct sk_buff *skb, struct net_device *nde
 
 	#if 0
 	//show_ptp_type(skb);	//Show PTP message type
-	skb_tx_timestamp(skb); //Spenser - Report software Timestamp
-	//v.s. skb_tstamp_tx(skb, &shhwtstamps);//Report HW Timestamp
+	skb_tx_timestamp(skb); //Spenser - Report software Timestamp v.s. - Report HW Timestamp
 	#endif
 
 	schedule_work(&db->tx_work);
@@ -2917,23 +2907,76 @@ static const struct net_device_ops dm9051_netdev_ops = {
 	.ndo_set_features = dm9051_ndo_set_features,
 	.ndo_get_stats = dm9051_get_stats,
 	/* 5 ptpc */
-	#if 1 //0
-	#ifdef DMPLUG_PTP
-//	int			(*ndo_do_ioctl)(struct net_device *dev,
-//					        struct ifreq *ifr, int cmd);
+#ifdef DMPLUG_PTP
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
-//	.ndo_do_ioctl		= lan743x_netdev_ioctl,
 	.ndo_do_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
 #else
 	.ndo_eth_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
 #endif
-//	int			(*ndo_do_ioctl)(struct net_device *dev,
-//					        struct ifreq *ifr, int cmd);
-//	int			(*ndo_eth_ioctl)(struct net_device *dev,
-//						 struct ifreq *ifr, int cmd);
-	#endif
-	#endif
+#endif
 };
+
+void MRR_WR_FCR_UPSTART(struct board_info *db)
+{
+	#if MI_FIX
+	mutex_lock(&db->spi_lockm);
+	#endif
+#ifdef DMCONF_MRR_WR
+	//int ret = dm9051_all_upstart(db);
+	//if (ret)
+	//	goto dnf_end;
+	printk("_all_upstart\n"); //NOT to .netif_crit(db, rx_err, db->ndev, "_all_upstart\n");
+	do {
+		int ret = dm9051_ncr_reset(db);
+		if (ret)
+			goto dnf_end;
+		
+	//=	ret = dm9051_all_reinit(db); //up_restart
+	#if 1		
+		ret = dm9051_core_init(db);
+		if (ret)
+			goto dnf_end;
+	#endif
+		ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
+		if (ret)
+			goto dnf_end;
+
+		ret = dm9051_enable_interrupt(db);
+		if (ret)
+			goto dnf_end;
+
+		ret = dm9051_subconcl_and_rerxctrl(db);
+		if (ret)
+			goto dnf_end;
+	} while(0);
+	dm9051_update_fcr(db);
+dnf_end:
+	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation done!\n");
+#else //DMCONF_MRR_WR
+	dm9051_update_fcr(db);
+	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation not applied!\n");
+#endif
+	#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+	#endif
+}
+
+static void DM9051_PROBE_DELAY_SETUP(struct board_info *db)
+{
+	#if defined(DMPLUG_INT)
+	/*
+	 * Interrupt: 
+	 */
+	#ifdef INT_TWO_STEP
+		INIT_RX_INT2_DELAY_SETUP(db);
+	#endif
+	#else
+	/*
+	 * Polling: 
+	 */
+	INIT_RX_POLL_DELAY_SETUP(db);
+	#endif
+}
 
 static void dm9051_operation_clear(struct board_info *db)
 {
@@ -2990,51 +3033,6 @@ static int dm9051_mdio_register(struct board_info *db)
 		dev_err(&spi->dev, "Could not register MDIO bus\n");
 
 	return ret;
-}
-
-void MRR_WR_FCR_UPSTART(struct board_info *db)
-{
-	#if MI_FIX
-	mutex_lock(&db->spi_lockm);
-	#endif
-#ifdef DMCONF_MRR_WR
-	//int ret = dm9051_all_upstart(db);
-	//if (ret)
-	//	goto dnf_end;
-	printk("_all_upstart\n"); //NOT to .netif_crit(db, rx_err, db->ndev, "_all_upstart\n");
-	do {
-		int ret = dm9051_ncr_reset(db);
-		if (ret)
-			goto dnf_end;
-		
-	//=	ret = dm9051_all_reinit(db); //up_restart
-	#if 1		
-		ret = dm9051_core_init(db);
-		if (ret)
-			goto dnf_end;
-	#endif
-		ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
-		if (ret)
-			goto dnf_end;
-
-		ret = dm9051_enable_interrupt(db);
-		if (ret)
-			goto dnf_end;
-
-		ret = dm9051_subconcl_and_rerxctrl(db);
-		if (ret)
-			goto dnf_end;
-	} while(0);
-	dm9051_update_fcr(db);
-dnf_end:
-	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation done!\n");
-#else //DMCONF_MRR_WR
-	dm9051_update_fcr(db);
-	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation not applied!\n");
-#endif
-	#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-	#endif
 }
 
 static void dm9051_handle_link_change(struct net_device *ndev)
@@ -3095,7 +3093,6 @@ static int dm9051_probe(struct spi_device *spi)
 
 	db = netdev_priv(ndev);
 
-	db->msg_enable = NETIF_MSG_DRV; //0; //NETIF_MSG_DRV for netif_err(adb, drv, adb->ndev, .., netif_warn(adb, drv, adb->ndev, ...
 	db->spidev = spi;
 	db->ndev = ndev;
 
@@ -3111,6 +3108,7 @@ static int dm9051_probe(struct spi_device *spi)
 	SHOW_DEVLOG_REFER(dev);
 
 	//[NETIF_MSG_HW is play for phylib...]
+	//db->msg_enable = 0;
 	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP | 
 		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_INTR | NETIF_MSG_RX_STATUS | NETIF_MSG_PKTDATA | NETIF_MSG_HW /*| NETIF_MSG_HW*/; //0;
 
@@ -3128,16 +3126,7 @@ static int dm9051_probe(struct spi_device *spi)
 	INIT_WORK(&db->rxctrl_work, dm9051_rxctl_delay);
 	INIT_WORK(&db->tx_work, dm9051_tx_delay);
 
-	#ifdef DMPLUG_INT
-	#ifdef INT_TWO_STEP
-		INIT_RX_INT2_DELAY_SETUP(db);
-	#endif
-	#else
-		/*
-		 * Polling: 
-		 */
-		INIT_RX_POLL_DELAY_SETUP(db);
-	#endif
+	DM9051_PROBE_DELAY_SETUP(db);
 
 	ret = dm9051_map_init(spi, db);
 	if (ret)
@@ -3147,6 +3136,7 @@ static int dm9051_probe(struct spi_device *spi)
 
 	printk("\n");
 	SHOW_PLAT_MODE(dev);
+
 	ret = dm9051_map_chipid(db);
 	if (ret)
 		return ret;
@@ -3160,10 +3150,6 @@ static int dm9051_probe(struct spi_device *spi)
 	ret = dm9051_mdio_register(db);
 	if (ret)
 		return ret;
-
-	//ret = dm9051_phy_connect(db);
-	//if (ret)
-	//	return ret;
 
 	dm9051_operation_clear(db);
 	skb_queue_head_init(&db->txq);
@@ -3182,7 +3168,7 @@ static int dm9051_probe(struct spi_device *spi)
 	/* 2.1 ptpc */
 	PTP_INIT(db);
 
-	return dm9051_phy_connect(db);
+	return dm9051_phy_connect(db); /* phy connect in the bottom */
 }
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,0) || \
@@ -3212,6 +3198,10 @@ static void dm9051_drv_remove(struct spi_device *spi)
 static const struct of_device_id dm9051_match_table[] = {
 	{.compatible = "davicom,dm9051"},
 	{}};
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
+MODULE_DEVICE_TABLE(of, dm9051_match_table);
+#endif
 
 static const struct spi_device_id dm9051_id_table[] = {
 	{"dm9051", 0},
