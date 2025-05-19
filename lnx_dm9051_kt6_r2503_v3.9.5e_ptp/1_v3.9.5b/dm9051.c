@@ -2705,26 +2705,11 @@ static int DM9051_OPEN_REQUEST(struct board_info *db, irq_handler_t handler)
 }
 #endif
 
-#if defined(DMPLUG_INT) && #if defined(INT_TWO_STEP)
-#undef dm9051_int2_irq
-#define dm9051_int2_irq(d,h) DM9051_INT2_REQUEST(d,h)
-static int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler)
-{
-	struct spi_device *spi = db->spidev;
-	int ret;
-
-	netif_crit(db, intr, db->ndev, "request_irq(INT TWO_STEP)\n");
-	ret = request_threaded_irq(spi->irq, NULL, handler,
-								get_dts_irqf(db) | IRQF_ONESHOT,
-								db->ndev->name, db);
-	//ret = request_irq(ndev->irq, handdler,
-	//							get_dts_irqf(db) | IRQF_ONESHOT,
-	//							ndev->name, db);
-	if (ret < 0)
-		netif_err(db, intr, db->ndev, "failed to rx request irq setup\n");
-	return ret;
-}
-#endif
+//#if defined(DMPLUG_INT) && #if defined(INT_TWO_STEP)
+//int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler)
+//{
+//}
+//#endif
 
 void DM9051_FREE_REQUEST_WORK(struct board_info *db)
 {

@@ -62,10 +62,15 @@
 #if defined(DMPLUG_INT)
 #ifdef INT_CLKOUT
 #endif
+
 #ifdef INT_TWO_STEP
+#undef dm9051_int2_irq
+#define dm9051_int2_irq(d,h) DM9051_INT2_REQUEST(d,h)
+
 void PROBE_INT2_DLY_SETUP(struct board_info *db);
 void dm9051_rx_irq_servicep(struct work_struct *work);
 irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
+int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
 #endif
 #endif
 

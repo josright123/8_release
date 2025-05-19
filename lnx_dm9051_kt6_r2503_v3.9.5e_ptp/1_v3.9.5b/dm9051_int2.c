@@ -60,4 +60,21 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 	}
 	return IRQ_HANDLED;
 }
+
+int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler)
+{
+	struct spi_device *spi = db->spidev;
+	int ret;
+
+	netif_crit(db, intr, db->ndev, "request_irq(INT TWO_STEP)\n");
+	ret = request_threaded_irq(spi->irq, NULL, handler,
+								get_dts_irqf(db) | IRQF_ONESHOT,
+								db->ndev->name, db);
+	//ret = request_irq(ndev->irq, handdler,
+	//							get_dts_irqf(db) | IRQF_ONESHOT,
+	//							ndev->name, db);
+	if (ret < 0)
+		netif_err(db, intr, db->ndev, "failed to rx request irq setup\n");
+	return ret;
+}
 #endif
