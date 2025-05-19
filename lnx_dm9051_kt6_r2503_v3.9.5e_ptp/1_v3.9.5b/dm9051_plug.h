@@ -67,10 +67,16 @@ void PROBE_INT2_DLY_SETUP(struct board_info *db);
 void dm9051_rx_irq_servicep(struct work_struct *work);
 irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
 #endif
-#else
+#endif
+
+#ifndef  DMPLUG_INT
+#undef dm9051_poll_sch
+#define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
+
 void dm9051_poll_servicep(struct work_struct *work);
 void PROBE_POLL_SETUP(struct board_info *db);
 void OPEN_POLL_SCHED(struct board_info *db);
+int DM9051_POLL_SCHED(struct board_info *db);
 #endif
 
 #ifdef DMCONF_BMCR_WR

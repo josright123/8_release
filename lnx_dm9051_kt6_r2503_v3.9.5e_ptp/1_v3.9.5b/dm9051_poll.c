@@ -79,4 +79,10 @@ void OPEN_POLL_SCHED(struct board_info *db)
 {
 	schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
 }
+
+int DM9051_POLL_SCHED(struct board_info *db)
+{
+	OPEN_POLL_SCHED(db); //#define dm9051_poll_sch(d) OPEN_POLL_SCHED(d) /* Schedule delay work */
+	return 0;
+}
 #endif

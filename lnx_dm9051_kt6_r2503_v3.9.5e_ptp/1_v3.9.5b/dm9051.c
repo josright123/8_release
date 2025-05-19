@@ -2726,17 +2726,6 @@ static int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler)
 }
 #endif
 
-#ifndef  DMPLUG_INT
-#undef dm9051_poll_sch
-#define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
-
-static int DM9051_POLL_SCHED(struct board_info *db)
-{
-	OPEN_POLL_SCHED(db); //#define dm9051_poll_sch(d) OPEN_POLL_SCHED(d) /* Schedule delay work */
-	return 0;
-}
-#endif
-
 void DM9051_FREE_REQUEST_WORK(struct board_info *db)
 {
 	/* schedule delay work */
