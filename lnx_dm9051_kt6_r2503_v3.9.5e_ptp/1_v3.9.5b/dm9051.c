@@ -2706,10 +2706,9 @@ static int DM9051_OPEN_REQUEST(struct board_info *db, irq_handler_t handler)
 
 #if defined(DMPLUG_INT) && #if defined(INT_TWO_STEP)
 #undef dm9051_int2_irq
-#define dm9051_int2_irq(d,h) DM9051_OPEN_INT2_REQ(d,h)
-static int DM9051_OPEN_INT2_REQ(struct board_info *db, irq_handler_t handler)
+#define dm9051_int2_irq(d,h) DM9051_INT2_REQUEST(d,h)
+static int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler)
 {
-	//return OPEN_REQUEST_IRQ(db->ndev);=
 	struct spi_device *spi = db->spidev;
 	int ret;
 
