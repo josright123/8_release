@@ -537,8 +537,8 @@ void dm9051_all_restart_sum(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 /* operation functions */
+//static int _dm9051_delayp_looping_rx_tx(struct board_info *db);
 void dm9051_rx_int2_plat(int voidirq, void *pw);
-int dm9051_delayp_looping_rx_tx(struct board_info *db);
 
 #ifdef MAIN_DATA
 /* MAIN Data: 

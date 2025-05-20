@@ -1727,9 +1727,6 @@ static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 		db->bc.evaluate_rxb_counter++;
 
 		if (db->bc.evaluate_rxb_counter == 1) {
-			//sprintf(db->bc.head, "rxb 1st %d", db->bc.evaluate_rxb_counter); 
-			//dm9051_dump_reg2s(db, 0x74, 0x75);
-			//dm9051_dump_reg2s(db, 0x24, 0x25);
 			char head[HEAD_LOG_BUFSIZE];
 			sprintf(head, "rxb 1st %d", db->bc.evaluate_rxb_counter); 
 			dm9051_headlog_regs(head, db, 0x74, 0x75);
@@ -2077,12 +2074,6 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	dm9051_ptp_txreq(db, skb);
 	#endif
 	#endif
-	
-//	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
-//		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
-//		(db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
-//		k("%s. tx_send tcr_wr %02x\n", db->bc.head, db->tcr_wr);
-//	}
 
 #if !defined(DMPLUG_CONTI)
 	ret = TX_SEND(db, skb);
@@ -2192,10 +2183,13 @@ static void dm9051_tx_delay(struct work_struct *work)
 }
 
 /* Common: looping rx and tx */
-
-int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
+static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 {
-	int ntx;
+	/*
+	 * is:
+	 *     while ((result = dm9051_loop_rx(db)) > 0) ;
+	 *     return result;
+	 */
 	int result;
 
 	do
@@ -2204,6 +2198,8 @@ int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 		if (result < 0)
 			return result; //result; //goto out_unlock;
 
+#if 0
+		int ntx;
 		sprintf(db->bc.head, "_THrd");
 		db->bc.mode = TX_THREAD;
 		ntx = dm9051_loop_tx(db); /* more tx better performance */
@@ -2218,27 +2214,28 @@ int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 
 //		int result_tx = 
 //		if (result_tx < 0)
-//			return result_tx; //result_tx; //goto out_unlock;
+//			return result_tx; //goto out_unlock;
+#endif
 	} while (result > 0);
 
 	return 0;
 }
 
 #if 1
-//static void dm9051_rx_plat_enable(struct board_info *db)
+//static void dm9051_rx_xplat_enable(struct board_info *db)
 //{
 //	dm9051_enable_interrupt(db);
 //}
-//static void dm9051_rx_plat_loop(struct board_info *db)
+//static void dm9051_rx_xplat_loop(struct board_info *db)
 //{
 //	int ret;
 //	ret = dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
 //	if (ret < 0)
 //		return;
-//	dm9051_enable_interrupt(db); //"dm9051_rx_plat_enable(struct board_info *db)"
+//	dm9051_enable_interrupt(db); //"dm9051_rx_xplat_enable(struct board_info *db)"
 //}
 
-//static int dm9051_rx_plat_disable(struct board_info *db)
+//static int dm9051_rx_xplat_disable(struct board_info *db)
 //{
 //	int result = dm9051_disable_interrupt(db);
 //	if (result)
@@ -2260,7 +2257,7 @@ void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat() //dm9051
 
 	mutex_lock(&db->spi_lockm);
 
-	//[REAL.'MI_FIX'] //(result is as 'dm9051_rx_plat_disable'(db))
+	//[REAL.'MI_FIX'] //(result is as 'dm9051_rx_xplat_disable'(db))
 	result = dm9051_disable_interrupt(db);
 	if (result)
 		goto out_unlock;
@@ -2298,9 +2295,9 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 		dm9051_rx_int2_plat(voidirq, pw); //.(macro)_rx_tx_plat()
 		thread_servicep_done = 1;
 		if (!thread_servicep_re_enter)
-			netif_err(db, intr, db->ndev, "_.int   [dm9051_rx_threaded_plat] this-first-enter %d\n", thread_servicep_re_enter++);
+			netif_err(db, intr, db->ndev, "_.int   [dm9051_rx_threaded] this-first-enter %d\n", thread_servicep_re_enter++);
 	} else {
-		netif_err(db, intr, db->ndev, "_.int   [dm9051_rx_threaded_plat] re-enter %d\n", thread_servicep_re_enter++);
+		netif_err(db, intr, db->ndev, "_.int   [dm9051_rx_threaded] re-enter %d\n", thread_servicep_re_enter++);
 	}
 	return IRQ_HANDLED;
 }
@@ -2313,25 +2310,6 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 //int OPEN_REQUEST_IRQ(struct net_device *ndev)
 //{
 //	struct board_info *db = to_dm9051_board(ndev);
-//	int ret;
-//	#if !defined(INT_TWO_STEP)
-//		netif_crit(db, intr, db->ndev, "request_irq(INT_THREAD)\n");
-//		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_threaded_plat,
-//		 						   get_dts_irqf(db) | IRQF_ONESHOT,
-//		 						   ndev->name, db);
-//		if (ret < 0)
-//			n(ndev, "failed to rx request threaded irq setup\n");
-//	#else //_INT_TWO_STEP
-//		netif_crit(db, intr, db->ndev, "request_irq(INT TWO_STEP)\n");
-//		ret = request_threaded_irq(ndev->irq, NULL, dm9051_rx_int2_delay,
-//									get_dts_irqf(db) | IRQF_ONESHOT,
-//									ndev->name, db);
-//		//ret = request_irq(ndev->irq, _dm9051_rx_int2_delay,
-//		//							get_dts_irqf(db) | IRQF_ONESHOT,
-//		//							ndev->name, db);
-//		if (ret < 0)
-//			n(ndev, "failed to rx request irq setup\n");
-//	#endif //_INT_TWO_STEP
 //	return ret;
 //}
 
