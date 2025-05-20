@@ -66,12 +66,19 @@ msg:
 rmmsg:
 	sudo dmesg -c
 
+t:
+	vcgencmd measure_temp
+	vcgencmd measure_clock arm
+	vcgencmd measure_clock core
+
 down:
 	sudo ifconfig eth1 down
 up:
 	sudo ifconfig eth1 up
 if:
 	ifconfig eth1
+if0:
+	ifconfig eth0
 cat:
 	cat /proc/interrupts
 
@@ -80,6 +87,9 @@ ifpin pin pin1:
 ifp p p1:
 	ping 192.168.6.1 -I eth1 -s 64
 #	ping 192.168.6.1 -I eth1 -s 64
+
+ifp0 p0:
+	ping 192.168.6.1 -I eth0 -s 64
 
 first:
 	sudo ifconfig eth0 down

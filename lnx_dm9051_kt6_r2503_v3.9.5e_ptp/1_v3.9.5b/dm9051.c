@@ -1406,22 +1406,50 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
 
 	/*PHY_LOG*/
-	dm9051_phyread_headlog("bmcr", db, 0);
+	dm9051_phyread_headlog("bcr00", db, 0);
 	dm9051_phyread_headlog("adv04", db, 4);
 	dm9051_phyread_headlog("lpa05", db, 5);
 	dm9051_phyread_headlog("phy17", db, 17);
 	dm9051_phyread_headlog("phy20", db, 20);
-
-	dm9051_phyread(db, 17, &val);
-	netif_warn(db, link, db->ndev, "phy17 %04x\n", val); //dscsr
 	/*BMSR*/
-	dm9051_phyread_headlog("bmsr", db, MII_BMSR);
+	/*dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
 	dm9051_phyread(db, MII_BMSR, &val);
 	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
 	data[7] = val;
 	dm9051_phyread(db, MII_BMSR, &val);
 	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
 	data[8] = val;
+
+	#if defined(DMPLUG_INT) && defined(MAIN_DATA)
+	netif_info(db, drv, db->ndev, "dm9051 INT"); //#pragma message("dm9051 INT")
+	#endif
+	#if !defined(DMPLUG_INT) && defined(MAIN_DATA)
+	netif_info(db, drv, db->ndev, "dm9051 POL"); //#pragma message("dm9051 POL")
+	#endif
+	#if defined(INT_CLKOUT) && defined(MAIN_DATA)
+	netif_info(db, drv, db->ndev, "INT: INT_CLKOUT"); //#warning "INT: INT_CLKOUT"
+	#endif
+	#if defined(INT_TWO_STEP) && defined(MAIN_DATA)
+	netif_info(db, drv, db->ndev, "INT: TWO_STEP"); //#warning "INT: TWO_STEP"
+	#endif
+	
+	#if defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
+	netif_info(db, drv, db->ndev, "WORKROUND: BMCR_WR"); //#pragma message("WORKROUND: BMCR_WR")
+	#endif
+	#if defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
+	netif_info(db, drv, db->ndev, "WORKROUND: MRR_WR"); //#pragma message("WORKROUND: MRR_WR")
+	#endif
+	
+	#if defined(DMPLUG_CONTI) && defined(MAIN_DATA)
+	netif_info(db, drv, db->ndev, "dm9051 CONTI"); //#pragma message("dm9051 CONTI")
+	#endif
+
+	#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
+	netif_info(db, drv, db->ndev, "dm9051 PTP"); //#pragma message("dm9051 PTP")
+	#endif
+	#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
+	netif_info(db, drv, db->ndev, "dm9051 PPS"); //#warning "dm9051 PPS"
+	#endif
 
 #if MI_FIX //ee write
 	mutex_unlock(&db->spi_lockm);
