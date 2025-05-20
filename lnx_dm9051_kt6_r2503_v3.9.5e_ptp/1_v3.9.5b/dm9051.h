@@ -90,7 +90,7 @@
 #warning "INT: TWO_STEP"
 #endif
 
-#define PLUG_BMCR
+//#define PLUG_BMCR
 #ifdef PLUG_BMCR
 #define DMCONF_BMCR_WR //(bmcr-work around)
 #endif
