@@ -308,6 +308,46 @@ static void SHOW_OPEN(struct board_info *db)
 	/* amdix_log_reset(db); */ //(to be determined)
 }
 
+void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len)
+{
+	int i, j, rowsize = 32;
+	int splen; //index of start row
+	int rlen; //remain/row length 
+	char line[120];
+
+	netif_info(db, pktdata, db->ndev, "%s\n", db->bc.head);
+	for (i = 0; i < packet_len; i += rlen) {
+		//rlen = print_line(packet_data+i, min(rowsize, skb->len - i)); ...
+		rlen =  packet_len - i;
+		if (rlen >= rowsize) rlen = rowsize;
+
+		splen = 0;
+		splen += sprintf(line + splen, " %3d", i);
+		for (j = 0; j < rlen; j++) {
+			if (!(j % 8)) splen += sprintf(line + splen, " ");
+			if (!(j % 16)) splen += sprintf(line + splen, " ");
+			splen += sprintf(line + splen, " %02x", packet_data[i+j]);
+		}
+		netif_info(db, pktdata, db->ndev, "%s\n", line);
+	}
+}
+
+static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2)
+{
+	unsigned int v1, v2;
+
+	dm9051_get_reg(db, reg1, &v1);
+	dm9051_get_reg(db, reg2, &v2);
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+}
+
+void dm9051_headlog_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2)
+{
+	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
+	dm9051_dump_reg2s(db, reg1, reg2);
+}
+
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
 {
 	int ret;
@@ -514,48 +554,6 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 	if (ret == 0)
 		BUS_OPS(db, buff, crlen);
 	return ret;
-}
-
-void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len)
-{
-	int i, j, rowsize = 32;
-	int splen; //index of start row
-	int rlen; //remain/row length 
-	char line[120];
-
-	netif_info(db, pktdata, db->ndev, "%s\n", db->bc.head);
-	for (i = 0; i < packet_len; i += rlen) {
-		//rlen = print_line(packet_data+i, min(rowsize, skb->len - i)); ...
-		rlen =  packet_len - i;
-		if (rlen >= rowsize) rlen = rowsize;
-
-		splen = 0;
-		splen += sprintf(line + splen, " %3d", i);
-		for (j = 0; j < rlen; j++) {
-			if (!(j % 8)) splen += sprintf(line + splen, " ");
-			if (!(j % 16)) splen += sprintf(line + splen, " ");
-			splen += sprintf(line + splen, " %02x", packet_data[i+j]);
-		}
-		netif_info(db, pktdata, db->ndev, "%s\n", line);
-	}
-}
-
-/* 'rx_status'
- */
-void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2)
-{
-	unsigned int v1, v2;
-
-	dm9051_get_reg(db, reg1, &v1);
-	dm9051_get_reg(db, reg2, &v2);
-	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
-}
-
-static void dm9051_headlog_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2)
-{
-	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
-	dm9051_dump_reg2s(db, reg1, reg2);
 }
 
 static int dm9051_ncr_poll(struct board_info *db)
@@ -1684,9 +1682,13 @@ static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 		db->bc.evaluate_rxb_counter++;
 
 		if (db->bc.evaluate_rxb_counter == 1) {
-			sprintf(db->bc.head, "rxb 1st %d", db->bc.evaluate_rxb_counter); 
-			dm9051_dump_reg2s(db, 0x74, 0x75);
-			dm9051_dump_reg2s(db, 0x24, 0x25);
+			//sprintf(db->bc.head, "rxb 1st %d", db->bc.evaluate_rxb_counter); 
+			//dm9051_dump_reg2s(db, 0x74, 0x75);
+			//dm9051_dump_reg2s(db, 0x24, 0x25);
+			char head[HEAD_LOG_BUFSIZE];
+			sprintf(head, "rxb 1st %d", db->bc.evaluate_rxb_counter); 
+			dm9051_headlog_regs(head, db, 0x74, 0x75);
+			dm9051_headlog_regs(head, db, 0x24, 0x25);
 		}
 
 		n += sprintf(pbff + n, "_[eval_rxb %2d]", db->bc.evaluate_rxb_counter);
@@ -1839,11 +1841,8 @@ static int dm9051_loop_rx(struct board_info *db)
 		if (rx_break(db, rxbyte, ndev->features))
 		{
 			if (trap_rxb(db, &rxbyte)) {
-				//if (db->bc.evaluate_rxb_counter == 1) {
-				sprintf(db->bc.head, "rxb last"); //(, db->bc.evaluate_rxb_counter); 
-				dm9051_dump_reg2s(db, 0x74, 0x75);
-				dm9051_dump_reg2s(db, 0x24, 0x25);
-				//}
+				dm9051_headlog_regs("rxb last", db, 0x74, 0x75);
+				dm9051_headlog_regs("rxb last", db, 0x24, 0x25);
 				dm9051_all_restart(db);
 				return -EINVAL;
 			}
@@ -2796,15 +2795,17 @@ static int dm9051_probe(struct spi_device *spi)
 	db->spidev = spi;
 	db->ndev = ndev;
 
-	/* 2 ptpc */
-	PTP_NEW(db, ndev);
-
-	ndev->netdev_ops = &dm9051_netdev_ops;
-	ndev->ethtool_ops = &dm9051_ethtool_ops;
-
 	/* Set default features */
 	if (dm9051_modedata->checksuming)
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
+
+	/* 2 ptpc */
+	PTP_NEW(db, ndev);
+
+	ndev->hw_features |= ndev->features;
+
+	ndev->netdev_ops = &dm9051_netdev_ops;
+	ndev->ethtool_ops = &dm9051_ethtool_ops;
 
 	/* version log */
 	printk("\n");
@@ -2816,8 +2817,6 @@ static int dm9051_probe(struct spi_device *spi)
 		dev_info(&db->spidev->dev, "DMPLUG PTP Version\n");
 		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
 	}
-
-	ndev->hw_features |= ndev->features;
 
 	//[NETIF_MSG_HW is play for phylib...]
 	//db->msg_enable = 0;
