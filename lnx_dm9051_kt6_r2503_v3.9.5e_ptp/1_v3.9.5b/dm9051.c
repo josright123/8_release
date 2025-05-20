@@ -148,6 +148,7 @@ static void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db)
 #endif
 	/* conti */
 	TX_CONTI_NEW(db);
+	/* 2.0 ptpc */
 	if (db->ptp_enable) {
 		dev_info(&db->spidev->dev, "DMPLUG PTP Version\n");
 		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
@@ -2252,7 +2253,7 @@ int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 /* Interrupt: Interrupt work */
 /* dm9051 rx_threaded irq */
 
-void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat()
+void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat() //dm9051_rx_threaded_irq()
 {
 	struct board_info *db = pw;
 	int result;
@@ -2293,6 +2294,7 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
+
 		dm9051_rx_int2_plat(voidirq, pw); //.(macro)_rx_tx_plat()
 		thread_servicep_done = 1;
 		if (!thread_servicep_re_enter)
@@ -2346,7 +2348,7 @@ void STOP_FREE_IRQ(struct net_device *ndev)
 }
 #endif
 
-static int dm9051_init_start(struct board_info *db)
+static int dm9051_all_start_init(struct board_info *db)
 {
 //before [spi_lockm]
 //use [spi_lockm]
@@ -2378,24 +2380,7 @@ static int dm9051_init_start(struct board_info *db)
 	return ret;
 }
 
-static int dm9051_close_all_stop(struct board_info *db)
-{
-	int ret;
-
-	#if MI_FIX
-	mutex_lock(&db->spi_lockm);
-	#endif
-
-	ret = dm9051_all_stop(db);
-
-	#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-	#endif
-
-	return ret;
-}
-
-static int dm9051_init_intr(struct board_info *db)
+static int dm9051_all_start_intr(struct board_info *db)
 {
 	int ret;
 
@@ -2414,6 +2399,23 @@ intr_unlck:
 	mutex_unlock(&db->spi_lockm);
 	#endif
 	
+	return ret;
+}
+
+static int dm9051_all_stop_mlock(struct board_info *db)
+{
+	int ret;
+
+	#if MI_FIX
+	mutex_lock(&db->spi_lockm);
+	#endif
+
+	ret = dm9051_all_stop(db);
+
+	#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+	#endif
+
 	return ret;
 }
 
@@ -2439,7 +2441,7 @@ static int dm9051_threaded_irq(struct board_info *db, irq_handler_t handler)
 	return ret;
 }
 
-void DM9051_FREE_REQUEST_WORK(struct board_info *db)
+static void dm9051_free_irqworks(struct board_info *db)
 {
 	/* schedule delay work */
 	#if defined(DMPLUG_INT)
@@ -2475,7 +2477,7 @@ static int dm9051_open(struct net_device *ndev)
 
 	ndev->irq = spi->irq; /* by dts */
 
-	ret = dm9051_init_start(db); /* such as all start */
+	ret = dm9051_all_start_init(db); /* such as all start */
 	if (ret)
 		return ret;
 
@@ -2498,11 +2500,14 @@ static int dm9051_open(struct net_device *ndev)
 		return ret;
 	}
 
-	ret = dm9051_init_intr(db); /* near the bottom */
-	if (ret)
+	ret = dm9051_all_start_intr(db); /* near the bottom */
+	if (ret) {
 		phy_stop(db->phydev);
+		dm9051_free_irqworks(db);
+		return ret;
+	}
 
-	return ret;
+	return 0;
 }
 
 /* Close network device
@@ -2532,13 +2537,13 @@ static int dm9051_stop(struct net_device *ndev)
 
 	phy_stop(db->phydev);
 
-	DM9051_FREE_REQUEST_WORK(db);
+	dm9051_free_irqworks(db);
 
 	netif_stop_queue(ndev);
 
 	skb_queue_purge(&db->txq);
 
-	return dm9051_close_all_stop(db);
+	return dm9051_all_stop_mlock(db);
 }
 
 /* event: play a schedule starter in condition
@@ -2621,6 +2626,7 @@ static int dm9051_set_mac_address(struct net_device *ndev, void *p)
 		return ret;
 
 	eth_commit_mac_addr_change(ndev, p);
+
 	#if MI_FIX //mac
 	mutex_lock(&db->spi_lockm);
 	#endif
@@ -2667,11 +2673,8 @@ static void CHKSUM_PTP_NDEV(struct board_info *db, struct net_device *ndev)
 
 	/* 2 ptpc */
 	PTP_NEW(db, ndev);
-	if (db->ptp_enable) {
-//		dev_info(&db->spidev->dev, "DMPLUG PTP Version\n");
-//		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
+	if (db->ptp_enable)
 		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
-	}
 
 	ndev->hw_features |= ndev->features;
 }
@@ -2748,10 +2751,10 @@ static void dm9051_operation_clear(struct board_info *db)
 
 	trap_clr(db);
 	db->bc.nRxcF = 0;
-//	db->bc.ndelayF = POLL_OPERATE_INIT;
 
 	db->csum_gen_val = 0; //disabling
 	db->csum_rcv_val = 0; //disabling
+
 	db->n_automdix = 0; //log-reset
 	db->stop_automdix_flag = 0;
 	db->automdix_log[0][0] = 0;
