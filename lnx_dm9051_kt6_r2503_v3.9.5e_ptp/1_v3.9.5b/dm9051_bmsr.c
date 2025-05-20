@@ -24,7 +24,7 @@
 #include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
 
-#ifndef DMCONF_BMCR_WR
+#ifdef DMCONF_BMCR_WR
 char *get_log_addr(struct board_info *db)
 {
 	if (!db->automdix_log[0][0]) {
