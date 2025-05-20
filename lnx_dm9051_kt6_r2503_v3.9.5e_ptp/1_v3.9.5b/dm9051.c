@@ -133,7 +133,7 @@ int get_dts_irqf(struct board_info *db)
 			r, \
 			n)
 
-static void SHOW_DEVLOG_REFER_BEGIN(struct device *dev)
+static void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db)
 {
 	printk("\n");
 #if 1	//[Test]
@@ -2828,13 +2828,13 @@ static int dm9051_probe(struct spi_device *spi)
 	db->spidev = spi;
 	db->ndev = ndev;
 
-	CHKSUM_PTP_NDEV(db. ndev);
+	CHKSUM_PTP_NDEV(db, ndev);
 
 	ndev->netdev_ops = &dm9051_netdev_ops;
 	ndev->ethtool_ops = &dm9051_ethtool_ops;
 
 	/* version log */
-	SHOW_DEVLOG_REFER_BEGIN(dev);
+	SHOW_DEVLOG_REFER_BEGIN(dev, db);
 
 	//[NETIF_MSG_HW is play for phylib...]
 	//db->msg_enable = 0;
