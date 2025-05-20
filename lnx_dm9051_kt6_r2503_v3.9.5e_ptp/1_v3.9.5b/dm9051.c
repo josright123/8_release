@@ -133,8 +133,9 @@ int get_dts_irqf(struct board_info *db)
 			r, \
 			n)
 
-void SHOW_DEVLOG_REFER(struct device *dev)
+static void SHOW_DEVLOG_REFER_BEGIN(struct device *dev)
 {
+	printk("\n");
 #if 1	//[Test]
 	dev_info(dev, "dev_info Version\n");
 	dev_notice(dev, "dev_notice Version\n");
@@ -145,9 +146,15 @@ void SHOW_DEVLOG_REFER(struct device *dev)
 	dev_err(dev, "dev_err Version\n");
 	printk("\n");
 #endif
+	/* conti */
+	TX_CONTI_NEW(db);
+	if (db->ptp_enable) {
+		dev_info(&db->spidev->dev, "DMPLUG PTP Version\n");
+		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
+	}
 }
 
-void SHOW_LOG_REFER(struct board_info *db)
+static void SHOW_LOG_REFER_BEGIN(struct board_info *db)
 {
 #if 1
 	/* [.] netif_msg_drv
@@ -219,16 +226,9 @@ void SHOW_DTS_INT(struct device *dev)
 	dev_info(dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
 	#endif
 }
+
 static void SHOW_CONFIG_MODE(struct device *dev)
 {
-	SHOW_DRIVER(dev);
-	do {
-		SHOW_DTS_SPEED(dev);
-		SHOW_RX_MATCH_MODE(dev);
-		SHOW_RX_INT_MODE(dev);
-		SHOW_DTS_INT(dev);
-	} while (0);
-
 	printk("\n");
 	//dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 #if defined(__x86_64__) || defined(__aarch64__)
@@ -254,6 +254,18 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 	dev_info(dev, "LXR: %s, BUILD: %s CONFIG_32BIT (32 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
 	#endif
 #endif
+}
+
+static void SHOW_DEVLOG_MODE(struct device *dev)
+{
+	SHOW_DRIVER(dev);
+
+	SHOW_DTS_SPEED(dev);
+	SHOW_RX_MATCH_MODE(dev);
+	SHOW_RX_INT_MODE(dev);
+	SHOW_DTS_INT(dev);
+
+	SHOW_CONFIG_MODE(dev);
 	DEV_INFO_TX_ALIGN(dev);
 	DEV_INFO_RX_ALIGN(dev);
 }
@@ -1171,6 +1183,10 @@ static int dm9051_map_chipid(struct board_info *db)
 	unsigned short wid;
 	u8 buff[6];
 	int ret;
+
+	printk("\n");
+	SHOW_PLAT_MODE(dev);
+	SHOW_OPTION_MODE(dev);
 
 	ret = dm9051_get_regs(db, DM9051_VIDL, buff, sizeof(buff));
 	if (ret < 0)
@@ -2615,7 +2631,41 @@ static const struct net_device_ops dm9051_netdev_ops = {
 #endif
 };
 
-void MRR_WR_FCR_UPSTART(struct board_info *db)
+static void CHKSUM_PTP_NDEV(struct board_info *db, struct net_device *ndev)
+{
+	/* Set default features */
+	if (dm9051_modedata->checksuming)
+		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
+
+	/* 2 ptpc */
+	PTP_NEW(db, ndev);
+	if (db->ptp_enable) {
+//		dev_info(&db->spidev->dev, "DMPLUG PTP Version\n");
+//		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
+		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
+	}
+
+	ndev->hw_features |= ndev->features;
+}
+
+static void DM9051_PROBE_DLYSETUP(struct board_info *db)
+{
+	#if defined(DMPLUG_INT)
+	/*
+	 * Interrupt: 
+	 */
+	#ifdef INT_TWO_STEP
+		PROBE_INT2_DLY_SETUP(db);
+	#endif
+	#else
+	/*
+	 * Polling: 
+	 */
+	PROBE_POLL_SETUP(db);
+	#endif
+}
+
+static void MRR_WR_FCR_UPSTART(struct board_info *db)
 {
 	#if MI_FIX
 	mutex_lock(&db->spi_lockm);
@@ -2657,23 +2707,6 @@ dnf_end:
 #endif
 	#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
-	#endif
-}
-
-static void DM9051_PROBE_DLY_SETUP(struct board_info *db)
-{
-	#if defined(DMPLUG_INT)
-	/*
-	 * Interrupt: 
-	 */
-	#ifdef INT_TWO_STEP
-		PROBE_INT2_DLY_SETUP(db);
-	#endif
-	#else
-	/*
-	 * Polling: 
-	 */
-	PROBE_POLL_SETUP(db);
 	#endif
 }
 
@@ -2795,28 +2828,13 @@ static int dm9051_probe(struct spi_device *spi)
 	db->spidev = spi;
 	db->ndev = ndev;
 
-	/* Set default features */
-	if (dm9051_modedata->checksuming)
-		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
-
-	/* 2 ptpc */
-	PTP_NEW(db, ndev);
-
-	ndev->hw_features |= ndev->features;
+	CHKSUM_PTP_NDEV(db. ndev);
 
 	ndev->netdev_ops = &dm9051_netdev_ops;
 	ndev->ethtool_ops = &dm9051_ethtool_ops;
 
 	/* version log */
-	printk("\n");
-	SHOW_DEVLOG_REFER(dev);
-
-	/* conti */
-	TX_CONTI_NEW(db);
-	if (db->ptp_enable) {
-		dev_info(&db->spidev->dev, "DMPLUG PTP Version\n");
-		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
-	}
+	SHOW_DEVLOG_REFER_BEGIN(dev);
 
 	//[NETIF_MSG_HW is play for phylib...]
 	//db->msg_enable = 0;
@@ -2829,22 +2847,17 @@ static int dm9051_probe(struct spi_device *spi)
 	INIT_WORK(&db->rxctrl_work, dm9051_rxctl_delay);
 	INIT_WORK(&db->tx_work, dm9051_tx_delay);
 
-	DM9051_PROBE_DLY_SETUP(db);
+	DM9051_PROBE_DLYSETUP(db);
 
 	ret = dm9051_map_init(spi, db);
 	if (ret)
 		return ret;
 
-	SHOW_CONFIG_MODE(dev);
-
-	printk("\n");
-	SHOW_PLAT_MODE(dev);
+	SHOW_DEVLOG_MODE(dev);
 
 	ret = dm9051_map_chipid(db);
 	if (ret)
 		return ret;
-
-	SHOW_OPTION_MODE(dev);
 
 	ret = dm9051_map_etherdev_par(ndev, db);
 	if (ret < 0)
@@ -2864,8 +2877,8 @@ static int dm9051_probe(struct spi_device *spi)
 		return dev_err_probe(dev, ret, "device register failed");
 	}
 	
-	//[if (netif_running(ndev)) ...]
-	SHOW_LOG_REFER(db);
+	//if (netif_running(ndev)) ..
+	SHOW_LOG_REFER_BEGIN(db);
 
 	/* 2.1 ptpc */
 	PTP_INIT(db);

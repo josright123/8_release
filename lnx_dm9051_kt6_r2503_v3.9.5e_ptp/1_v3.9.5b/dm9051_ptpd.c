@@ -1479,11 +1479,6 @@ static void dm9051_ptp_stop(struct board_info *db)
 /* APIs */
 void ptp_new(struct board_info *db, struct net_device *ndev) {
 	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
-	if (db->ptp_enable) {
-//		dev_info(&db->spidev->dev, "DMPLUG PTP Version\n");
-//		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
-		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
-	}
 }
 void ptp_init_rcr(struct board_info *db) {
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)
