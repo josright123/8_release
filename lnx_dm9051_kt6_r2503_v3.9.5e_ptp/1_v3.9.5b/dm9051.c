@@ -1857,13 +1857,15 @@ static int dm9051_loop_rx(struct board_info *db)
 	int ret, rxlen, padlen;
 	unsigned int rxbyte;
 	struct sk_buff *skb;
+	int ntx;
 	u8 *rdptr;
 	int scanrr = 0;
 
 	do
 	{
 #if 1
-		int ntx;
+		/* In rx-loop
+		 */
 		sprintf(db->bc.head, "_THrd0");
 		db->bc.mode = TX_THREAD0;
 		ntx = dm9051_loop_tx(db); /* [More] and more tx better performance */
@@ -1968,6 +1970,22 @@ static int dm9051_loop_rx(struct board_info *db)
 	} while (!ret);
 	monitor_rxc(db, scanrr);
 
+#if 1
+	/* Ending rx-loop
+	 */
+	//int ntx;
+	sprintf(db->bc.head, "_THrd");
+	db->bc.mode = TX_THREAD;
+	ntx = dm9051_loop_tx(db); /* more tx better performance */
+	if (ntx) {
+		db->xmit_thrd++;
+		db->xmit_ttc += ntx;
+		if (db->xmit_thrd <= 9) {
+			netif_warn(db, tx_queued, db->ndev, "%2d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
+				db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
+		}
+	}
+#endif
 	return scanrr;
 }
 
@@ -2197,25 +2215,6 @@ static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 		result = dm9051_loop_rx(db); /* threaded rx */
 		if (result < 0)
 			return result; //result; //goto out_unlock;
-
-#if 0
-		int ntx;
-		sprintf(db->bc.head, "_THrd");
-		db->bc.mode = TX_THREAD;
-		ntx = dm9051_loop_tx(db); /* more tx better performance */
-		if (ntx) {
-			db->xmit_thrd++;
-			db->xmit_ttc += ntx;
-			if (db->xmit_thrd <= 9) {
-				netif_warn(db, tx_queued, db->ndev, "%2d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
-					db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
-			}
-		}
-
-//		int result_tx = 
-//		if (result_tx < 0)
-//			return result_tx; //goto out_unlock;
-#endif
 	} while (result > 0);
 
 	return 0;
