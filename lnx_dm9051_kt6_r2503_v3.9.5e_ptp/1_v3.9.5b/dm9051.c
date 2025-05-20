@@ -35,6 +35,11 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
 #define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
 
+/* Optional functions and dadicated function */
+#define dm9051_threaded_irq(d,h)	0
+#define dm9051_int2_irq(d,h)		0
+#define dm9051_poll_sch(d)		0
+
 /* raw fake encrypt */
 #define BUS_SETUP(db)	0		//empty(NoError)
 #define BUS_OPS(db, buff, crlen)	//empty
@@ -2681,10 +2686,6 @@ intr_unlck:
 	return ret;
 }
 
-#define dm9051_threaded_irq(d,h)	0
-#define dm9051_int2_irq(d,h)		0
-#define dm9051_poll_sch(d)		0
-
 #if defined(DMPLUG_INT) && !defined(INT_TWO_STEP)
 #undef dm9051_threaded_irq
 #define dm9051_threaded_irq(d,h) DM9051_OPEN_REQUEST(d,h)
@@ -2764,9 +2765,21 @@ static int dm9051_open(struct net_device *ndev)
 
 	netif_wake_queue(ndev);
 
-	ret = dm9051_threaded_irq(db, dm9051_rx_threaded_plat); /* near the bottom */
+//ret = dm9051_poll_sch(db);
+//if (ret == NO_SUPP) {
+//	ret = dm9051_int2_irq(db, dm9051_rx_int2_delay);
+//	if (ret == NO_SUPP) {
+//		ret = dm9051_threaded_irq(db, dm9051_rx_threaded_plat); /* near the bottom */
+//	}
+//}
+//if (ret < 0) {
+//	phy_stop(db->phydev); //of 'dm9051_core_clear(db)' //
+//	return ret;
+//}
+
+	ret = dm9051_poll_sch(db);
 	ret |= dm9051_int2_irq(db, dm9051_rx_int2_delay);
-	ret |= dm9051_poll_sch(db);
+	ret |= dm9051_threaded_irq(db, dm9051_rx_threaded_plat); /* near the bottom */
 	if (ret < 0) {
 		phy_stop(db->phydev); //of 'dm9051_core_clear(db)' //
 		return ret;
