@@ -140,9 +140,9 @@ void SHOW_DEVLOG_REFER(struct device *dev)
 	dev_notice(dev, "dev_notice Version\n");
 	//dev_alert(dev, "dev_alert Version\n"); //(available)
 	//dev_emerg(dev, "dev_emerg Version\n");
+	dev_warn(dev, "dev_warn Version\n");
 	dev_crit(dev, "dev_crit Version\n");
 	dev_err(dev, "dev_err Version\n");
-	dev_warn(dev, "dev_warn Version\n");
 	printk("\n");
 #endif
 }
@@ -157,8 +157,8 @@ void SHOW_LOG_REFER(struct board_info *db)
 	netif_notice(db, probe, db->ndev, "netif_notice Version\n");
 	//netif_alert(db, probe, db->ndev, "netif_alert Version\n"); //(available)
 	//netif_emerg(db, probe, db->ndev, "netif_emerg Version\n");
-	netif_crit(db, probe, db->ndev, "netif_crit Version\n");
 	netif_warn(db, probe, db->ndev, "netif_warn Version\n");
+	netif_crit(db, probe, db->ndev, "netif_crit Version\n");
 	netif_err(db, probe, db->ndev, "netif_err Version\n");
 //	netif_dbg(db, probe, ndev, "netif_dbg Version\n");
 //	netdev_dbg(ndev, "netdev_dbg Version\n");
@@ -173,7 +173,7 @@ void SHOW_DRIVER(struct device *dev)
 	// 64-bit code
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_crit(dev, "Davicom: %s (64 bit)", confdata.release_version);
+	dev_warn(dev, "Davicom: %s (64 bit)", confdata.release_version);
 	#else
 	// 32-bit specific code
 	dev_crit(dev, "Davicom: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)", confdata.release_version);
@@ -185,7 +185,7 @@ void SHOW_DRIVER(struct device *dev)
 	dev_crit(dev, "Davicom: %s (32 bit, warn: but kernel config has CONFIG_64BIT?))", confdata.release_version);
 	#else
 	// 32-bit specific code
-	dev_crit(dev, "Davicom: %s (32 bit)", confdata.release_version);
+	dev_warn(dev, "Davicom: %s (32 bit)", confdata.release_version);
 	#endif
 #endif
 }
@@ -195,33 +195,19 @@ void SHOW_DTS_SPEED(struct device *dev)
 	/* [dbg] spi.speed */
 	unsigned int speed;
 	of_property_read_u32(dev->of_node, "spi-max-frequency", &speed);
-	dev_crit(dev, "SPI speed from DTS: %d Hz\n", speed);
+	dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
 }
 
 void SHOW_RX_MATCH_MODE(struct device *dev)
 {
-	dev_warn(dev, "Davicom: %s", dmplug_rx_mach);
+	dev_info(dev, "Davicom: %s", dmplug_rx_mach);
 }
 
 void SHOW_RX_INT_MODE(struct device *dev)
 {
 	#if defined(DMPLUG_INT)
-	dev_warn(dev, "Davicom: %s", dmplug_intterrpt2);
+	dev_info(dev, "Davicom: %s", dmplug_intterrpt2);
 	#endif
-}
-
-void SHOW_OPEN(struct board_info *db)
-{
-	printk("\n");
-	//netdev_info(db->phydev->attached_dev, "dm9051_open\n");
-	//netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_rx_mach);
-	netif_info(db, drv, db->ndev, "dm9051_open\n");
-	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_rx_mach);
-	#if defined(DMPLUG_INT)
-	//netdev_info(db->phydev->attached_dev, "Davicom: %s", dmplug_intterrpt2);
-	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_intterrpt2);
-	#endif
-	/* amdix_log_reset(db); */ //(to be determined)
 }
 
 void SHOW_DTS_INT(struct device *dev)
@@ -229,8 +215,8 @@ void SHOW_DTS_INT(struct device *dev)
 	#if defined(DMPLUG_INT)
 	unsigned int intdata[2];
 	of_property_read_u32_array(dev->of_node, "interrupts", &intdata[0], 2);
-	dev_crit(dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
-	dev_crit(dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
+	dev_info(dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
+	dev_info(dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
 	#endif
 }
 static void SHOW_CONFIG_MODE(struct device *dev)
@@ -247,25 +233,25 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 	//dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 #if defined(__x86_64__) || defined(__aarch64__)
 	// 64-bit code
-	dev_err(dev, "LXR: %s, BUILD: %s __aarch64__ (64 bit)\n", utsname()->release, utsname()->release); //(compile-time)
+	dev_info(dev, "LXR: %s, BUILD: %s __aarch64__ (64 bit)\n", utsname()->release, utsname()->release); //(compile-time)
 	
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_err(dev, "LXR: %s, BUILD: %s CONFIG_64BIT (64 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
+	dev_info(dev, "LXR: %s, BUILD: %s CONFIG_64BIT (64 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
 	#else
 	// 32-bit specific code
 	dev_err(dev, "LXR: %s, BUILD: %s CONFIG_32BIT (32 bit, warn: because config has no CONFIG_64BIT ?)\n", utsname()->release, utsname()->release);
 	#endif
 #else
 	// 32-bit code
-	dev_err(dev, "LXR: %s, BUILD: %s __aarch32__ (32 bit)\n", utsname()->release, utsname()->release); //(compile-time)
+	dev_info(dev, "LXR: %s, BUILD: %s __aarch32__ (32 bit)\n", utsname()->release, utsname()->release); //(compile-time)
 
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
 	dev_err(dev, "LXR: %s, BUILD: %s (64 bit, warn: CONFIG_64BIT contrary to __aarch32__ ?)\n", utsname()->release, utsname()->release);
 	#else
 	// 32-bit specific code
-	dev_err(dev, "LXR: %s, BUILD: %s CONFIG_32BIT (32 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
+	dev_info(dev, "LXR: %s, BUILD: %s CONFIG_32BIT (32 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
 	#endif
 #endif
 	DEV_INFO_TX_ALIGN(dev);
@@ -274,7 +260,7 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 
 static void SHOW_PLAT_MODE(struct device *dev)
 {
-	dev_err(dev, "Davicom: %s", driver_align_mode.test_info);
+	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 }
 
 int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
@@ -309,6 +295,17 @@ static void SHOW_MONITOR_RXC(struct board_info *db)
 		PRINT_BURST_INFO(db->bc.nRxcF);
 	else if (dm9051_modedata->align.burst_mode == BURST_MODE_ALIGN)
 		PRINT_ALIGN_INFO(db->bc.nRxcF);
+}
+
+static void SHOW_OPEN(struct board_info *db)
+{
+	printk("\n");
+	netif_info(db, drv, db->ndev, "dm9051_open\n");
+	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_rx_mach);
+	#if defined(DMPLUG_INT)
+	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_intterrpt2);
+	#endif
+	/* amdix_log_reset(db); */ //(to be determined)
 }
 
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
@@ -1202,14 +1199,11 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 			/* NOT next with k for dm9051_phywr(regnum, val) */
 			if ((regnum == 0) && (val & 0x800)) {
 				netif_crit(db, link, db->ndev, "[mdio phywr] %d %04x: power down (warn)\n", regnum, val);
-				//k("[mdio phywr] %d %04x: power down (warn)\n", regnum, val);
-				//k("\n");
 				break;
 			}
 
 			if (mdio_write_count <= 9)
-				netif_crit(db, link, db->ndev, "[count%d] mdio phywr %d %04x\n", mdio_write_count++, regnum, val);
-				//k("[count%d] mdio phywr %d %04x\n", mdio_write_count++, regnum, val);
+				netif_info(db, link, db->ndev, "[count%d] mdio phywr %d %04x\n", mdio_write_count++, regnum, val);
 		} while(0);
 		ret = dm9051_phywrite(db, regnum, val);
 
@@ -3170,7 +3164,6 @@ static int dm9051_probe(struct spi_device *spi)
 	
 	//[if (netif_running(ndev)) ...]
 	SHOW_LOG_REFER(db);
-	printk("\n");
 
 	/* 2.1 ptpc */
 	PTP_INIT(db);

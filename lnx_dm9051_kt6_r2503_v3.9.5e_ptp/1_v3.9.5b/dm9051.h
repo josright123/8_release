@@ -24,22 +24,26 @@
 #ifdef CONFIG_64BIT
 // 64-bit specific code
 #pragma message("dm9051 @ __aarch64__")
-#pragma message("dm9051 @ CONFIG_64BIT")
+//#pragma message("dm9051 @ CONFIG_64BIT")
+#warning "dm9051 @ CONFIG_64BIT"
 #else
 // 32-bit specific code
-#pragma message("dm9051 @ __aarch64__")
+//#pragma message("dm9051 @ __aarch64__")
+#warning "dm9051 @ __aarch64__"
 #warning "dm9051 but is @ CONFIG_32BIT"
 #endif
 #else
 // 32-bit code
 #ifdef CONFIG_64BIT
 // 64-bit specific code
-#pragma message("dm9051 @ __aarch32__")
+//#pragma message("dm9051 @ __aarch32__")
+#warning "dm9051 @ __aarch32__"
 #warning "dm9051 but is @ CONFIG_64BIT"
 #else
 // 32-bit specific code
 #pragma message("dm9051 @ __aarch32__")
-#pragma message("dm9051 @ CONFIG_32BIT")
+//#pragma message("dm9051 @ CONFIG_32BIT")
+#warning "dm9051 @ CONFIG_32BIT"
 #endif
 #endif
 #endif
