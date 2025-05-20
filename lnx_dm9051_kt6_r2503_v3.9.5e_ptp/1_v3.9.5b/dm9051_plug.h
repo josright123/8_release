@@ -64,7 +64,9 @@
 #endif
 
 #ifdef INT_TWO_STEP
+#undef dm9051_int2_supp
 #undef dm9051_int2_irq
+#define dm9051_int2_supp() REQUEST_SUPPORTTED
 #define dm9051_int2_irq(d,h) DM9051_INT2_REQUEST(d,h)
 
 void PROBE_INT2_DLY_SETUP(struct board_info *db);
@@ -75,7 +77,9 @@ int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
 #endif
 
 #ifndef  DMPLUG_INT
+#undef dm9051_poll_supp
 #undef dm9051_poll_sch
+#define dm9051_poll_supp() REQUEST_SUPPORTTED
 #define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
 
 void dm9051_poll_servicep(struct work_struct *work);

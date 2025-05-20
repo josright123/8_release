@@ -308,6 +308,30 @@ struct eng_config {
 #define AMDIX_LOG_BUFSIZE		72
 
 #if 1 //sticked fixed here is better!
+
+/* Optional functions declaration const */
+enum dm_req_not_support {
+	VOID_REQUEST_FUNCTION =		-9,
+	NOT_REQUEST_SUPPORTTED =	0,
+};
+enum dm_req_support {
+	REQUEST_SUPPORTTED =		1,
+};
+
+//#define NOT_REQUEST_SUPPORTTED	0x0
+//#define VOID_REQUEST_FUNCTION		-9
+
+/* Optional functions and dadicated function */
+#ifdef MAIN_DATA
+#define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
+#define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
+
+#define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
+#define dm9051_int2_irq(d,h)		VOID_REQUEST_FUNCTION
+#endif
+
+//#define REQUEST_SUPPORTTED		1 //REQUEST_SUPPORTTED (1)
+
 #include "dm9051_plug.h" /* for definition of '_INT_TWO_STEP' */
 #include "dm9051_ptpd.h" /* 0.1 ptpc */
 
