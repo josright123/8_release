@@ -55,7 +55,7 @@ void dm9051_poll_servicep(struct work_struct *work) //.dm9051_poll_delay_xplat()
 
 	mutex_lock(&db->spi_lockm);
 
-	dm9051_delayp_looping_rx_tx(db);
+	while (dm9051_loop_rx(db) > 0) ; //dm9051_delayp_looping_rx_tx(db);
 
 	mutex_unlock(&db->spi_lockm);
 

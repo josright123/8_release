@@ -92,21 +92,37 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
-#if defined(DMPLUG_INT)
-  #if !defined(INT_CLKOUT)
-  #define dmplug_rx_mach "interrupt polarity ctrl mode"
-  #else
-  #define dmplug_rx_mach "interrupt clkout mode"
-  #endif
-
-  #if !defined(INT_TWO_STEP)
-  #define dmplug_intterrpt2 "interrupt direct step"
-  #else
-  #define dmplug_intterrpt2 "interrupt two step"
-  #endif
-#else
+#define dmplug_rx_mach "interrupt polarity ctrl mode"
+#if defined(INT_CLKOUT)
+#undef dmplug_rx_mach
+#define dmplug_rx_mach "interrupt clkout mode"
+#endif
+#if !defined(DMPLUG_INT)
+#undef dmplug_rx_mach
 #define dmplug_rx_mach "poll mode"
 #endif
+
+#define dmplug_intterrpt2 "interrupt direct step"
+#if defined(INT_TWO_STEP)
+#undef dmplug_intterrpt2
+#define dmplug_intterrpt2 "interrupt two step"
+#endif 
+
+//#if defined(DMPLUG_INT)
+//  #if !defined(INT_CLKOUT)
+//  #define dmplug_rx_mach "interrupt polarity ctrl mode"
+//  #else
+//  #define dmplug_rx_mach "interrupt clkout mode"
+//  #endif
+
+//  #if !defined(INT_TWO_STEP)
+//  #define dmplug_intterrpt2 "interrupt direct step"
+//  #else
+//  #define dmplug_intterrpt2 "interrupt two step"
+//  #endif
+//#else
+//#define dmplug_rx_mach "poll mode"
+//#endif
 
 /* log */
 #define DEV_INFO_RX_ALIGN(dev) \
@@ -1852,7 +1868,8 @@ static int dm9051_loop_tx(struct board_info *db);
  *    0 - no error, caller need stop further rx operation
  *  -EBUSY - read data invalide(NOT an error), caller escape from rx operation
  */
-static int dm9051_loop_rx(struct board_info *db)
+//static 
+int dm9051_loop_rx(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
 	int ret, rxlen, padlen;
@@ -2206,24 +2223,21 @@ static void dm9051_tx_delay(struct work_struct *work)
  *    0 - no error, caller need stop further rx operation
  *  -EBUSY - read data invalide(NOT an error), caller escape from rx operation
  */
-static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
-{
-	/*
-	 * is:
-	 *     while ((result = dm9051_loop_rx(db)) > 0) ;
-	 *     return result;
-	 */
-	int result;
+//static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
+//{
+//	/*
+//	 * is:
+//	 *     while ((result = dm9051_loop_rx(db)) > 0) ;
+//	 *     return result;
+//	 */
+//	int result;
 
-	do
-	{
-		result = dm9051_loop_rx(db); /* threaded rx */
-		if (result < 0)
-			return result; //result; //goto out_unlock;
-	} while (result > 0);
+//	do {
+//		result = dm9051_loop_rx(db); /* threaded rx */
+//	} while(result > 0);
 
-	return 0;
-}
+//	return result;
+//}
 
 #if 1
 //static void dm9051_rx_xplat_enable(struct board_info *db)
@@ -2275,7 +2289,7 @@ void dm9051_thread_irq(void *pw) //.(macro)_rx_tx_plat() //dm9051_rx_threaded_ir
 	 *    0 - no error, caller need stop further rx operation
 	 *  -EBUSY - read data invalide(NOT an error), caller escape from rx operation
 	 */
-	dm9051_delayp_looping_rx_tx(db);
+	while (dm9051_loop_rx(db) > 0) ; //dm9051_delayp_looping_rx_tx(db);
 
 	dm9051_enable_interrupt(db);
 

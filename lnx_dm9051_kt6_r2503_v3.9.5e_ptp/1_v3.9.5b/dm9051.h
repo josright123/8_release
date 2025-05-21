@@ -539,7 +539,7 @@ void dm9051_all_restart_sum(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 /* operation functions */
-//static int _dm9051_delayp_looping_rx_tx(struct board_info *db);
+int dm9051_loop_rx(struct board_info *db); //static int _dm9051_delayp_looping_rx_tx(struct board_info *db);
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 
 #ifdef MAIN_DATA
