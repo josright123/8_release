@@ -17,7 +17,6 @@
  * to
  *   dm9051a-objs := dm9051.o dm9051_plug.o dm9051_log.o
  */
- 
 #include <linux/etherdevice.h>
 #include <linux/ethtool.h>
 #include <linux/interrupt.h>
@@ -25,6 +24,8 @@
 #include <linux/irq.h>
 #include <linux/mii.h>
 #include <linux/module.h>
+#include <linux/utsname.h>
+#include <generated/utsrelease.h> // For newer kernels
 #include <linux/netdevice.h>
 #include <linux/phy.h>
 #include <linux/regmap.h>
@@ -33,8 +34,26 @@
 #include <linux/spi/spi.h>
 #include <linux/types.h>
 #include <linux/of.h>
-//#include <linux/ptp_clock_kernel.h>
-#include "dm9051.h"
+#include <linux/version.h>
+#include <linux/ptp_clock_kernel.h>
+ 
+//#include <linux/etherdevice.h>
+//#include <linux/ethtool.h>
+//#include <linux/interrupt.h>
+//#include <linux/iopoll.h>
+//#include <linux/irq.h>
+//#include <linux/mii.h>
+//#include <linux/module.h>
+//#include <linux/netdevice.h>
+//#include <linux/phy.h>
+//#include <linux/regmap.h>
+//#include <linux/skbuff.h>
+//#include <linux/spinlock.h>
+//#include <linux/spi/spi.h>
+//#include <linux/types.h>
+//#include <linux/of.h>
+#define SECOND_MAIN //(sec)
+#include "../dm9051.h"
 
 //#warning "DMPLUG: dm9051 plug-in log function"
 

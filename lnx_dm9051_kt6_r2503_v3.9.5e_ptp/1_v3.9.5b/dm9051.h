@@ -315,8 +315,9 @@ enum dm_req_support {
 //#define VOID_REQUEST_FUNCTION		-9
 
 /* Optional functions and dadicated function */
-#define FA //(fake)
-#if defined(FA) && defined(MAIN_DATA)
+//#define SECOND_MAIN //(sec)
+#define FAK //(fake)
+#if defined(FAK) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
 //#ifdef _MAIN_DATA
 /* raw fake encrypt */
 #define BUS_SETUP(db)	0		//empty(NoError)
