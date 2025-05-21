@@ -92,49 +92,6 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
-//#define dmplug_rx_mach "interrupt direct edge mode"
-//#if defined(INT_CLKOUT)
-//#undef dmplug_rx_mach
-//#define dmplug_rx_mach "interrupt periodic clkout mode"
-//#endif
-//#if !defined(DMPLUG_INT)
-//#undef dmplug_rx_mach
-//#define dmplug_rx_mach "poll mode"
-//#endif
-
-//#define dmplug_intterrpt2 "interrupt direct step"
-//#if defined(INT_TWO_STEP)
-//#undef dmplug_intterrpt2
-//#define dmplug_intterrpt2 "interrupt two step"
-//#endif 
-
-//#if defined(DMPLUG_INT)
-//  #if !defined(INT_CLKOUT)
-//  #define dmplug_rx_mach "interrupt polarity ctrl mode"
-//  #else
-//  #define dmplug_rx_mach "interrupt clkout mode"
-//  #endif
-
-//  #if !defined(INT_TWO_STEP)
-//  #define dmplug_intterrpt2 "interrupt direct step"
-//  #else
-//  #define dmplug_intterrpt2 "interrupt two step"
-//  #endif
-//#else
-//#define dmplug_rx_mach "poll mode"
-//#endif
-
-//void SHOW_RX_MATCH_MODE(struct device *dev)
-//{
-//	dev_info(dev, "Davicom: %s", dmplug_rx_mach);
-//}
-//void SHOW_RX_INT_MODE(struct device *dev)
-//{
-//	#if defined(DMPLUG_INT)
-//	dev_info(dev, "Davicom: %s", dmplug_intterrpt2);
-//	#endif
-//}
-
 /* log */
 #define DEV_INFO_RX_ALIGN(dev) \
 		dev_warn(dev, "RX: %s blk %u\n", \
@@ -850,8 +807,6 @@ static int dm9051_phywrite(void *context, unsigned int reg, unsigned int val)
  */
 static int dm9051_phyread_headlog(char *head, struct board_info *db,
 									unsigned int reg)
-//=static int dm9051_phyread_log_reset(struct board_info *db,
-//									unsigned int reg)
 {
 	unsigned int val;
 	int ret = dm9051_phyread(db, reg, &val);
@@ -862,17 +817,6 @@ static int dm9051_phyread_headlog(char *head, struct board_info *db,
 	netif_warn(db, link, db->ndev, "%s %04x\n", head, val);
 	return ret;
 }
-
-//static int PHY_LOG(struct board_info *db)
-//{
-//	int ret = dm9051_phyread_log_reset(db, 0);
-//	if (ret)
-//		return ret;
-//	ret = dm9051_phyread_log_reset(db, 3);
-//	if (ret)
-//		return ret;
-//	return 0;
-//}
 
 static int PHY_RST(struct board_info *db)
 {
@@ -896,20 +840,10 @@ static int PHY_RST(struct board_info *db)
 
 static int dm9051_phy_reset(struct board_info *db)
 {
-	int ret;
-#if 1
 	/* PHY reset */
 	printk("_phy_reset\n");
-	ret = PHY_RST(db);
-	if (ret)
-		return ret;
-#endif
-	return 0;
+	return PHY_RST(db);
 }
-
-//#ifdef DMCONF_BMCR_WR
-//PHY_READ/dm9051_phyread_nt_bmsr
-//#endif
 
 static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 {
@@ -1874,7 +1808,6 @@ static int dm9051_loop_tx(struct board_info *db);
  *    0 - no error, caller need stop further rx operation
  *  -EBUSY - read data invalide(NOT an error), caller escape from rx operation
  */
-//static 
 int dm9051_loop_rx(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
@@ -2170,7 +2103,6 @@ static int dm9051_loop_tx(struct board_info *db)
 }
 
 /* threaded_irq */
-
 /* schedule delay works */
 
 static void dm9051_rxctl_delay(struct work_struct *work)
@@ -2224,7 +2156,7 @@ static void dm9051_tx_delay(struct work_struct *work)
 	mutex_unlock(&db->spi_lockm);
 }
 
-/* (looping rx and tx) send packets and read packets from the fifo memory
+/* (looping rx and tx)
  * return value,
  *    0 - no error, caller need stop further rx operation
  *  -EBUSY - read data invalide(NOT an error), caller escape from rx operation
