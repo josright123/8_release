@@ -43,7 +43,7 @@ void dm9051_rx_irq_servicep(struct work_struct *work) //optional: INT: TWO_STEP 
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
 
-	dm9051_thread_irq(db); // 0 is no-used //.(macro)_rx_tx_plat()
+	dm9051_rx_threaded_plat(db); //dm9051_thread_irq(db); // 0 is no-used //.(macro)_rx_tx_plat()
 	thread_servicep_doneII = 1;
 
 }

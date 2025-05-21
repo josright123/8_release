@@ -529,8 +529,6 @@ int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 			size_t len);
 int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);
 
-irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
-
 int dm9051_nsr_poll(struct board_info *db);
 
 /* init functions */
@@ -541,6 +539,7 @@ int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 /* operation functions */
 int dm9051_loop_rx(struct board_info *db); //static int _dm9051_delayp_looping_rx_tx(struct board_info *db);
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
+irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 
 #ifdef MAIN_DATA
 /* MAIN Data: 

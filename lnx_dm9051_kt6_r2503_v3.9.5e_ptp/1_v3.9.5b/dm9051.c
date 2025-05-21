@@ -93,24 +93,6 @@ int get_dts_irqf(struct board_info *db)
 }
 
 /* log */
-#define DEV_INFO_RX_ALIGN(dev) \
-		dev_warn(dev, "RX: %s blk %u\n", \
-			dm9051_modedata->align.burst_mode_info, \
-			dm9051_modedata->align.rx_blk)
-#define DEV_INFO_TX_ALIGN(dev) \
-		dev_warn(dev, "TX: %s blk %u\n", \
-			dm9051_modedata->align.burst_mode_info, \
-			dm9051_modedata->align.tx_blk)
-#define PRINT_ALIGN_INFO(n) \
-		netif_warn(db, rx_status, db->ndev, "___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
-			dmplug_tx, \
-			dm9051_modedata->align.rx_blk, \
-			dm9051_modedata->align.tx_blk, \
-			n)
-#define PRINT_BURST_INFO(n) \
-		netif_warn(db, rx_status, db->ndev, "___[rx/tx %s mode] nRxc %d\n", \
-			dmplug_tx, \
-			n)
 #define PRINT_REGMAP_BLK_ERR(evtstr, ret, r, n) \
 		netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
 			__func__, ret, \
@@ -263,11 +245,44 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 #endif
 }
 
-static void SHOW_OPTION_MODE(struct device *dev)
+static void SHOW_ENG_OPTION_MODE(struct device *dev)
 {
 	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", econf->tx_timeout_us, dmplug_tx,
 			econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
 			econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
+}
+
+#define DEV_INFO_TX_ALIGN(dev) \
+		dev_warn(dev, "TX: %s blk %u\n", \
+			dm9051_modedata->align.burst_mode_info, \
+			dm9051_modedata->align.tx_blk)
+#define DEV_INFO_RX_ALIGN(dev) \
+		dev_warn(dev, "RX: %s blk %u\n", \
+			dm9051_modedata->align.burst_mode_info, \
+			dm9051_modedata->align.rx_blk)
+
+static void SHOW_MONITOR_RXC(struct board_info *db, int scanrr)
+{
+#define PRINT_BURST_INFO(n) \
+		netif_warn(db, rx_status, db->ndev, "___[rx/tx %s mode] nRxc %d\n", \
+			dmplug_tx, \
+			n)
+#define PRINT_ALIGN_INFO(n) \
+		netif_warn(db, rx_status, db->ndev, "___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
+			dmplug_tx, \
+			dm9051_modedata->align.rx_blk, \
+			dm9051_modedata->align.tx_blk, \
+			n)
+
+	if (econf->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
+	{
+		db->bc.nRxcF += scanrr;
+		
+		if (dm9051_modedata->align.burst_mode == BURST_MODE_FULL)
+			PRINT_BURST_INFO(db->bc.nRxcF);
+		else if (dm9051_modedata->align.burst_mode == BURST_MODE_ALIGN)
+			PRINT_ALIGN_INFO(db->bc.nRxcF);
+	}
 }
 
 static void SHOW_DEVLOG_MODE(struct device *dev)
@@ -283,7 +298,7 @@ static void SHOW_DEVLOG_MODE(struct device *dev)
 	SHOW_CONFIG_MODE(dev);
 	DEV_INFO_TX_ALIGN(dev);
 	DEV_INFO_RX_ALIGN(dev);
-	SHOW_OPTION_MODE(dev);
+	SHOW_ENG_OPTION_MODE(dev);
 }
 
 static void SHOW_PLAT_MODE(struct device *dev)
@@ -308,14 +323,6 @@ void SHOW_MAC(struct board_info *db, u8 *addr)
 	dev_warn(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
 			 addr[0], addr[1], addr[2],
 			 addr[3], addr[4], addr[5]);
-}
-
-static void SHOW_MONITOR_RXC(struct board_info *db)
-{
-	if (dm9051_modedata->align.burst_mode == BURST_MODE_FULL)
-		PRINT_BURST_INFO(db->bc.nRxcF);
-	else if (dm9051_modedata->align.burst_mode == BURST_MODE_ALIGN)
-		PRINT_ALIGN_INFO(db->bc.nRxcF);
 }
 
 static void SHOW_OPEN(struct board_info *db)
@@ -1173,7 +1180,7 @@ static int dm9051_map_chipid(struct board_info *db)
 
 	printk("\n");
 	SHOW_PLAT_MODE(dev);
-	//SHOW_OPTION_MODE(dev);
+	//SHOW_ENG_OPTION_MODE(dev);
 
 	ret = dm9051_get_regs(db, DM9051_VIDL, buff, sizeof(buff));
 	if (ret < 0)
@@ -1656,14 +1663,9 @@ static void monitor_rxb0(struct board_info *db, unsigned int rxbyte)
 	}
 }
 
-static void monitor_rxc(struct board_info *db, int scanrr)
-{
-	if (econf->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
-	{
-		db->bc.nRxcF += scanrr;
-		SHOW_MONITOR_RXC(db);
-	}
-}
+//static void monitor_rxc(struct board_info *db, int scanrr)
+//{
+//}
 
 // check rxbs
 // return: 0 : Still not trap
@@ -1925,7 +1927,7 @@ int dm9051_loop_rx(struct board_info *db)
 		db->ndev->stats.rx_packets++;
 		scanrr++;
 	} while (!ret);
-	monitor_rxc(db, scanrr);
+	SHOW_MONITOR_RXC(db, scanrr); //monitor_rxc(db, scanrr);
 
 #if 1
 	/* Ending rx-loop

@@ -100,6 +100,7 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
  */
 #ifdef DMPLUG_CONTI
 /* Log definitions */
+#undef dmplug_tx
 #define dmplug_tx "continue"
 void tx_contu_new(struct board_info *db);
 int TX_MOTE2_CONTI_RCR(struct board_info *db);
