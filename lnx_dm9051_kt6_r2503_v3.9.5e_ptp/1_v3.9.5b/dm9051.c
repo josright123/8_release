@@ -92,10 +92,10 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
-#define dmplug_rx_mach "interrupt polarity ctrl mode"
+#define dmplug_rx_mach "interrupt direct edge mode"
 #if defined(INT_CLKOUT)
 #undef dmplug_rx_mach
-#define dmplug_rx_mach "interrupt clkout mode"
+#define dmplug_rx_mach "interrupt periodic clkout mode"
 #endif
 #if !defined(DMPLUG_INT)
 #undef dmplug_rx_mach
@@ -2313,11 +2313,11 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
 		if (!thread_servicep_re_enter)
-			netif_err(db, intr, db->ndev, "_.PLAT.WARN   [%s] this-first-enter %d\n", __func__, thread_servicep_re_enter++);
+			netif_crit(db, intr, db->ndev, "_.PLAT.WARN   [%s] this-first-enter %d\n", __func__, thread_servicep_re_enter++);
 		dm9051_thread_irq(db); //(voidirq, pw) //.(macro)_rx_tx_plat()
 		thread_servicep_done = 1;
 	} else {
-		//.if (thread_servicep_re_enter <= 10)
+		//.if (thread_servicep_re_enter <= 9)
 		netif_err(db, intr, db->ndev, "_.PLAT.WARN   [%s] re-enter %d\n", __func__, thread_servicep_re_enter++);
 	}
 	return IRQ_HANDLED;

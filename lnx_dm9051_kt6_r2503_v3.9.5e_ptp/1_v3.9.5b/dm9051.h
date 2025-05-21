@@ -71,7 +71,7 @@
   #define INT_CLKOUT //(INT39_CLKOUT)
   #endif
 
-  //#define PLUG_INT_2STEP
+  #define PLUG_INT_2STEP
   #ifdef PLUG_INT_2STEP
   #define INT_TWO_STEP //(INT39_TWO_STEP)
   #endif
