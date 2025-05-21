@@ -516,10 +516,6 @@ int get_dts_irqf(struct board_info *db);
 //void dm9051_dump_reg3(struct board_info *db, unsigned int reg1, unsigned int reg2, unsigned int reg3);
 //void dm9051_dump_registers(struct board_info *db);
 
-void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len);
-//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
-void dm9051_headlog_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
-
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb);
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
 int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,

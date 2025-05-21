@@ -118,4 +118,23 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeou
 int bus_setup(struct board_info *db);
 void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #endif
+
+//[log]
+void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db);
+void SHOW_LOG_REFER_BEGIN(struct board_info *db);
+void SHOW_DEVLOG_MODE(struct device *dev);
+void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db);
+
+void SHOW_PLAT_MODE(struct device *dev);
+int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid);
+void SHOW_MAC(struct board_info *db, u8 *addr);
+void SHOW_OPEN(struct board_info *db);
+void SHOW_MONITOR_RXC(struct board_info *db, int scanrr);
+
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+void dm9051_headlog_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
+int dm9051_phyread_headlog(char *head, struct board_info *db, unsigned int reg);
+void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len);
+void monitor_rxb0(struct board_info *db, unsigned int rxbyte);
+
 #endif //_DM9051_PLUG_H_
