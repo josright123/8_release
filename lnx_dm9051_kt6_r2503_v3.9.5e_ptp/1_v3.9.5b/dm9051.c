@@ -32,30 +32,6 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #define STICK_SKB_CHG_NOTE
 #define DM9051_INTR_BACKCODE
 
-/* re-direct conti */
-#ifdef DMPLUG_CONTI
-#undef TX_CONTI_NEW
-#define TX_CONTI_NEW(d) tx_contu_new(d)
-#endif
-
-/* re-direct ptpc */
-#ifdef DMPLUG_PTP
-#undef PTP_NEW
-#define PTP_NEW(d, n) ptp_new(d, n)
-#undef PTP_INIT_RCR
-#define PTP_INIT_RCR(d) ptp_init_rcr(d)
-#undef PTP_INIT
-#define PTP_INIT(d) ptp_init(d)
-#undef PTP_END
-#define PTP_END(d) ptp_end(d)
-#endif
-
-/* re-direct bmsr_wr */
-#ifdef DMCONF_BMCR_WR
-#undef PHY_READ
-#define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
-#endif
-
 /*
  * Info: 
  */

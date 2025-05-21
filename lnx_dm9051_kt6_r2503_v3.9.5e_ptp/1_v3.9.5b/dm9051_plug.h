@@ -138,4 +138,30 @@ int dm9051_phyread_headlog(char *head, struct board_info *db, unsigned int reg);
 void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len);
 void monitor_rxb0(struct board_info *db, unsigned int rxbyte);
 
+/* re-direct bmsr_wr */
+#define CO //(Coerce)
+
+#if defined(CO) && defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
+#undef PHY_READ
+#define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
+#endif
+
+/* re-direct conti */
+#if defined(CO) && defined(DMPLUG_CONTI) && defined(MAIN_DATA)
+#undef TX_CONTI_NEW
+#define TX_CONTI_NEW(d) tx_contu_new(d)
+#endif
+
+/* re-direct ptpc */
+#if defined(CO) && defined(DMPLUG_PTP) && defined(MAIN_DATA)
+#undef PTP_NEW
+#define PTP_NEW(d, n) ptp_new(d, n)
+#undef PTP_INIT_RCR
+#define PTP_INIT_RCR(d) ptp_init_rcr(d)
+#undef PTP_INIT
+#define PTP_INIT(d) ptp_init(d)
+#undef PTP_END
+#define PTP_END(d) ptp_end(d)
+#endif
+
 #endif //_DM9051_PLUG_H_

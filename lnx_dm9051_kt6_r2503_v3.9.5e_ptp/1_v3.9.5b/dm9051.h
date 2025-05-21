@@ -18,8 +18,8 @@
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
 /*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
 
-#if defined(MAIN_DATA)
-#if defined(__x86_64__) || defined(__aarch64__)
+//#if defined(_MAIN_DATA)
+#if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
 #ifdef CONFIG_64BIT // 64-bit specific code
 #pragma message("dm9051 @ __aarch64__")
 #warning "dm9051 @ CONFIG_64BIT" //#pragma message("dm9051 @ CONFIG_64BIT")
@@ -27,7 +27,7 @@
 #warning "dm9051 @ __aarch64__" //#pragma message("dm9051 @ __aarch64__")
 #warning "dm9051 but is @ CONFIG_32BIT"
 #endif
-#else //__aarch64__
+#elif (!defined(__x86_64__) && !defined(__aarch64__)) && defined(MAIN_DATA)
 #ifdef CONFIG_64BIT // 64-bit specific code
 #warning "dm9051 @ __aarch32__" //#pragma message("dm9051 @ __aarch32__")
 #warning "dm9051 but is @ CONFIG_64BIT"
@@ -35,8 +35,8 @@
 #pragma message("dm9051 @ __aarch32__")
 #warning "dm9051 @ CONFIG_32BIT" //#pragma message("dm9051 @ CONFIG_32BIT")
 #endif
-#endif //__aarch64__
-#endif //MAIN_DATA
+#endif //__x86_64__ || __aarch64__
+//#endif //_MAIN_DATA
 
 /* Macro for already known platforms
  */
@@ -315,8 +315,9 @@ enum dm_req_support {
 //#define VOID_REQUEST_FUNCTION		-9
 
 /* Optional functions and dadicated function */
-#ifdef MAIN_DATA
-
+#define FA //(fake)
+#if defined(FA) && defined(MAIN_DATA)
+//#ifdef _MAIN_DATA
 /* raw fake encrypt */
 #define BUS_SETUP(db)	0		//empty(NoError)
 #define BUS_OPS(db, buff, crlen)	//empty
@@ -340,7 +341,8 @@ enum dm_req_support {
 
 /* raw(fake) bmsr_wr */
 #define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
-#endif //MAIN_DATA
+//#endif //_MAIN_DATA
+#endif
 
 //#define REQUEST_SUPPORTTED		1 //REQUEST_SUPPORTTED (1)
 
@@ -545,9 +547,9 @@ int dm9051_loop_rx(struct board_info *db); //static int _dm9051_delayp_looping_r
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 
-#ifdef MAIN_DATA
 /* MAIN Data: 
  */
+#ifdef MAIN_DATA
 const struct driver_config confdata = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
 };
