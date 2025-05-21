@@ -446,7 +446,9 @@ struct board_info
 	#ifdef INT_TWO_STEP
 	struct delayed_work irq_servicep;
 	#endif
-	#else
+	#endif
+
+	#ifndef DMPLUG_INT
 	struct delayed_work irq_workp;
 	#endif
 
@@ -538,7 +540,7 @@ int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 /* operation functions */
 //static int _dm9051_delayp_looping_rx_tx(struct board_info *db);
-void dm9051_rx_int2_plat(int voidirq, void *pw);
+void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 
 #ifdef MAIN_DATA
 /* MAIN Data: 

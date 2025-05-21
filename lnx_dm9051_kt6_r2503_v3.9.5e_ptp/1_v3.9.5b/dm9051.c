@@ -30,6 +30,7 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 /* Tx 'wb' do skb protect */
 #define DM9051_SKB_PROTECT
 #define STICK_SKB_CHG_NOTE
+#define DM9051_INTR_BACKCODE
 
 /* Helper macros */
 #define SCAN_BL(dw) (dw & GENMASK(7, 0))
@@ -1849,7 +1850,7 @@ static int dm9051_loop_tx(struct board_info *db);
  * return value,
  *  > 0 - read packet number, caller can repeat the rx operation
  *    0 - no error, caller need stop further rx operation
- *  -EBUSY - read data error, caller escape from rx operation
+ *  -EBUSY - read data invalide(NOT an error), caller escape from rx operation
  */
 static int dm9051_loop_rx(struct board_info *db)
 {
@@ -2200,7 +2201,11 @@ static void dm9051_tx_delay(struct work_struct *work)
 	mutex_unlock(&db->spi_lockm);
 }
 
-/* Common: looping rx and tx */
+/* (looping rx and tx) send packets and read packets from the fifo memory
+ * return value,
+ *    0 - no error, caller need stop further rx operation
+ *  -EBUSY - read data invalide(NOT an error), caller escape from rx operation
+ */
 static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 {
 	/*
@@ -2228,9 +2233,10 @@ static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 //static void dm9051_rx_xplat_loop(struct board_info *db)
 //{
 //	int ret;
-//	ret = dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
-//	if (ret < 0)
-//		return;
+//	dm9051_delayp_looping_rx_tx(db); //.looping_rx_tx()
+//.	ret =
+//.	if (ret < 0)
+//.		return;
 //	dm9051_enable_interrupt(db); //"dm9051_rx_xplat_enable(struct board_info *db)"
 //}
 
@@ -2249,7 +2255,7 @@ static int dm9051_delayp_looping_rx_tx(struct board_info *db) //.looping_rx_tx()
 /* Interrupt: Interrupt work */
 /* dm9051 rx_threaded irq */
 
-void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat() //dm9051_rx_threaded_irq()
+void dm9051_thread_irq(void *pw) //.(macro)_rx_tx_plat() //dm9051_rx_threaded_irq()
 {
 	struct board_info *db = pw;
 	int result;
@@ -2265,10 +2271,11 @@ void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat() //dm9051
 	if (result)
 		goto out_unlock;
 
+	/* return value from _dm9051_delayp_looping_rx_tx(),
+	 *    0 - no error, caller need stop further rx operation
+	 *  -EBUSY - read data invalide(NOT an error), caller escape from rx operation
+	 */
 	dm9051_delayp_looping_rx_tx(db);
-	//result = 
-	//if (result < 0)
-	//	goto out_unlock;
 
 	dm9051_enable_interrupt(db);
 
@@ -2276,13 +2283,14 @@ void dm9051_rx_int2_plat(int voidirq, void *pw) //.(macro)_rx_tx_plat() //dm9051
 	 */
 out_unlock:
 	mutex_unlock(&db->spi_lockm);
+	//_thread_servicep_done = 1;
 	//return IRQ_HANDLED;
 }
 
 /* threaded_irq */
 
 int thread_servicep_done = 1;
-int thread_servicep_re_enter;
+int thread_servicep_re_enter = 0;
 
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 {
@@ -2290,38 +2298,15 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
-
-		dm9051_rx_int2_plat(voidirq, pw); //.(macro)_rx_tx_plat()
-		thread_servicep_done = 1;
 		if (!thread_servicep_re_enter)
-			netif_err(db, intr, db->ndev, "_.int   [dm9051_rx_threaded] this-first-enter %d\n", thread_servicep_re_enter++);
+			netif_err(db, intr, db->ndev, "_.PLAT.WARN   [%s] this-first-enter %d\n", __func__, thread_servicep_re_enter++);
+		dm9051_thread_irq(db); //(voidirq, pw) //.(macro)_rx_tx_plat()
+		thread_servicep_done = 1;
 	} else {
-		netif_err(db, intr, db->ndev, "_.int   [dm9051_rx_threaded] re-enter %d\n", thread_servicep_re_enter++);
+		//.if (thread_servicep_re_enter <= 10)
+		netif_err(db, intr, db->ndev, "_.PLAT.WARN   [%s] re-enter %d\n", __func__, thread_servicep_re_enter++);
 	}
 	return IRQ_HANDLED;
-}
-#endif
-
-#if defined(DMPLUG_INT)
-/*
- * Interrupt: 
- */
-//int OPEN_REQUEST_IRQ(struct net_device *ndev)
-//{
-//	struct board_info *db = to_dm9051_board(ndev);
-//	return ret;
-//}
-
-void STOP_FREE_IRQ(struct net_device *ndev)
-{
-	struct board_info *db = to_dm9051_board(ndev);
-
-	#ifdef INT_TWO_STEP
-	cancel_delayed_work_sync(&db->irq_servicep);
-	#endif //_INT_TWO_STEP
-
-	free_irq(db->spidev->irq, db);
-	netif_err(db, intr, ndev, "_[stop] remove: free irq %d\n", db->spidev->irq);
 }
 #endif
 
@@ -2396,27 +2381,55 @@ static int dm9051_all_stop_mlock(struct board_info *db)
 	return ret;
 }
 
-static int dm9051_threaded_irq(struct board_info *db, irq_handler_t handler)
+#if defined(DMPLUG_INT)
+/*
+ * Interrupt: 
+ */
+static int dm9051_req_irq(struct board_info *db, irq_handler_t handler)
 {
 	struct spi_device *spi = db->spidev;
 	int ret;
 
-	if (dm9051_poll_supp())
-		return dm9051_poll_sch(db);
-
-	if (dm9051_int2_supp())
-		return dm9051_int2_irq(db, dm9051_rx_int2_delay);
-
-	/* interrupt work */
-	//return OPEN_REQUEST_IRQ(db->ndev);=
 	netif_crit(db, intr, db->ndev, "request_irq(INT_THREAD)\n");
-	ret = request_threaded_irq(spi->irq, NULL, handler,
+	thread_servicep_re_enter = 0; //used in 'dm9051_rx_threaded_plat'
+	ret = request_threaded_irq(spi->irq, NULL, handler, //'dm9051_rx_threaded_plat'
 							   get_dts_irqf(db) | IRQF_ONESHOT,
 							   db->ndev->name, db);
 	if (ret < 0)
 		netif_err(db, intr, db->ndev, "failed to rx request threaded irq setup\n");
 	return ret;
 }
+#endif
+
+static int dm9051_threaded_irq(struct board_info *db, irq_handler_t handler)
+{
+#ifndef DMPLUG_INT
+	if (dm9051_poll_supp())
+		return dm9051_poll_sch(db);
+	return 0;
+#endif
+
+#if defined(DMPLUG_INT)
+	if (dm9051_int2_supp())
+		return dm9051_int2_irq(db, dm9051_rx_int2_delay);
+
+	return dm9051_req_irq(db, handler);
+#endif
+}
+
+#if defined(DMPLUG_INT)
+static void dm9051_thread_irq_free(struct net_device *ndev)
+{
+	struct board_info *db = to_dm9051_board(ndev);
+
+	#ifdef INT_TWO_STEP
+	cancel_delayed_work_sync(&db->irq_servicep);
+	#endif //_INT_TWO_STEP
+
+	free_irq(db->spidev->irq, db);
+	netif_err(db, intr, ndev, "_[stop] remove: free irq %d\n", db->spidev->irq);
+}
+#endif
 
 static void dm9051_free_irqworks(struct board_info *db)
 {
@@ -2425,7 +2438,7 @@ static void dm9051_free_irqworks(struct board_info *db)
 	/*
 	 * Interrupt: 
 	 */
-	STOP_FREE_IRQ(db->ndev);
+	dm9051_thread_irq_free(db->ndev);
 	#else
 	/*
 	 * Polling: 
