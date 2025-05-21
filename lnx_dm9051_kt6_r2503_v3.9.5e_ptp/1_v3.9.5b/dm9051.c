@@ -153,16 +153,13 @@ int get_dts_irqf(struct board_info *db)
 static void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db)
 {
 	printk("\n");
-#if 1	//[Test]
 	dev_info(dev, "dev_info Version\n");
 	dev_notice(dev, "dev_notice Version\n");
-	//dev_alert(dev, "dev_alert Version\n"); //(available)
-	//dev_emerg(dev, "dev_emerg Version\n");
 	dev_warn(dev, "dev_warn Version\n");
 	dev_crit(dev, "dev_crit Version\n");
 	dev_err(dev, "dev_err Version\n");
 	printk("\n");
-#endif
+
 	/* conti */
 	TX_CONTI_NEW(db);
 	/* 2.0 ptpc */
@@ -174,20 +171,56 @@ static void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db)
 
 static void SHOW_LOG_REFER_BEGIN(struct board_info *db)
 {
-#if 1
-	/* [.] netif_msg_drv
-	 */
 	printk("\n");
 	netif_info(db, probe, db->ndev, "netif_info Version\n");
 	netif_notice(db, probe, db->ndev, "netif_notice Version\n");
-	//netif_alert(db, probe, db->ndev, "netif_alert Version\n"); //(available)
-	//netif_emerg(db, probe, db->ndev, "netif_emerg Version\n");
 	netif_warn(db, probe, db->ndev, "netif_warn Version\n");
 	netif_crit(db, probe, db->ndev, "netif_crit Version\n");
 	netif_err(db, probe, db->ndev, "netif_err Version\n");
 //	netif_dbg(db, probe, ndev, "netif_dbg Version\n");
 //	netdev_dbg(ndev, "netdev_dbg Version\n");
-#endif
+}
+
+static void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
+{
+	if (dev)
+		dev_info(dev, "%s\n", str);
+	else if (db)
+		netif_info(db, drv, db->ndev, "%s\n", str);
+}
+
+static void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
+{
+	#if defined(DMPLUG_INT) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "dm9051 INT"); //netif_info(db, drv, db->ndev, "dm9051 INT"); //#pragma message("dm9051 INT")
+	#endif
+	#if !defined(DMPLUG_INT) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "dm9051 POL"); //netif_info(db, drv, db->ndev, "dm9051 POL"); //#pragma message("dm9051 POL")
+	#endif
+	#if defined(INT_CLKOUT) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "INT: INT_CLKOUT"); //netif_info(db, drv, db->ndev, "INT: INT_CLKOUT"); //#warning "INT: INT_CLKOUT"
+	#endif
+	#if defined(INT_TWO_STEP) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "INT: TWO_STEP"); //netif_info(db, drv, db->ndev, "INT: TWO_STEP"); //#warning "INT: TWO_STEP"
+	#endif
+	
+	#if defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "WORKROUND: BMCR_WR"); //netif_info(db, drv, db->ndev, "WORKROUND: BMCR_WR"); //#pragma message("WORKROUND: BMCR_WR")
+	#endif
+	#if defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "WORKROUND: MRR_WR"); //netif_info(db, drv, db->ndev, "WORKROUND: MRR_WR"); //#pragma message("WORKROUND: MRR_WR")
+	#endif
+	
+	#if defined(DMPLUG_CONTI) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "dm9051 CONTI"); //netif_info(db, drv, db->ndev, "dm9051 CONTI"); //#pragma message("dm9051 CONTI")
+	#endif
+
+	#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "dm9051 PTP"); //netif_info(db, drv, db->ndev, "dm9051 PTP"); //#pragma message("dm9051 PTP")
+	#endif
+	#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "dm9051 PPS"); //netif_info(db, drv, db->ndev, "dm9051 PPS"); //#warning "dm9051 PPS"
+	#endif
 }
 
 void SHOW_DRIVER(struct device *dev)
@@ -223,17 +256,17 @@ void SHOW_DTS_SPEED(struct device *dev)
 	dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
 }
 
-void SHOW_RX_MATCH_MODE(struct device *dev)
-{
-	dev_info(dev, "Davicom: %s", dmplug_rx_mach);
-}
+//void SHOW_RX_MATCH_MODE(struct device *dev)
+//{
+//	dev_info(dev, "Davicom: %s", dmplug_rx_mach);
+//}
 
-void SHOW_RX_INT_MODE(struct device *dev)
-{
-	#if defined(DMPLUG_INT)
-	dev_info(dev, "Davicom: %s", dmplug_intterrpt2);
-	#endif
-}
+//void SHOW_RX_INT_MODE(struct device *dev)
+//{
+//	#if defined(DMPLUG_INT)
+//	dev_info(dev, "Davicom: %s", dmplug_intterrpt2);
+//	#endif
+//}
 
 void SHOW_DTS_INT(struct device *dev)
 {
@@ -279,8 +312,9 @@ static void SHOW_DEVLOG_MODE(struct device *dev)
 	SHOW_DRIVER(dev);
 
 	SHOW_DTS_SPEED(dev);
-	SHOW_RX_MATCH_MODE(dev);
-	SHOW_RX_INT_MODE(dev);
+	SHOW_ALL_USER_CONFIG(dev, db);
+//	SHOW_RX_MATCH_MODE(dev);
+//	SHOW_RX_INT_MODE(dev);
 	SHOW_DTS_INT(dev);
 
 	SHOW_CONFIG_MODE(dev);
@@ -331,10 +365,11 @@ static void SHOW_OPEN(struct board_info *db)
 {
 	printk("\n");
 	netif_info(db, drv, db->ndev, "dm9051_open\n");
-	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_rx_mach);
-	#if defined(DMPLUG_INT)
-	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_intterrpt2);
-	#endif
+	SHOW_ALL_USER_CONFIG(NULL, db);
+//	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_rx_mach);
+//	#if defined(DMPLUG_INT)
+//	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_intterrpt2);
+//	#endif
 	/* amdix_log_reset(db); */ //(to be determined)
 }
 
@@ -1438,36 +1473,7 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
 	data[8] = val;
 
-	#if defined(DMPLUG_INT) && defined(MAIN_DATA)
-	netif_info(db, drv, db->ndev, "dm9051 INT"); //#pragma message("dm9051 INT")
-	#endif
-	#if !defined(DMPLUG_INT) && defined(MAIN_DATA)
-	netif_info(db, drv, db->ndev, "dm9051 POL"); //#pragma message("dm9051 POL")
-	#endif
-	#if defined(INT_CLKOUT) && defined(MAIN_DATA)
-	netif_info(db, drv, db->ndev, "INT: INT_CLKOUT"); //#warning "INT: INT_CLKOUT"
-	#endif
-	#if defined(INT_TWO_STEP) && defined(MAIN_DATA)
-	netif_info(db, drv, db->ndev, "INT: TWO_STEP"); //#warning "INT: TWO_STEP"
-	#endif
-	
-	#if defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
-	netif_info(db, drv, db->ndev, "WORKROUND: BMCR_WR"); //#pragma message("WORKROUND: BMCR_WR")
-	#endif
-	#if defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
-	netif_info(db, drv, db->ndev, "WORKROUND: MRR_WR"); //#pragma message("WORKROUND: MRR_WR")
-	#endif
-	
-	#if defined(DMPLUG_CONTI) && defined(MAIN_DATA)
-	netif_info(db, drv, db->ndev, "dm9051 CONTI"); //#pragma message("dm9051 CONTI")
-	#endif
-
-	#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
-	netif_info(db, drv, db->ndev, "dm9051 PTP"); //#pragma message("dm9051 PTP")
-	#endif
-	#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
-	netif_info(db, drv, db->ndev, "dm9051 PPS"); //#warning "dm9051 PPS"
-	#endif
+	SHOW_ALL_USER_CONFIG(NULL, db);
 
 #if MI_FIX //ee write
 	mutex_unlock(&db->spi_lockm);
