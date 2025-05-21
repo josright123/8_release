@@ -92,21 +92,21 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
-#define dmplug_rx_mach "interrupt direct edge mode"
-#if defined(INT_CLKOUT)
-#undef dmplug_rx_mach
-#define dmplug_rx_mach "interrupt periodic clkout mode"
-#endif
-#if !defined(DMPLUG_INT)
-#undef dmplug_rx_mach
-#define dmplug_rx_mach "poll mode"
-#endif
+//#define dmplug_rx_mach "interrupt direct edge mode"
+//#if defined(INT_CLKOUT)
+//#undef dmplug_rx_mach
+//#define dmplug_rx_mach "interrupt periodic clkout mode"
+//#endif
+//#if !defined(DMPLUG_INT)
+//#undef dmplug_rx_mach
+//#define dmplug_rx_mach "poll mode"
+//#endif
 
-#define dmplug_intterrpt2 "interrupt direct step"
-#if defined(INT_TWO_STEP)
-#undef dmplug_intterrpt2
-#define dmplug_intterrpt2 "interrupt two step"
-#endif 
+//#define dmplug_intterrpt2 "interrupt direct step"
+//#if defined(INT_TWO_STEP)
+//#undef dmplug_intterrpt2
+//#define dmplug_intterrpt2 "interrupt two step"
+//#endif 
 
 //#if defined(DMPLUG_INT)
 //  #if !defined(INT_CLKOUT)
@@ -123,6 +123,17 @@ int get_dts_irqf(struct board_info *db)
 //#else
 //#define dmplug_rx_mach "poll mode"
 //#endif
+
+//void SHOW_RX_MATCH_MODE(struct device *dev)
+//{
+//	dev_info(dev, "Davicom: %s", dmplug_rx_mach);
+//}
+//void SHOW_RX_INT_MODE(struct device *dev)
+//{
+//	#if defined(DMPLUG_INT)
+//	dev_info(dev, "Davicom: %s", dmplug_intterrpt2);
+//	#endif
+//}
 
 /* log */
 #define DEV_INFO_RX_ALIGN(dev) \
@@ -184,7 +195,7 @@ static void SHOW_LOG_REFER_BEGIN(struct board_info *db)
 static void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
 {
 	if (dev)
-		dev_info(dev, "%s\n", str);
+		dev_warn(dev, "%s\n", str);
 	else if (db)
 		netif_info(db, drv, db->ndev, "%s\n", str);
 }
@@ -256,18 +267,6 @@ void SHOW_DTS_SPEED(struct device *dev)
 	dev_info(dev, "SPI speed from DTS: %d Hz\n", speed);
 }
 
-//void SHOW_RX_MATCH_MODE(struct device *dev)
-//{
-//	dev_info(dev, "Davicom: %s", dmplug_rx_mach);
-//}
-
-//void SHOW_RX_INT_MODE(struct device *dev)
-//{
-//	#if defined(DMPLUG_INT)
-//	dev_info(dev, "Davicom: %s", dmplug_intterrpt2);
-//	#endif
-//}
-
 void SHOW_DTS_INT(struct device *dev)
 {
 	#if defined(DMPLUG_INT)
@@ -307,12 +306,19 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 #endif
 }
 
+static void SHOW_OPTION_MODE(struct device *dev)
+{
+	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", econf->tx_timeout_us, dmplug_tx,
+			econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
+			econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
+}
+
 static void SHOW_DEVLOG_MODE(struct device *dev)
 {
 	SHOW_DRIVER(dev);
 
 	SHOW_DTS_SPEED(dev);
-	SHOW_ALL_USER_CONFIG(dev, db);
+	//SHOW_ALL_USER_CONFIG(dev, NULL);
 //	SHOW_RX_MATCH_MODE(dev);
 //	SHOW_RX_INT_MODE(dev);
 	SHOW_DTS_INT(dev);
@@ -320,6 +326,7 @@ static void SHOW_DEVLOG_MODE(struct device *dev)
 	SHOW_CONFIG_MODE(dev);
 	DEV_INFO_TX_ALIGN(dev);
 	DEV_INFO_RX_ALIGN(dev);
+	SHOW_OPTION_MODE(dev);
 }
 
 static void SHOW_PLAT_MODE(struct device *dev)
@@ -337,13 +344,6 @@ int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
 
 	dev_warn(dev, "chip %04x found\n", wid);
 	return 0;
-}
-
-static void SHOW_OPTION_MODE(struct device *dev)
-{
-	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", econf->tx_timeout_us, dmplug_tx,
-			econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
-			econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
 }
 
 void SHOW_MAC(struct board_info *db, u8 *addr)
@@ -364,7 +364,7 @@ static void SHOW_MONITOR_RXC(struct board_info *db)
 static void SHOW_OPEN(struct board_info *db)
 {
 	printk("\n");
-	netif_info(db, drv, db->ndev, "dm9051_open\n");
+	netif_warn(db, drv, db->ndev, "dm9051_open\n");
 	SHOW_ALL_USER_CONFIG(NULL, db);
 //	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_rx_mach);
 //	#if defined(DMPLUG_INT)
@@ -1239,7 +1239,7 @@ static int dm9051_map_chipid(struct board_info *db)
 
 	printk("\n");
 	SHOW_PLAT_MODE(dev);
-	SHOW_OPTION_MODE(dev);
+	//SHOW_OPTION_MODE(dev);
 
 	ret = dm9051_get_regs(db, DM9051_VIDL, buff, sizeof(buff));
 	if (ret < 0)
