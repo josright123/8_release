@@ -20,33 +20,23 @@
 
 #if defined(MAIN_DATA)
 #if defined(__x86_64__) || defined(__aarch64__)
-// 64-bit code
-#ifdef CONFIG_64BIT
-// 64-bit specific code
+#ifdef CONFIG_64BIT // 64-bit specific code
 #pragma message("dm9051 @ __aarch64__")
-//#pragma message("dm9051 @ CONFIG_64BIT")
-#warning "dm9051 @ CONFIG_64BIT"
-#else
-// 32-bit specific code
-//#pragma message("dm9051 @ __aarch64__")
-#warning "dm9051 @ __aarch64__"
+#warning "dm9051 @ CONFIG_64BIT" //#pragma message("dm9051 @ CONFIG_64BIT")
+#else // 32-bit specific code
+#warning "dm9051 @ __aarch64__" //#pragma message("dm9051 @ __aarch64__")
 #warning "dm9051 but is @ CONFIG_32BIT"
 #endif
-#else
-// 32-bit code
-#ifdef CONFIG_64BIT
-// 64-bit specific code
-//#pragma message("dm9051 @ __aarch32__")
-#warning "dm9051 @ __aarch32__"
+#else //__aarch64__
+#ifdef CONFIG_64BIT // 64-bit specific code
+#warning "dm9051 @ __aarch32__" //#pragma message("dm9051 @ __aarch32__")
 #warning "dm9051 but is @ CONFIG_64BIT"
-#else
-// 32-bit specific code
+#else // 32-bit specific code
 #pragma message("dm9051 @ __aarch32__")
-//#pragma message("dm9051 @ CONFIG_32BIT")
-#warning "dm9051 @ CONFIG_32BIT"
+#warning "dm9051 @ CONFIG_32BIT" //#pragma message("dm9051 @ CONFIG_32BIT")
 #endif
-#endif
-#endif
+#endif //__aarch64__
+#endif //MAIN_DATA
 
 /* Macro for already known platforms
  */
@@ -77,10 +67,6 @@
   #endif
 #endif
 
-// #if defined(def) && defined(MAIN_DATA)
-// #pragma message(s)
-// #warning s
-// #endif
 #if defined(DMPLUG_INT) && defined(MAIN_DATA)
 #pragma message("dm9051 INT")
 #endif
@@ -269,6 +255,9 @@
 #define DM9051_TX_QUE_LO_WATER	25
 #define DM_EEPROM_MAGIC		0x9051
 
+/* Helper macros */
+#define SCAN_BL(dw)		(dw & GENMASK(7, 0))
+#define SCAN_BH(dw)		((dw & GENMASK(15, 8)) >> 8)
 #define	DM_RXHDR_SIZE		sizeof(struct dm9051_rxhdr)
 
 /* Kernel version definitions */
@@ -327,12 +316,31 @@ enum dm_req_support {
 
 /* Optional functions and dadicated function */
 #ifdef MAIN_DATA
+
+/* raw fake encrypt */
+#define BUS_SETUP(db)	0		//empty(NoError)
+#define BUS_OPS(db, buff, crlen)	//empty
+
+/* fake raw tx mode */
+#define dmplug_tx "normal"
+#define TX_CONTI_NEW(d)
+
+/* fake ptpc */
+#define PTP_NEW(d, n)
+#define PTP_INIT_RCR(d)
+#define PTP_INIT(d)
+#define PTP_END(d)
+
+/* poll fake */
 #define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
 #define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
 
 #define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
 #define dm9051_int2_irq(d,h)		VOID_REQUEST_FUNCTION
-#endif
+
+/* raw(fake) bmsr_wr */
+#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
+#endif //MAIN_DATA
 
 //#define REQUEST_SUPPORTTED		1 //REQUEST_SUPPORTTED (1)
 

@@ -82,7 +82,8 @@ int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
 #define dm9051_poll_supp() REQUEST_SUPPORTTED
 #define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
 
-void dm9051_poll_servicep(struct work_struct *work);
+void dm9051_threaded_poll(struct work_struct *work); //dm9051_poll_servicep()
+
 void PROBE_POLL_SETUP(struct board_info *db);
 void OPEN_POLL_SCHED(struct board_info *db);
 int DM9051_POLL_SCHED(struct board_info *db);

@@ -48,7 +48,7 @@ struct eng_sched sched = {
 #define DM_TIMER_EXPIRE2 0
 #define DM_TIMER_EXPIRE3 0
 
-void dm9051_poll_servicep(struct work_struct *work) //.dm9051_poll_delay_xplat()
+void dm9051_threaded_poll(struct work_struct *work) //.dm9051_poll_servicep()
 {
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
@@ -72,7 +72,7 @@ void PROBE_POLL_SETUP(struct board_info *db)
 {
 	/* schedule delay work */
 	db->bc.ndelayF = POLL_OPERATE_INIT;
-	INIT_DELAYED_WORK(&db->irq_workp, dm9051_poll_servicep); //.dm9051_poll_delay_xplat()
+	INIT_DELAYED_WORK(&db->irq_workp, dm9051_threaded_poll); //.dm9051_poll_servicep()
 }
 
 void OPEN_POLL_SCHED(struct board_info *db)

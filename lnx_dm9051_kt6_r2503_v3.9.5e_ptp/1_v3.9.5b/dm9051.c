@@ -32,29 +32,11 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #define STICK_SKB_CHG_NOTE
 #define DM9051_INTR_BACKCODE
 
-/* Helper macros */
-#define SCAN_BL(dw) (dw & GENMASK(7, 0))
-#define SCAN_BH(dw) ((dw & GENMASK(15, 8)) >> 8)
-
-/* raw fake encrypt */
-#define BUS_SETUP(db)	0		//empty(NoError)
-#define BUS_OPS(db, buff, crlen)	//empty
-
-/* fake normal tx mode */
-#define dmplug_tx "normal"
-#define TX_CONTI_NEW(d)
-
 /* re-direct conti */
 #ifdef DMPLUG_CONTI
 #undef TX_CONTI_NEW
 #define TX_CONTI_NEW(d) tx_contu_new(d)
 #endif
-
-/* fake ptpc */
-#define PTP_NEW(d, n)
-#define PTP_INIT_RCR(d)
-#define PTP_INIT(d)
-#define PTP_END(d)
 
 /* re-direct ptpc */
 #ifdef DMPLUG_PTP
@@ -67,9 +49,6 @@ const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configu
 #undef PTP_END
 #define PTP_END(d) ptp_end(d)
 #endif
-
-/* raw(fake) bmsr_wr */
-#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
 
 /* re-direct bmsr_wr */
 #ifdef DMCONF_BMCR_WR
