@@ -56,12 +56,12 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 	if (thread_servicep_doneII) {
 		thread_servicep_doneII = 0;
 		if (!thread_servicep_re_enterII)
-			netif_crit(db, intr, db->ndev, "_.INT2.HANDLED   [%s] first-enter %d\n", __func__, thread_servicep_re_enterII++);
+			netif_crit(db, intr, db->ndev, "INT: TWO_STEP   [%s] first-enter %d\n", __func__, thread_servicep_re_enterII++);
 		schedule_delayed_work(&db->irq_servicep, 0); //dm9051_rx_int2-plat(voidirq, pw);
 	}
 	else {
 		if (thread_servicep_re_enterII <= 9)
-			netif_err(db, intr, db->ndev, "_.INT2.HANDLED   [%s] re-enter %d\n", __func__, thread_servicep_re_enterII++);
+			netif_err(db, intr, db->ndev, "INT: TWO_STEP   [%s] re-enter %d\n", __func__, thread_servicep_re_enterII++);
 	}
 	return IRQ_HANDLED;
 }
