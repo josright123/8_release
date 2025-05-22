@@ -44,101 +44,7 @@
 #warning "dm9051 PPS"
 #endif
 
-/*
- * Engineering Verification
- */
-//#ifdef _MAIN_DATA
- //#ifdef DMCONF_AARCH_64
- //#pragma message("dm9051 AARCH_64")
- //#else
- //#pragma message("dm9051 AARCH_32")
- //#endif
-
- //#ifdef DMCONF_DIV_HLPR_32
- //#pragma message("dm9051 DIV_HLPR_32")
- //#endif
-//#endif //_MAIN_DATA
-
-#if defined(DMPLUG_INT)
-#ifdef INT_CLKOUT
-#endif
-
-#ifdef INT_TWO_STEP
-#undef dm9051_int2_supp
-#undef dm9051_int2_irq
-#define dm9051_int2_supp() REQUEST_SUPPORTTED
-#define dm9051_int2_irq(d,h) DM9051_INT2_REQUEST(d,h)
-
-void PROBE_INT2_DLY_SETUP(struct board_info *db);
-void dm9051_rx_irq_servicep(struct work_struct *work);
-irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
-int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
-#endif
-#endif
-
-#ifndef  DMPLUG_INT
-#undef dm9051_poll_supp
-#undef dm9051_poll_sch
-#define dm9051_poll_supp() REQUEST_SUPPORTTED
-#define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
-
-void dm9051_threaded_poll(struct work_struct *work); //dm9051_poll_servicep()
-
-void PROBE_POLL_SETUP(struct board_info *db);
-void OPEN_POLL_SCHED(struct board_info *db);
-int DM9051_POLL_SCHED(struct board_info *db);
-#endif
-
-#ifdef DMCONF_BMCR_WR
-int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val);
-#endif
-
-#ifdef DMCONF_MRR_WR
-#endif
-
-/*
- * Conti: 
- */
-#ifdef DMPLUG_CONTI
-/* Log definitions */
-#undef dmplug_tx
-#define dmplug_tx "continue"
-void tx_contu_new(struct board_info *db);
-int TX_MOTE2_CONTI_RCR(struct board_info *db);
-int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
-#endif
-
-//[overlay]
-#ifdef DMPLUG_CRYPT
-//overlay by plug/
-#undef BUS_SETUP
-#define BUS_SETUP(db) bus_setup(struct board_info *db)
-#undef BUS_OPS
-#define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
-//implement in plug/
-int bus_setup(struct board_info *db);
-void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
-#endif
-
-//[log]
-void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db);
-void SHOW_LOG_REFER_BEGIN(struct board_info *db);
-void SHOW_DEVLOG_MODE(struct device *dev);
-void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db);
-
-void SHOW_PLAT_MODE(struct device *dev);
-int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid);
-void SHOW_MAC(struct board_info *db, u8 *addr);
-void SHOW_OPEN(struct board_info *db);
-void SHOW_MONITOR_RXC(struct board_info *db, int scanrr);
-
-//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
-void dm9051_headlog_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
-int dm9051_phyread_headlog(char *head, struct board_info *db, unsigned int reg);
-void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len);
-void monitor_rxb0(struct board_info *db, unsigned int rxbyte);
-
-/* re-direct bmsr_wr */
+/* CO, re-direct bmsr_wr */
 #define CO //(Coerce)
 #if defined(CO) && defined(DMCONF_BMCR_WR) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
 #undef PHY_READ
@@ -161,6 +67,39 @@ void monitor_rxb0(struct board_info *db, unsigned int rxbyte);
 #define PTP_INIT(d) ptp_init(d)
 #undef PTP_END
 #define PTP_END(d) ptp_end(d)
+#endif
+
+/* re-direct log */
+#if defined(CO) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+#undef SHOW_DEVLOG_REFER_BEGIN
+#undef SHOW_LOG_REFER_BEGIN
+#undef SHOW_DEVLOG_MODE
+#undef SHOW_ALL_USER_CONFIG
+
+#undef SHOW_PLAT_MODE
+#undef SHOW_MAC
+#undef SHOW_OPEN
+#undef SHOW_MONITOR_RXC
+
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+#undef dm9051_headlog_regs
+#undef dm9051_phyread_headlog
+#undef dm9051_dump_data1
+#undef monitor_rxb0
+void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db);
+void SHOW_LOG_REFER_BEGIN(struct board_info *db);
+void SHOW_DEVLOG_MODE(struct device *dev);
+void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db);
+
+void SHOW_PLAT_MODE(struct device *dev);
+void SHOW_OPEN(struct board_info *db);
+void SHOW_MONITOR_RXC(struct board_info *db, int scanrr);
+
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+void dm9051_headlog_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
+int dm9051_phyread_headlog(char *head, struct board_info *db, unsigned int reg);
+void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len);
+void monitor_rxb0(struct board_info *db, unsigned int rxbyte);
 #endif
 
 #endif //_DM9051_PLUG_H_

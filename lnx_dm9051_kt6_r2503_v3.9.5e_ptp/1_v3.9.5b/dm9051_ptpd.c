@@ -23,6 +23,8 @@
 #include "dm9051.h"
 //#include "dm9051_ptpd.h"
 
+#ifdef DMPLUG_PTP
+#endif
 u8 get_ptp_message_type005(struct ptp_header *ptp_hdr);
 
 int is_ptp_sync_packet(u8 msgtype);

@@ -235,18 +235,6 @@ void SHOW_PLAT_MODE(struct device *dev)
 	dev_info(dev, "Davicom: %s", plat_cnf->test_info);
 }
 
-int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
-{
-	if (wid != DM9051_ID)
-	{
-		dev_err(dev, "chipid error as %04x !\n", wid);
-		return -ENODEV;
-	}
-
-	dev_warn(dev, "chip %04x found\n", wid);
-	return 0;
-}
-
 void SHOW_MAC(struct board_info *db, u8 *addr)
 {
 	dev_warn(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
