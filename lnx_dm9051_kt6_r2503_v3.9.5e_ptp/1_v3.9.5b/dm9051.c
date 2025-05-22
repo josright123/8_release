@@ -22,7 +22,9 @@
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
+#include <linux/ptp_classify.h>
 #define MAIN_DATA
+#include "dm9051_ptp1.h"
 #include "dm9051.h"
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
@@ -1423,10 +1425,8 @@ static int rx_head_break(struct board_info *db)
 	/* 7 rxhead ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	static int before_slave_ptp_packets = 5;
-	if (db->ptp_enable) {
-		err_bits &= ~RSR_PTP_BITS; //_15888_ //To allow support "Enable PTP" must disable checksum_offload
-	}
+//	static int before_slave_ptp_packets = 5;
+	err_bits = ptp_status_bits(db);
 	#endif
 	#endif
 
@@ -1470,9 +1470,9 @@ static int rx_head_break(struct board_info *db)
 	/* -rxhead ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	if (before_slave_ptp_packets && (!db->ptp_on) && (db->rxhdr.status & RSR_PTP_BITS)) {
-		netif_warn(db, hw, db->ndev, "%d. On ptp_on is 0, ptp packet received!\n", before_slave_ptp_packets--);
-	}
+//	if (before_slave_ptp_packets && (!db->ptp_on) && (db->rxhdr.status & RSR_PTP_BITS)) {
+//		netif_warn(db, hw, db->ndev, "%d. On ptp_on is 0, ptp packet received!\n", before_slave_ptp_packets--);
+//	}
 	#endif
 	#endif
 	return 0;
@@ -1582,10 +1582,9 @@ int dm9051_loop_rx(struct board_info *db)
 		/* 7.2 ptpc */
 		#if 1 //0
 		#ifdef DMPLUG_PTP
-		if (db->rxhdr.status & RSR_RXTS_EN) {
-			//if T1/T4,
-		}
-
+#if 0 //[wait further test..]
+		if (is_ptp_rxts_enable(db)) //if T1/T4, // Is it inserted Timestamp?
+#endif
 		//So when NOT T1/T4, we can skip tell tstamp (just an empty (virtual) one)
 		//if (db->rxhdr.status & RSR_RXTS_EN) {	// Is it inserted Timestamp?
 			dm9051_ptp_rx_hwtstamp(db, skb, db->rxTSbyte); //_15888_, 
@@ -1593,6 +1592,7 @@ int dm9051_loop_rx(struct board_info *db)
 			 * slave4l can parse the T1 and/or T4 rx tstamp from master
 			 */
 		//}
+
 		#endif
 		#endif
 

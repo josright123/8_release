@@ -18,7 +18,9 @@
 #include <linux/version.h>
 //_15888_
 #include <linux/ptp_clock_kernel.h>
+#include <linux/ptp_classify.h>
 
+#include "dm9051_ptp1.h"
 #include "dm9051.h"
 //#include "dm9051_ptpd.h"
 #define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
@@ -392,7 +394,7 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte)
 	//_15888_
 	//if (db->ptp_on) { //Even NOT ptp_on, need do.
 	if (db->ptp_enable) {
-	if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+	if (is_ptp_rxts_enable(db)) {	// Inserted Timestamp
 		struct net_device *ndev = db->ndev;
 		int ret;
 		//printk("Had RX Timestamp... rxstatus = 0x%x\n", db->rxhdr.status);
@@ -1439,7 +1441,7 @@ int ptp_9051_verify_pin(struct ptp_clock_info *caps, unsigned int pin,
 	return 0;
 }
 
-static void dm9051_ptp_init(struct board_info *db)
+static void dm9051_ptp_register(struct board_info *db)
 {
 	printk("\n");
 	netif_info(db, hw, db->ndev, "DM9051A Driver PTP Init\n");
@@ -1460,7 +1462,7 @@ static void dm9051_ptp_init(struct board_info *db)
 	//db->ptp_flags |= IGB_PTP_ENABLED;	// Spenser - no used
 }
 
-static void dm9051_ptp_stop(struct board_info *db)
+static void dm9051_ptp_unregister(struct board_info *db)
 {
 	/* Disable PTP for if switch to standard version from PLUG_PTP version*/
 	//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x01); //Disable PTP function Register offset 0x60, value 0x01
@@ -1483,16 +1485,27 @@ void ptp_new(struct board_info *db, struct net_device *ndev) {
 void ptp_init_rcr(struct board_info *db) {
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)
 }
+u8 ptp_status_bits(struct board_info *db) {
+	u8 err_bits = RSR_ERR_BITS;
+
+	if (db->ptp_enable) {
+		err_bits &= ~RSR_PTP_BITS; //_15888_ //To allow support "Enable PTP" must disable checksum_offload
+	}
+	return err_bits;
+}
+int is_ptp_rxts_enable(struct board_info *db) {
+	return (db->rxhdr.status & RSR_RXTS_EN) ? 1 : 0; //if T1/T4, // Is it inserted Timestamp?
+}
 
 void ptp_init(struct board_info *db) {
 	/* Turn on by ptp4l run command
 	 * db->ptp_on = 1; */
 	db->ptp_on = 0;
-	dm9051_ptp_init(db); //_15888_
+	dm9051_ptp_register(db); //_15888_
 	dm9051_ptp_core_init(db); //only by _probe [for further functionality test, do eliminate here, put to _open, and further _core_init]
 }
 void ptp_end(struct board_info *db) {
-	dm9051_ptp_stop(db); //_15888_ todo
+	dm9051_ptp_unregister(db); //_15888_ todo
 }
 
 void dm9051_ptp_core_init(struct board_info *db)
