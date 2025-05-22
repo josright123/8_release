@@ -25,7 +25,7 @@
 #define MAIN_DATA
 #include "dm9051.h"
 
-const struct mod_config *dm9051_modedata = &driver_align_mode; /* Driver configuration */
+const struct driver_conf_info *driver_conf = &driver_align_mode; /* Driver configuration */
 
 /* Tx 'wb' do skb protect */
 #define DM9051_SKB_PROTECT
@@ -149,14 +149,14 @@ int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 {
 	int ret;
 
-	if (dm9051_modedata->align.burst_mode)
+	if (driver_conf->align.burst_mode)
 	{ // tx
 		ret = regmap_noinc_write(db->regmap_dm, reg, buff, len);
 	}
 	else
 	{
 		const u8 *p = (const u8 *)buff;
-		u32 BLKTX = dm9051_modedata->align.tx_blk;
+		u32 BLKTX = driver_conf->align.tx_blk;
 		while (len >= BLKTX)
 		{
 			ret = regmap_noinc_write(db->regmap_dm, reg, p, BLKTX);
@@ -214,7 +214,7 @@ int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 {
 	int ret;
 
-	if (dm9051_modedata->align.burst_mode)
+	if (driver_conf->align.burst_mode)
 	{ // rx
 		ret = regmap_noinc_read(db->regmap_dm, reg, buff, len);
 	}
@@ -222,7 +222,7 @@ int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 	{
 		u8 *p = buff;
 		unsigned int rb;
-		u32 BLKRX = dm9051_modedata->align.rx_blk;
+		u32 BLKRX = driver_conf->align.rx_blk;
 		while (len >= BLKRX)
 		{
 			ret = regmap_noinc_read(db->regmap_dm, reg, p, BLKRX);
@@ -636,7 +636,7 @@ static int dm9051_core_init(struct board_info *db)
 	if (ret)
 		return ret;
 
-	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (dm9051_modedata->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
+	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (driver_conf->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
 	if (ret)
 		return ret;
 	// Spenser
@@ -1479,7 +1479,7 @@ int dm9051_loop_rx(struct board_info *db)
 		#endif
 
 		rxlen = le16_to_cpu(db->rxhdr.rxlen);
-		padlen = (dm9051_modedata->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
+		padlen = (driver_conf->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
 		skb = dev_alloc_skb(padlen);
 		if (!skb)
 		{
@@ -1574,7 +1574,7 @@ struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
 {
 //#if !defined(_DMPLUG_CONTI)
 	db->data_len = skb->len;
-	db->pad = (dm9051_modedata->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
+	db->pad = (driver_conf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
 #ifdef DM9051_SKB_PROTECT
 	if (db->pad)
 		skb = EXPAND_SKB(skb, db->pad);
@@ -1608,7 +1608,7 @@ static int TX_SEND(struct board_info *db, struct sk_buff *skb)
 	/*
 	 * #define EXPEND_LEN(datlen,pd) (datlen + pd)
 	 * #define WRITE_SKB(db,p,len) dm9051_write_mem_cache(db,p,len)
-	 * if (!dm9051_modedata->skb_wb_mode) {
+	 * if (!driver_conf->skb_wb_mode) {
 	 *   ret = WRITE_SKB(db, skb, skb->len);
 	 *   ret = dm9051_single_tx(db, skb->len);
 	 * }
@@ -2193,7 +2193,7 @@ static const struct net_device_ops dm9051_netdev_ops = {
 static void CHKSUM_PTP_NDEV(struct board_info *db, struct net_device *ndev)
 {
 	/* Set default features */
-	if (dm9051_modedata->checksuming)
+	if (driver_conf->checksuming)
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 
 	/* 2 ptpc */

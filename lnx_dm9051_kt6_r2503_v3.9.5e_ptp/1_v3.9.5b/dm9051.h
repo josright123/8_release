@@ -285,7 +285,7 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 #define	FORCE_MONITOR_TX_TIMEOUT	1
 
 /* Configuration structures */
-struct eng_config {
+struct plat_config {
         int force_monitor_rxb;
         int force_monitor_rxc;
         int force_monitor_tx_timeout;
@@ -548,22 +548,18 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 /* MAIN Data: 
  */
 #ifdef MAIN_DATA
-const struct eng_config engdata = {
+const struct plat_config platform_conf = {
 	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
 	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
 	.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
-//	.sched = {
-//		.delayF = {0, 1, 0, 0, 1}, 
-//		.nTargetMaxNum = POLL_OPERATE_NUM},
-//;const struct eng_sched csched = engdata.sched;
-	.tx_timeout_us = 210000, //2100,
+	.tx_timeout_us = 210000,
 };
 
-const struct eng_config *econf = &engdata;
+const struct plat_config *econf = &platform_conf;
 
 /* Driver configuration structure
  */
-struct mod_config {
+struct driver_conf_info {
 	char *test_info;
 	int skb_wb_mode;
 	int checksuming;
@@ -598,7 +594,7 @@ enum {
 	BURST_MODE_FULL = 1,
 };
 
-const struct mod_config driver_align_mode = {
+const struct driver_conf_info driver_align_mode = {
 	.test_info = "Test in rpi5 bcm2712",
 	.skb_wb_mode = SKB_WB_ON, //SKB_WB_OFF, //SKB_WB_ON,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
@@ -608,7 +604,7 @@ const struct mod_config driver_align_mode = {
 		.tx_blk = 32, .rx_blk = 64},
 };
 
-const struct mod_config driver_burst_mode = {
+const struct driver_conf_info driver_burst_mode = {
 	.test_info = "Test in rpi4 bcm2711",
 	.skb_wb_mode = SKB_WB_ON,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
@@ -618,7 +614,7 @@ const struct mod_config driver_burst_mode = {
 		.tx_blk = 0, .rx_blk = 0},
 };
 
-const struct mod_config driver_misc_mode = {
+const struct driver_conf_info driver_misc_mode = {
 	.test_info = "Test in processor Cortex-A",
 	.skb_wb_mode = SKB_WB_OFF,
 	.checksuming = DEFAULT_CHECKSUM_OFF,

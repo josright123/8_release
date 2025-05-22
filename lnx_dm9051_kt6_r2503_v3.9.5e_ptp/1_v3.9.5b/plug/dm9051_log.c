@@ -37,21 +37,6 @@
 #include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
  
-//#include <linux/etherdevice.h>
-//#include <linux/ethtool.h>
-//#include <linux/interrupt.h>
-//#include <linux/iopoll.h>
-//#include <linux/irq.h>
-//#include <linux/mii.h>
-//#include <linux/module.h>
-//#include <linux/netdevice.h>
-//#include <linux/phy.h>
-//#include <linux/regmap.h>
-//#include <linux/skbuff.h>
-//#include <linux/spinlock.h>
-//#include <linux/spi/spi.h>
-//#include <linux/types.h>
-//#include <linux/of.h>
 #define SECOND_MAIN //(sec)
 #include "../dm9051.h"
 
@@ -59,7 +44,7 @@
 struct driver_rel_info {
 	const char *release_version;
 };
-const struct driver_rel_info relinfo = {
+const struct driver_rel_info driver_info = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
 };
 
@@ -147,19 +132,19 @@ static void SHOW_DRIVER(struct device *dev)
 	// 64-bit code
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_warn(dev, "Davicom: %s (64 bit)", relinfo.release_version);
+	dev_warn(dev, "Davicom: %s (64 bit)", driver_info.release_version);
 	#else
 	// 32-bit specific code
-	dev_crit(dev, "Davicom: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)", relinfo.release_version);
+	dev_crit(dev, "Davicom: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)", driver_info.release_version);
 	#endif
 #else
 	// 32-bit code
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_crit(dev, "Davicom: %s (32 bit, warn: but kernel config has CONFIG_64BIT?))", relinfo.release_version);
+	dev_crit(dev, "Davicom: %s (32 bit, warn: but kernel config has CONFIG_64BIT?))", driver_info.release_version);
 	#else
 	// 32-bit specific code
-	dev_warn(dev, "Davicom: %s (32 bit)", relinfo.release_version);
+	dev_warn(dev, "Davicom: %s (32 bit)", driver_info.release_version);
 	#endif
 #endif
 }
@@ -213,12 +198,12 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 
 #define DEV_INFO_TX_ALIGN(dev) \
 		dev_warn(dev, "TX: %s blk %u\n", \
-			dm9051_modedata->align.burst_mode_info, \
-			dm9051_modedata->align.tx_blk)
+			driver_conf->align.burst_mode_info, \
+			driver_conf->align.tx_blk)
 #define DEV_INFO_RX_ALIGN(dev) \
 		dev_warn(dev, "RX: %s blk %u\n", \
-			dm9051_modedata->align.burst_mode_info, \
-			dm9051_modedata->align.rx_blk)
+			driver_conf->align.burst_mode_info, \
+			driver_conf->align.rx_blk)
 
 static void SHOW_ENG_OPTION_MODE(struct device *dev)
 {
@@ -289,17 +274,17 @@ void SHOW_MONITOR_RXC(struct board_info *db, int scanrr)
 #define PRINT_ALIGN_INFO(n) \
 		netif_warn(db, rx_status, db->ndev, "___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
 			dmplug_tx, \
-			dm9051_modedata->align.rx_blk, \
-			dm9051_modedata->align.tx_blk, \
+			driver_conf->align.rx_blk, \
+			driver_conf->align.tx_blk, \
 			n)
 
 	if (econf->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
 	{
 		db->bc.nRxcF += scanrr;
 		
-		if (dm9051_modedata->align.burst_mode == BURST_MODE_FULL)
+		if (driver_conf->align.burst_mode == BURST_MODE_FULL)
 			PRINT_BURST_INFO(db->bc.nRxcF);
-		else if (dm9051_modedata->align.burst_mode == BURST_MODE_ALIGN)
+		else if (driver_conf->align.burst_mode == BURST_MODE_ALIGN)
 			PRINT_ALIGN_INFO(db->bc.nRxcF);
 	}
 }
