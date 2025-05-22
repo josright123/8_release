@@ -30,7 +30,7 @@ const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration
 /* Tx 'wb' do skb protect */
 #define DM9051_SKB_PROTECT
 #define STICK_SKB_CHG_NOTE
-#define DM9051_INTR_BACKCODE
+#define DM9051_INTR_BACKCODE //even not INTR, we provide the base-line INTR source code for comiliered-in
 
 /*
  * Info: 
@@ -1650,14 +1650,17 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	/* 6 tx ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-#if 1 //tom tell, 20250522
-	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
-		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
-		netdev_dbg(db->ndev, "Yes, This is a hardware timestamp requested\n");
-	}
-#endif	
 	//u8 message_type = 
 	dm9051_ptp_txreq(db, skb);
+
+	if (db->tcr_wr & TCR_TS_EN) {
+	#if 1 //tom tell, 20250522
+		//if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
+		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
+		netdev_dbg(db->ndev, "yes, ptp4l is in a hardware tx timestamp in progress requested\n");
+		//}
+	#endif	
+	}
 	#endif
 	#endif
 
