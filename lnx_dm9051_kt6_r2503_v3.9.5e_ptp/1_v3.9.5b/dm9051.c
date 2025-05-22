@@ -300,8 +300,8 @@ int dm9051_nsr_poll(struct board_info *db)
 
 	ret = regmap_read_poll_timeout(db->regmap_dm, DM9051_NSR, mval,
 								   mval & (NSR_TX2END | NSR_TX1END),
-								   1, econf->tx_timeout_us); // 2100 <- 20
-	if (econf->force_monitor_tx_timeout && ret == -ETIMEDOUT)
+								   1, param->tx_timeout_us); // 2100 <- 20
+	if (param->force_monitor_tx_timeout && ret == -ETIMEDOUT)
 		netdev_err(db->ndev, "timeout in checking for tx end\n");
 	return ret;
 }
@@ -430,7 +430,7 @@ static int dm9051_eeprom_write(struct board_info *db, int offset, u8 *data)
 	return regmap_write(db->regmap_dm, DM9051_EPCR, 0);
 }
 
-static int dm9051_phyread(void *context, unsigned int reg, unsigned int *val)
+int dm9051_phyread(void *context, unsigned int reg, unsigned int *val)
 {
 	struct board_info *db = context;
 	int ret;
@@ -1255,7 +1255,6 @@ int dm9051_subconcl_and_rerxctrl(struct board_info *db)
 	return dm9051_set_fcr(db);
 }
 
-#define TIMES_TO_RST 10
 #define DM9051_RX_BREAK(exp, yhndlr, nhndlr) \
 	do {	\
 		if ((exp)) {	\
@@ -1665,7 +1664,7 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 #if !defined(DMPLUG_CONTI)
 	ret = TX_SEND(db, skb);
 #else
-	ret = TX_MODE2_CONTI_TCR(db, skb, econf->tx_timeout_us);
+	ret = TX_MODE2_CONTI_TCR(db, skb, param->tx_timeout_us);
 #endif
 	
 	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 

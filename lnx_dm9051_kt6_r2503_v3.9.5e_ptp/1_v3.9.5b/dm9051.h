@@ -259,6 +259,7 @@
 #define SCAN_BL(dw)		(dw & GENMASK(7, 0))
 #define SCAN_BH(dw)		((dw & GENMASK(15, 8)) >> 8)
 #define	DM_RXHDR_SIZE		sizeof(struct dm9051_rxhdr)
+#define TIMES_TO_RST		10
 
 /* Kernel version definitions */
 //#define DM9051_KERNEL_5_10	5
@@ -283,14 +284,6 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 
 #define	FORCE_SILENCE_TX_TIMEOUT	0
 #define	FORCE_MONITOR_TX_TIMEOUT	1
-
-/* Configuration structures */
-struct plat_config {
-        int force_monitor_rxb;
-        int force_monitor_rxc;
-        int force_monitor_tx_timeout;
-        u64 tx_timeout_us;
-};
 
 /* driver config */
 #define MI_FIX                          1
@@ -526,6 +519,7 @@ int get_dts_irqf(struct board_info *db);
 
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb);
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
+int dm9051_phyread(void *context, unsigned int reg, unsigned int *val);
 int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 			size_t len);
 
@@ -545,20 +539,22 @@ int dm9051_loop_rx(struct board_info *db); //static int _dm9051_delayp_looping_r
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 
-/* MAIN Data: 
+/* Param structures
  */
-#ifdef MAIN_DATA
-const struct plat_config platform_conf = {
-	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
-	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
-	.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
-	.tx_timeout_us = 210000,
+struct param_config {
+        int force_monitor_rxb;
+        int force_monitor_rxc;
+        int force_monitor_tx_timeout;
+        u64 tx_timeout_us;
 };
-
-const struct plat_config *econf = &platform_conf;
 
 /* Driver configuration structure
  */
+enum {
+	BURST_MODE_ALIGN = 0,
+	BURST_MODE_FULL = 1,
+};
+
 struct driver_conf_info {
 	char *test_info;
 	int skb_wb_mode;
@@ -572,6 +568,22 @@ struct driver_conf_info {
 	} align;
 };
 
+#ifdef MAIN_DATA
+const struct param_config param_conf = {
+	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
+	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
+	.force_monitor_tx_timeout = FORCE_SILENCE_TX_TIMEOUT,
+	.tx_timeout_us = 210000,
+};
+
+const struct param_config *param = &param_conf;
+#endif //MAIN_DATA
+
+#ifdef SECOND_MAIN
+extern const struct param_config *param;
+#endif //SECOND_MAIN
+
+#ifdef MAIN_DATA
 /* Default driver configuration */
 //SPI_SYNC_ALIGN_MODE = 0,
 //SPI_SYNC_BURST_MODE = 1,
@@ -587,11 +599,6 @@ enum {
 //#define	DEFAULT_CHECKSUM_ON		1
 	DEFAULT_CHECKSUM_OFF = 0,
 	DEFAULT_CHECKSUM_ON = 1,
-};
-
-enum {
-	BURST_MODE_ALIGN = 0,
-	BURST_MODE_FULL = 1,
 };
 
 const struct driver_conf_info driver_align_mode = {

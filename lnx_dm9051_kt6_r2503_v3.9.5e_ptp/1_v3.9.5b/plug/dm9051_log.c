@@ -40,6 +40,8 @@
 #define SECOND_MAIN //(sec)
 #include "../dm9051.h"
 
+extern const struct driver_conf_info *driver_conf;
+
 //#warning "DMPLUG: dm9051 plug-in log function"
 struct driver_rel_info {
 	const char *release_version;
@@ -89,34 +91,34 @@ static void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
 
 void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
 {
-	#if defined(DMPLUG_INT) && defined(MAIN_DATA)
+	#if defined(DMPLUG_INT) && defined(SECOND_MAIN)
 	USER_CONFIG(dev, db, "dm9051 INT"); //netif_info(db, drv, db->ndev, "dm9051 INT"); //#pragma message("dm9051 INT")
 	#endif
-	#if !defined(DMPLUG_INT) && defined(MAIN_DATA)
+	#if !defined(DMPLUG_INT) && defined(SECOND_MAIN)
 	USER_CONFIG(dev, db, "dm9051 POL"); //netif_info(db, drv, db->ndev, "dm9051 POL"); //#pragma message("dm9051 POL")
 	#endif
-	#if defined(INT_CLKOUT) && defined(MAIN_DATA)
+	#if defined(INT_CLKOUT) && defined(SECOND_MAIN)
 	USER_CONFIG(dev, db, "INT: INT_CLKOUT"); //netif_info(db, drv, db->ndev, "INT: INT_CLKOUT"); //#warning "INT: INT_CLKOUT"
 	#endif
-	#if defined(INT_TWO_STEP) && defined(MAIN_DATA)
+	#if defined(INT_TWO_STEP) && defined(SECOND_MAIN)
 	USER_CONFIG(dev, db, "INT: TWO_STEP"); //netif_info(db, drv, db->ndev, "INT: TWO_STEP"); //#warning "INT: TWO_STEP"
 	#endif
 	
-	#if defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
+	#if defined(DMCONF_BMCR_WR) && defined(SECOND_MAIN)
 	USER_CONFIG(dev, db, "WORKROUND: BMCR_WR"); //netif_info(db, drv, db->ndev, "WORKROUND: BMCR_WR"); //#pragma message("WORKROUND: BMCR_WR")
 	#endif
-	#if defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
+	#if defined(DMCONF_MRR_WR) && defined(SECOND_MAIN)
 	USER_CONFIG(dev, db, "WORKROUND: MRR_WR"); //netif_info(db, drv, db->ndev, "WORKROUND: MRR_WR"); //#pragma message("WORKROUND: MRR_WR")
 	#endif
 	
-	#if defined(DMPLUG_CONTI) && defined(MAIN_DATA)
+	#if defined(DMPLUG_CONTI) && defined(SECOND_MAIN)
 	USER_CONFIG(dev, db, "dm9051 CONTI"); //netif_info(db, drv, db->ndev, "dm9051 CONTI"); //#pragma message("dm9051 CONTI")
 	#endif
 
-	#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
+	#if defined(DMPLUG_PTP) && defined(SECOND_MAIN)
 	USER_CONFIG(dev, db, "dm9051 PTP"); //netif_info(db, drv, db->ndev, "dm9051 PTP"); //#pragma message("dm9051 PTP")
 	#endif
-	#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
+	#if defined(DMPLUG_PPS_CLKOUT) && defined(SECOND_MAIN)
 	USER_CONFIG(dev, db, "dm9051 PPS"); //netif_info(db, drv, db->ndev, "dm9051 PPS"); //#warning "dm9051 PPS"
 	#endif
 }
@@ -170,7 +172,6 @@ static void SHOW_DTS_INT(struct device *dev)
 static void SHOW_CONFIG_MODE(struct device *dev)
 {
 	printk("\n");
-	//dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
 #if defined(__x86_64__) || defined(__aarch64__)
 	// 64-bit code
 	dev_info(dev, "LXR: %s, BUILD: %s __aarch64__ (64 bit)\n", utsname()->release, utsname()->release); //(compile-time)
@@ -207,9 +208,9 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 
 static void SHOW_ENG_OPTION_MODE(struct device *dev)
 {
-	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", econf->tx_timeout_us, dmplug_tx,
-			econf->force_monitor_rxb ? "monitor rxb" : "silence rxb",
-			econf->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
+	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", param->tx_timeout_us, dmplug_tx,
+			param->force_monitor_rxb ? "monitor rxb" : "silence rxb",
+			param->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
 }
 
 void SHOW_DEVLOG_MODE(struct device *dev)
@@ -231,7 +232,7 @@ void SHOW_DEVLOG_MODE(struct device *dev)
 //-
 void SHOW_PLAT_MODE(struct device *dev)
 {
-	dev_info(dev, "Davicom: %s", driver_align_mode.test_info);
+	dev_info(dev, "Davicom: %s", driver_conf->test_info);
 }
 
 int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
@@ -278,7 +279,7 @@ void SHOW_MONITOR_RXC(struct board_info *db, int scanrr)
 			driver_conf->align.tx_blk, \
 			n)
 
-	if (econf->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
+	if (param->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
 	{
 		db->bc.nRxcF += scanrr;
 		
@@ -345,7 +346,7 @@ void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len)
 
 void monitor_rxb0(struct board_info *db, unsigned int rxbyte)
 {
-	if (econf->force_monitor_rxb)
+	if (param->force_monitor_rxb)
 	{
 		static int rxbz_counter = 0;
 		static unsigned int inval_rxb[TIMES_TO_RST] = {0};
