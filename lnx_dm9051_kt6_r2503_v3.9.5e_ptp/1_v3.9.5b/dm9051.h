@@ -22,36 +22,26 @@
 #if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
 #ifdef CONFIG_64BIT // 64-bit specific code
 #pragma message("dm9051 @ __aarch64__")
-#warning "dm9051 @ CONFIG_64BIT" //#pragma message("dm9051 @ CONFIG_64BIT")
+//#warning "dm9051 @ CONFIG_64BIT"
 #else // 32-bit specific code
-#warning "dm9051 @ __aarch64__" //#pragma message("dm9051 @ __aarch64__")
+#warning "dm9051 @ __aarch64__"
 #warning "dm9051 but is @ CONFIG_32BIT"
 #endif
 #elif (!defined(__x86_64__) && !defined(__aarch64__)) && defined(MAIN_DATA)
 #ifdef CONFIG_64BIT // 64-bit specific code
-#warning "dm9051 @ __aarch32__" //#pragma message("dm9051 @ __aarch32__")
+#warning "dm9051 @ __aarch32__"
 #warning "dm9051 but is @ CONFIG_64BIT"
 #else // 32-bit specific code
 #pragma message("dm9051 @ __aarch32__")
-#warning "dm9051 @ CONFIG_32BIT" //#pragma message("dm9051 @ CONFIG_32BIT")
+//#warning "dm9051 @ CONFIG_32BIT"
 #endif
 #endif //__x86_64__ || __aarch64__
 //#endif //_MAIN_DATA
 
+#define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
+
 /* Macro for already known platforms
  */
-/*#define DMCONF_DIV_HLPR_32 */	//(32-bit division helper, __aeabi_ldivmod()) 
-//#define PLUG_CFG_HLPR
-//#ifdef PLUG_CFG_HLPR
-#define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
-//#endif
-
-/*#define DMCONF_AARCH_64 */ //(64-bit OS)
-//#define PLUG_CFG64
-//#ifdef PLUG_CFG64
-//#define DMCONF_AARCH_64 //(64-bit OS)
-//#endif
-
 #define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT39)
@@ -261,14 +251,6 @@
 #define	DM_RXHDR_SIZE		sizeof(struct dm9051_rxhdr)
 #define TIMES_TO_RST		10
 
-/* Kernel version definitions */
-//#define DM9051_KERNEL_5_10	5
-//#define DM9051_KERNEL_5_15	6
-//#define DM9051_KERNEL_6_1	7
-//#define DM9051_KERNEL_6_6	8
-
-//#define LXR_REF_CONF		DM9051_KERNEL_6_6
-
 /* Helper functions */
 static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 {
@@ -290,148 +272,8 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 
 #define AMDIX_LOG_BUFSIZE		72
 
-//#if 1
-//sticked fixed here is better!
-//#endif
-
-/* Optional functions declaration const */
-enum dm_req_not_support {
-	VOID_REQUEST_FUNCTION =		-9,
-	NOT_REQUEST_SUPPORTTED =	0,
-};
-enum dm_req_support {
-	REQUEST_SUPPORTTED =		1,
-};
-
-//#define NOT_REQUEST_SUPPORTTED	0x0
-//#define VOID_REQUEST_FUNCTION		-9
-//#define REQUEST_SUPPORTTED		1 //REQUEST_SUPPORTTED (1)
-
-/* Optional functions and dadicated function */
-//#define SECOND_MAIN //(sec)
-#define FAK //(fake)
-#if defined(FAK) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
-//#ifdef _MAIN_DATA
-//[fake]
-/* raw fake encrypt */
-#define BUS_SETUP(db)	0		//empty(NoError)
-#define BUS_OPS(db, buff, crlen)	//empty
-
-/* fake raw tx mode */
-#define dmplug_tx "normal"
-#define TX_CONTI_NEW(d)
-
-/* fake ptpc */
-#define PTP_NEW(d, n)			d->ptp_enable = 0
-#define PTP_INIT_RCR(d)
-#define PTP_INIT(d)
-#define PTP_END(d)
-
-/* poll fake */
-#define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
-#define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
-
-#define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
-#define dm9051_int2_irq(d,h)		VOID_REQUEST_FUNCTION
-
-/* raw(fake) bmsr_wr */
-#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
-
-//[fake]
-#define SHOW_DEVLOG_REFER_BEGIN(d, b)
-#define SHOW_LOG_REFER_BEGIN(b)
-#define SHOW_DEVLOG_MODE(d)
-#define SHOW_ALL_USER_CONFIG(d, b)
-
-#define SHOW_PLAT_MODE(d)
-#define SHOW_MAC(b, a)
-#define SHOW_OPEN(b)
-#define SHOW_MONITOR_RXC(b, n)
-
-//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
-#define dm9051_headlog_regs(h, b, r1, r2)
-#define dm9051_phyread_headlog(h, b, r)	(void)0
-#define dm9051_dump_data1(b, p, l)
-#define monitor_rxb0(b, rb)
-//#endif //_MAIN_DATA
-#endif
-
-/* MCO, re-direct, Verification */
-#define MCO //(MainCoerce)
-//#ifdef _MAIN_DATA
- //#ifdef DMCONF_AARCH_64
- //#pragma message("dm9051 AARCH_64")
- //#else
- //#pragma message("dm9051 AARCH_32")
- //#endif
-
- //#ifdef DMCONF_DIV_HLPR_32
- //#pragma message("dm9051 DIV_HLPR_32")
- //#endif
-//#endif //_MAIN_DATA
-
-#if defined(MCO) && defined(DMPLUG_INT) && defined(MAIN_DATA)
-#ifdef INT_CLKOUT
-#endif
-
-#if defined(MCO) && defined(INT_TWO_STEP) && defined(MAIN_DATA)
-#undef dm9051_int2_supp
-#undef dm9051_int2_irq
-#define dm9051_int2_supp() REQUEST_SUPPORTTED
-#define dm9051_int2_irq(d,h) DM9051_INT2_REQUEST(d,h)
-
-void PROBE_INT2_DLY_SETUP(struct board_info *db);
-void dm9051_rx_irq_servicep(struct work_struct *work);
-irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
-int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
-#endif
-
-#if defined(MCO) && defined(DMPLUG_INT) && defined(MAIN_DATA)
-#undef dm9051_poll_supp
-#undef dm9051_poll_sch
-#define dm9051_poll_supp() REQUEST_SUPPORTTED
-#define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
-
-void dm9051_threaded_poll(struct work_struct *work); //dm9051_poll_servicep()
-
-void PROBE_POLL_SETUP(struct board_info *db);
-void OPEN_POLL_SCHED(struct board_info *db);
-int DM9051_POLL_SCHED(struct board_info *db);
-#endif
-
-#if defined(MCO) && defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
-int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val);
-#endif
-
-#if defined(MCO) && defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
-#endif
-
-/*
- * Conti: 
- */
-#if defined(MCO) && defined(DMPLUG_CONTI) && defined(MAIN_DATA)
-/* Log definitions */
-#undef dmplug_tx
-#define dmplug_tx "continue"
-void tx_contu_new(struct board_info *db);
-int TX_MOTE2_CONTI_RCR(struct board_info *db);
-int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
-#endif
-
-//[overlay]
-#if defined(MCO) && defined(DMPLUG_CRYPT) && defined(MAIN_DATA)
-//overlay by plug/
-#undef BUS_SETUP
-#define BUS_SETUP(db) bus_setup(struct board_info *db)
-#undef BUS_OPS
-#define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
-//implement in plug/
-int bus_setup(struct board_info *db);
-void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
-#endif
-
 //#include "dm9051_plug.h" /* for definition of '_INT_TWO_STEP' */
-#include "dm9051_ptpd.h" /* 0.1 ptpc */
+//#include "dm9051_ptpd.h" /* 0.1 ptpc */
 
 /**
  * struct rx_ctl_mach - rx activities record
@@ -597,12 +439,146 @@ struct board_info
 	#endif
 	#endif
 };
+
+/* Optional functions declaration const */
+enum dm_req_not_support {
+	VOID_REQUEST_FUNCTION =		-9,
+	NOT_REQUEST_SUPPORTTED =	0,
+};
+enum dm_req_support {
+	REQUEST_SUPPORTTED =		1,
+};
+
+//#define NOT_REQUEST_SUPPORTTED	0x0
+//#define VOID_REQUEST_FUNCTION		-9
+//#define REQUEST_SUPPORTTED		1 //REQUEST_SUPPORTTED (1)
+
+/* Optional functions and dadicated function */
+//#define SECOND_MAIN //(sec)
+#define FAK //(fake)
+#if defined(FAK) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+//#ifdef _MAIN_DATA
+//[fake]
+/* raw fake encrypt */
+#define BUS_SETUP(db)	0		//empty(NoError)
+#define BUS_OPS(db, buff, crlen)	//empty
+
+/* fake raw tx mode */
+#define dmplug_tx "normal"
+#define TX_CONTI_NEW(d)
+
+/* fake ptpc */
+#define PTP_NEW(d, n)			d->ptp_enable = 0
+#define PTP_INIT_RCR(d)
+#define PTP_INIT(d)
+#define PTP_END(d)
+
+/* poll fake */
+#define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
+#define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
+
+#define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
+#define dm9051_int2_irq(d,h)		VOID_REQUEST_FUNCTION
+
+/* raw(fake) bmsr_wr */
+#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
+
+//[fake]
+#define SHOW_DEVLOG_REFER_BEGIN(d, b)
+#define SHOW_LOG_REFER_BEGIN(b)
+#define SHOW_DEVLOG_MODE(d)
+#define SHOW_ALL_USER_CONFIG(d, b)
+
+#define SHOW_PLAT_MODE(d)
+#define SHOW_MAC(b, a)
+#define SHOW_OPEN(b)
+#define SHOW_MONITOR_RXC(b, n)
+
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+#define dm9051_headlog_regs(h, b, r1, r2)
+#define dm9051_phyread_headlog(h, b, r)	(void)0
+#define dm9051_dump_data1(b, p, l)
+#define monitor_rxb0(b, rb)
+//#endif //_MAIN_DATA
+#endif
+
+/* MCO, re-direct, Verification */
+#define MCO //(MainCoerce)
+//#ifdef _MAIN_DATA
+ //#ifdef DMCONF_AARCH_64
+ //#pragma message("dm9051 AARCH_64")
+ //#else
+ //#pragma message("dm9051 AARCH_32")
+ //#endif
+
+ //#ifdef DMCONF_DIV_HLPR_32
+ //#pragma message("dm9051 DIV_HLPR_32")
+ //#endif
+//#endif //_MAIN_DATA
+
+#if defined(MCO) && defined(INT_CLKOUT) && defined(MAIN_DATA)
+#endif
+
+#if defined(MCO) && defined(INT_TWO_STEP) /* && defined(MAIN_DATA)*/
+#undef dm9051_int2_supp
+#undef dm9051_int2_irq
+#define dm9051_int2_supp() REQUEST_SUPPORTTED
+#define dm9051_int2_irq(d,h) DM9051_INT2_REQUEST(d,h)
+
+void PROBE_INT2_DLY_SETUP(struct board_info *db);
+void dm9051_rx_irq_servicep(struct work_struct *work);
+irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
+int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
+#endif
+
+#if defined(MCO) && defined(DMPLUG_INT) && defined(MAIN_DATA)
+#undef dm9051_poll_supp
+#undef dm9051_poll_sch
+#define dm9051_poll_supp() REQUEST_SUPPORTTED
+#define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
+
+void dm9051_threaded_poll(struct work_struct *work); //dm9051_poll_servicep()
+
+void PROBE_POLL_SETUP(struct board_info *db);
+void OPEN_POLL_SCHED(struct board_info *db);
+int DM9051_POLL_SCHED(struct board_info *db);
+#endif
+
+#if defined(MCO) && defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
+int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val);
+#endif
+
+#if defined(MCO) && defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
+#endif
+
+/*
+ * Conti: 
+ */
+#if defined(MCO) && defined(DMPLUG_CONTI) && defined(MAIN_DATA)
+/* Log definitions */
+#undef dmplug_tx
+#define dmplug_tx "continue"
+void tx_contu_new(struct board_info *db);
+int TX_MOTE2_CONTI_RCR(struct board_info *db);
+int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
+#endif
+
+//[overlay]
+#if defined(MCO) && defined(DMPLUG_CRYPT) && defined(MAIN_DATA)
+//overlay by plug/
+#undef BUS_SETUP
+#define BUS_SETUP(db) bus_setup(struct board_info *db)
+#undef BUS_OPS
+#define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
+//implement in plug/
+int bus_setup(struct board_info *db);
+void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #endif
 
 //#define TOGG_INTVL	1
 //#define TOGG_TOT_SHOW	5
 #define NUM_TRIGGER			25
-#define	NUM_BMSR_DOWN_SHOW	5
+#define	NUM_BMSR_DOWN_SHOW		5
 
 int get_dts_irqf(struct board_info *db);
 
@@ -689,8 +665,6 @@ enum {
 };
 
 enum {
-//#define	DEFAULT_CHECKSUM_OFF		0
-//#define	DEFAULT_CHECKSUM_ON		1
 	DEFAULT_CHECKSUM_OFF = 0,
 	DEFAULT_CHECKSUM_ON = 1,
 };
