@@ -412,12 +412,11 @@ struct board_info
 	unsigned int lpa;
 	unsigned int mdi; //= 0x0830;
 
-	int ptp_enable;
 
 	/* 1 ptpc */
 	#if 1 //0
 	#ifdef DMPLUG_PTP
-	/* if defined DMPLUG_PTP. begin ... */
+	int			ptp_enable;
 	struct ptp_clock        *ptp_clock;
 	struct ptp_clock_info 	ptp_caps;
 
@@ -429,7 +428,6 @@ struct board_info
 	struct hwtstamp_config	tstamp_config;
 	s64			pre_rate;
 	u8              	rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
-	/* if defined DMPLUG_PTP. end ... */
 	#endif
 	#endif
 };

@@ -2268,9 +2268,11 @@ static void CHKSUM_PTP_NDEV(struct board_info *db, struct net_device *ndev)
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 
 	/* 2 ptpc */
+	#ifdef DMPLUG_PTP
 	PTP_NEW(db, ndev);
 	if (db->ptp_enable)
 		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
+	#endif
 
 	ndev->hw_features |= ndev->features;
 }
