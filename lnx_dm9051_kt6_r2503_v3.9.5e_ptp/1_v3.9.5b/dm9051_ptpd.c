@@ -17,8 +17,8 @@
 #include <linux/of.h>
 #include <linux/version.h>
 //_15888_
-#include <linux/ptp_clock_kernel.h>
-#include <linux/ptp_classify.h>
+//#include <linux/ptp_clock_kernel.h>
+//#include <linux/ptp_classify.h>
 
 #include "dm9051_ptp1.h"
 #include "dm9051.h"

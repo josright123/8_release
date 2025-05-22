@@ -21,8 +21,8 @@
 #include <linux/types.h>
 #include <linux/of.h>
 #include <linux/version.h>
-#include <linux/ptp_clock_kernel.h>
-#include <linux/ptp_classify.h>
+//#include <linux/ptp_clock_kernel.h>
+//#include <linux/ptp_classify.h>
 #define MAIN_DATA
 #include "dm9051_ptp1.h"
 #include "dm9051.h"

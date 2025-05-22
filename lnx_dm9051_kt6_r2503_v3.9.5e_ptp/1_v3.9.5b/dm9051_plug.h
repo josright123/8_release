@@ -44,8 +44,9 @@
 //#warning "dm9051 PPS"
 //#endif
 
-/* CO, re-direct bmsr_wr */
+/* CO, */
 #define CO //(Coerce)
+/* re-direct bmsr_wr */
 #if defined(CO) && defined(DMCONF_BMCR_WR) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
 #undef PHY_READ
 #define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
