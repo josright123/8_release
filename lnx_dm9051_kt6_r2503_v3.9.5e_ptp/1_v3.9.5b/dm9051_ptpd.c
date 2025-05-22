@@ -16,15 +16,13 @@
 #include <linux/types.h>
 #include <linux/of.h>
 #include <linux/version.h>
-
 //_15888_
 #include <linux/ptp_clock_kernel.h>
 
 #include "dm9051.h"
 //#include "dm9051_ptpd.h"
+#define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
 
-#ifdef DMPLUG_PTP
-#endif
 u8 get_ptp_message_type005(struct ptp_header *ptp_hdr);
 
 int is_ptp_sync_packet(u8 msgtype);

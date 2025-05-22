@@ -81,48 +81,6 @@ void SHOW_LOG_REFER_BEGIN(struct board_info *db)
 //	netdev_dbg(ndev, "netdev_dbg Version\n");
 }
 
-static void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
-{
-	if (dev)
-		dev_warn(dev, "%s\n", str);
-	else if (db)
-		netif_info(db, drv, db->ndev, "%s\n", str);
-}
-
-void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
-{
-	#if defined(DMPLUG_INT) && defined(SECOND_MAIN)
-	USER_CONFIG(dev, db, "dm9051 INT"); //netif_info(db, drv, db->ndev, "dm9051 INT"); //#pragma message("dm9051 INT")
-	#endif
-	#if !defined(DMPLUG_INT) && defined(SECOND_MAIN)
-	USER_CONFIG(dev, db, "dm9051 POL"); //netif_info(db, drv, db->ndev, "dm9051 POL"); //#pragma message("dm9051 POL")
-	#endif
-	#if defined(INT_CLKOUT) && defined(SECOND_MAIN)
-	USER_CONFIG(dev, db, "INT: INT_CLKOUT"); //netif_info(db, drv, db->ndev, "INT: INT_CLKOUT"); //#warning "INT: INT_CLKOUT"
-	#endif
-	#if defined(INT_TWO_STEP) && defined(SECOND_MAIN)
-	USER_CONFIG(dev, db, "INT: TWO_STEP"); //netif_info(db, drv, db->ndev, "INT: TWO_STEP"); //#warning "INT: TWO_STEP"
-	#endif
-	
-	#if defined(DMCONF_BMCR_WR) && defined(SECOND_MAIN)
-	USER_CONFIG(dev, db, "WORKROUND: BMCR_WR"); //netif_info(db, drv, db->ndev, "WORKROUND: BMCR_WR"); //#pragma message("WORKROUND: BMCR_WR")
-	#endif
-	#if defined(DMCONF_MRR_WR) && defined(SECOND_MAIN)
-	USER_CONFIG(dev, db, "WORKROUND: MRR_WR"); //netif_info(db, drv, db->ndev, "WORKROUND: MRR_WR"); //#pragma message("WORKROUND: MRR_WR")
-	#endif
-	
-	#if defined(DMPLUG_CONTI) && defined(SECOND_MAIN)
-	USER_CONFIG(dev, db, "dm9051 CONTI"); //netif_info(db, drv, db->ndev, "dm9051 CONTI"); //#pragma message("dm9051 CONTI")
-	#endif
-
-	#if defined(DMPLUG_PTP) && defined(SECOND_MAIN)
-	USER_CONFIG(dev, db, "dm9051 PTP"); //netif_info(db, drv, db->ndev, "dm9051 PTP"); //#pragma message("dm9051 PTP")
-	#endif
-	#if defined(DMPLUG_PPS_CLKOUT) && defined(SECOND_MAIN)
-	USER_CONFIG(dev, db, "dm9051 PPS"); //netif_info(db, drv, db->ndev, "dm9051 PPS"); //#warning "dm9051 PPS"
-	#endif
-}
-
 /*
  * Driver logs: 
  */
@@ -218,7 +176,6 @@ void SHOW_DEVLOG_MODE(struct device *dev)
 	SHOW_DRIVER(dev);
 
 	SHOW_DTS_SPEED(dev);
-	//SHOW_ALL_USER_CONFIG(dev, NULL);
 //	SHOW_RX_MATCH_MODE(dev);
 //	SHOW_RX_INT_MODE(dev);
 	SHOW_DTS_INT(dev);
@@ -240,18 +197,6 @@ void SHOW_MAC(struct board_info *db, u8 *addr)
 	dev_warn(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
 			 addr[0], addr[1], addr[2],
 			 addr[3], addr[4], addr[5]);
-}
-
-void SHOW_OPEN(struct board_info *db)
-{
-	printk("\n");
-	netif_warn(db, drv, db->ndev, "dm9051_open\n");
-	SHOW_ALL_USER_CONFIG(NULL, db);
-//	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_rx_mach);
-//	#if defined(DMPLUG_INT)
-//	netif_info(db, drv, db->ndev, "Davicom: %s", dmplug_intterrpt2);
-//	#endif
-	/* amdix_log_reset(db); */ //(to be determined)
 }
 
 void SHOW_MONITOR_RXC(struct board_info *db, int scanrr)

@@ -35,7 +35,6 @@ const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration
 /*
  * Info: 
  */
-
 int get_dts_irqf(struct board_info *db)
 {
 	struct spi_device *spi = db->spidev;
@@ -47,14 +46,88 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
+static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
+{
+	if (wid != DM9051_ID)
+	{
+		dev_err(dev, "chipid error as %04x !\n", wid);
+		return -ENODEV;
+	}
+
+	dev_warn(dev, "probe %04x found\n", wid);
+	return 0;
+}
+
+static void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
+{
+	if (dev)
+		dev_warn(dev, "%s\n", str);
+	else if (db)
+		netif_info(db, drv, db->ndev, "%s\n", str);
+}
+
+static void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
+{
+	#if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "dm9051 __aarch64__");
+	#ifndef CONFIG_64BIT // 64-bit specific code
+	USER_CONFIG(dev, db, "dm9051 CONFIG_32BIT (kconfig) ?!");
+	#endif
+	#elif (!defined(__x86_64__) && !defined(__aarch64__)) && defined(MAIN_DATA)
+	USER_CONFIG(dev, db, "dm9051 __aarch32__");
+	#ifdef CONFIG_64BIT // 64-bit specific code
+	USER_CONFIG(dev, db, "dm9051 CONFIG_64BIT(kconfig) ?!");
+	#endif
+	#endif //__x86_64__ || __aarch64__
+
+	#if defined(DMPLUG_INT)
+	USER_CONFIG(dev, db, "dm9051 INT");
+	#endif
+	#if !defined(DMPLUG_INT)
+	USER_CONFIG(dev, db, "dm9051 POL");
+	#endif
+	#if defined(INT_CLKOUT)
+	USER_CONFIG(dev, db, "INT: INT_CLKOUT");
+	#endif
+	#if defined(INT_TWO_STEP)
+	USER_CONFIG(dev, db, "INT: TWO_STEP");
+	#endif
+	#if defined(DMCONF_BMCR_WR)
+	USER_CONFIG(dev, db, "WORKROUND: BMCR_WR");
+	#endif
+	#if defined(DMCONF_MRR_WR)
+	USER_CONFIG(dev, db, "WORKROUND: MRR_WR");
+	#endif
+	#if defined(DMPLUG_CONTI)
+	USER_CONFIG(dev, db, "dm9051 CONTI");
+	#endif
+	#if defined(DMPLUG_PTP)
+	USER_CONFIG(dev, db, "dm9051 PTP");
+	#endif
+	#if defined(DMPLUG_PPS_CLKOUT)
+	USER_CONFIG(dev, db, "dm9051 PPS");
+	#endif
+}
+
+static void SHOW_OPEN(struct board_info *db)
+{
+	printk("\n");
+	netif_warn(db, drv, db->ndev, "dm9051_open\n");
+	SHOW_ALL_USER_CONFIG(NULL, db);
+	/* amdix_log_reset(db); */ //(to be determined)
+}
+
 /* log */
 #define PRINT_REGMAP_BLK_ERR(evtstr, ret, r, n) \
-		netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
-			__func__, ret, \
-			evtstr, \
-			r, \
-			n)
+	netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
+		__func__, ret, \
+		evtstr, \
+		r, \
+		n)
 
+/*
+ * functions: 
+ */
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
 {
 	int ret;
@@ -828,18 +901,6 @@ static int dm9051_map_init(struct spi_device *spi, struct board_info *db)
 	regconfigdmbulk.lock_arg = db;
 	db->regmap_dmbulk = devm_regmap_init_spi(db->spidev, &regconfigdmbulk);
 	return PTR_ERR_OR_ZERO(db->regmap_dmbulk);
-}
-
-static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
-{
-	if (wid != DM9051_ID)
-	{
-		dev_err(dev, "chipid error as %04x !\n", wid);
-		return -ENODEV;
-	}
-
-	dev_warn(dev, "chip %04x found\n", wid);
-	return 0;
 }
 
 static int dm9051_map_chipid(struct board_info *db)
@@ -1848,7 +1909,7 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 	if (thread_servicep_done) {
 		thread_servicep_done = 0;
 		if (!thread_servicep_re_enter)
-			netif_crit(db, intr, db->ndev, "_.PLAT.WARN   [%s] this-first-enter %d\n", __func__, thread_servicep_re_enter++);
+			netif_notice(db, intr, db->ndev, "INT: [%s] this-first-enter %d\n", __func__, thread_servicep_re_enter++);
 		dm9051_thread_irq(db); //(voidirq, pw) //.(macro)_rx_tx_plat()
 		thread_servicep_done = 1;
 	} else {
@@ -1936,7 +1997,7 @@ static int dm9051_req_irq(struct board_info *db, irq_handler_t handler)
 	struct spi_device *spi = db->spidev;
 	int ret;
 
-	netif_crit(db, intr, db->ndev, "request_irq(INT_THREAD)\n");
+	netif_warn(db, intr, db->ndev, "request_irq(INT_THREAD)\n");
 	thread_servicep_re_enter = 0; //used in 'dm9051_rx_threaded_plat'
 	ret = request_threaded_irq(spi->irq, NULL, handler, //'dm9051_rx_threaded_plat'
 							   get_dts_irqf(db) | IRQF_ONESHOT,
@@ -2004,7 +2065,6 @@ static int dm9051_open(struct net_device *ndev)
 	int ret;
 
 	SHOW_OPEN(db);
-
 	db->imr_all = IMR_PAR | IMR_PRM;
 	db->lcr_all = LMCR_MODE1;
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN;

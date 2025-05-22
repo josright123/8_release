@@ -74,11 +74,9 @@
 #undef SHOW_DEVLOG_REFER_BEGIN
 #undef SHOW_LOG_REFER_BEGIN
 #undef SHOW_DEVLOG_MODE
-#undef SHOW_ALL_USER_CONFIG
 
 #undef SHOW_PLAT_MODE
 #undef SHOW_MAC
-#undef SHOW_OPEN
 #undef SHOW_MONITOR_RXC
 
 //static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
@@ -89,10 +87,8 @@
 void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db);
 void SHOW_LOG_REFER_BEGIN(struct board_info *db);
 void SHOW_DEVLOG_MODE(struct device *dev);
-void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db);
 
 void SHOW_PLAT_MODE(struct device *dev);
-void SHOW_OPEN(struct board_info *db);
 void SHOW_MONITOR_RXC(struct board_info *db, int scanrr);
 
 //static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);

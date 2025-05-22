@@ -18,12 +18,10 @@
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
 /*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
 
-//#if defined(_MAIN_DATA)
 #if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
 #ifdef CONFIG_64BIT // 64-bit specific code
 #pragma message("dm9051 @ __aarch64__")
-//#warning "dm9051 @ CONFIG_64BIT"
-#else // 32-bit specific code
+#else
 #warning "dm9051 @ __aarch64__"
 #warning "dm9051 but is @ CONFIG_32BIT"
 #endif
@@ -31,14 +29,10 @@
 #ifdef CONFIG_64BIT // 64-bit specific code
 #warning "dm9051 @ __aarch32__"
 #warning "dm9051 but is @ CONFIG_64BIT"
-#else // 32-bit specific code
+#else
 #pragma message("dm9051 @ __aarch32__")
-//#warning "dm9051 @ CONFIG_32BIT"
 #endif
 #endif //__x86_64__ || __aarch64__
-//#endif //_MAIN_DATA
-
-#define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
 
 /* Macro for already known platforms
  */
@@ -51,7 +45,7 @@
   #define INT_CLKOUT //(INT39_CLKOUT)
   #endif
 
-  #define PLUG_INT_2STEP
+  //#define PLUG_INT_2STEP
   #ifdef PLUG_INT_2STEP
   #define INT_TWO_STEP //(INT39_TWO_STEP)
   #endif
@@ -487,11 +481,9 @@ enum dm_req_support {
 #define SHOW_DEVLOG_REFER_BEGIN(d, b)
 #define SHOW_LOG_REFER_BEGIN(b)
 #define SHOW_DEVLOG_MODE(d)
-#define SHOW_ALL_USER_CONFIG(d, b)
 
 #define SHOW_PLAT_MODE(d)
 #define SHOW_MAC(b, a)
-#define SHOW_OPEN(b)
 #define SHOW_MONITOR_RXC(b, n)
 
 //static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
@@ -504,18 +496,6 @@ enum dm_req_support {
 
 /* MCO, re-direct, Verification */
 #define MCO //(MainCoerce)
-//#ifdef _MAIN_DATA
- //#ifdef DMCONF_AARCH_64
- //#pragma message("dm9051 AARCH_64")
- //#else
- //#pragma message("dm9051 AARCH_32")
- //#endif
-
- //#ifdef DMCONF_DIV_HLPR_32
- //#pragma message("dm9051 DIV_HLPR_32")
- //#endif
-//#endif //_MAIN_DATA
-
 #if defined(MCO) && defined(INT_CLKOUT) && defined(MAIN_DATA)
 #endif
 
