@@ -56,6 +56,12 @@
 #include "../dm9051.h"
 
 //#warning "DMPLUG: dm9051 plug-in log function"
+struct driver_rel_info {
+	const char *release_version;
+};
+const struct driver_rel_info relinfo = {
+	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
+};
 
 void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db)
 {
@@ -141,19 +147,19 @@ static void SHOW_DRIVER(struct device *dev)
 	// 64-bit code
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_warn(dev, "Davicom: %s (64 bit)", confdata.release_version);
+	dev_warn(dev, "Davicom: %s (64 bit)", relinfo.release_version);
 	#else
 	// 32-bit specific code
-	dev_crit(dev, "Davicom: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)", confdata.release_version);
+	dev_crit(dev, "Davicom: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)", relinfo.release_version);
 	#endif
 #else
 	// 32-bit code
 	#ifdef CONFIG_64BIT
 	// 64-bit specific code
-	dev_crit(dev, "Davicom: %s (32 bit, warn: but kernel config has CONFIG_64BIT?))", confdata.release_version);
+	dev_crit(dev, "Davicom: %s (32 bit, warn: but kernel config has CONFIG_64BIT?))", relinfo.release_version);
 	#else
 	// 32-bit specific code
-	dev_warn(dev, "Davicom: %s (32 bit)", confdata.release_version);
+	dev_warn(dev, "Davicom: %s (32 bit)", relinfo.release_version);
 	#endif
 #endif
 }

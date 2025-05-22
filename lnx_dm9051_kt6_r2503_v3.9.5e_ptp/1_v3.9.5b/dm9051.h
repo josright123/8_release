@@ -285,9 +285,6 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 #define	FORCE_MONITOR_TX_TIMEOUT	1
 
 /* Configuration structures */
-struct driver_config {
-	const char *release_version;
-};
 struct eng_config {
         int force_monitor_rxb;
         int force_monitor_rxc;
@@ -551,9 +548,6 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 /* MAIN Data: 
  */
 #ifdef MAIN_DATA
-const struct driver_config confdata = {
-	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
-};
 const struct eng_config engdata = {
 	.force_monitor_rxb = FORCE_SILENCE_RXB, /* FORCE_MONITOR_RXB */
 	.force_monitor_rxc = FORCE_SILENCE_RX_COUNT,
