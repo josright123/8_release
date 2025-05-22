@@ -555,7 +555,7 @@ enum {
 	BURST_MODE_FULL = 1,
 };
 
-struct driver_conf_info {
+struct plat_cnf_info {
 	char *test_info;
 	int skb_wb_mode;
 	int checksuming;
@@ -601,7 +601,7 @@ enum {
 	DEFAULT_CHECKSUM_ON = 1,
 };
 
-const struct driver_conf_info driver_align_mode = {
+const struct plat_cnf_info plat_align_mode = {
 	.test_info = "Test in rpi5 bcm2712",
 	.skb_wb_mode = SKB_WB_ON, //SKB_WB_OFF, //SKB_WB_ON,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
@@ -611,7 +611,7 @@ const struct driver_conf_info driver_align_mode = {
 		.tx_blk = 32, .rx_blk = 64},
 };
 
-const struct driver_conf_info driver_burst_mode = {
+const struct plat_cnf_info plat_burst_mode = {
 	.test_info = "Test in rpi4 bcm2711",
 	.skb_wb_mode = SKB_WB_ON,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
@@ -621,7 +621,7 @@ const struct driver_conf_info driver_burst_mode = {
 		.tx_blk = 0, .rx_blk = 0},
 };
 
-const struct driver_conf_info driver_misc_mode = {
+const struct plat_cnf_info plat_misc_mode = {
 	.test_info = "Test in processor Cortex-A",
 	.skb_wb_mode = SKB_WB_OFF,
 	.checksuming = DEFAULT_CHECKSUM_OFF,

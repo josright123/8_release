@@ -40,7 +40,7 @@
 #define SECOND_MAIN //(sec)
 #include "../dm9051.h"
 
-extern const struct driver_conf_info *driver_conf;
+extern const struct plat_cnf_info *plat_cnf;
 
 //#warning "DMPLUG: dm9051 plug-in log function"
 struct driver_rel_info {
@@ -199,12 +199,12 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 
 #define DEV_INFO_TX_ALIGN(dev) \
 		dev_warn(dev, "TX: %s blk %u\n", \
-			driver_conf->align.burst_mode_info, \
-			driver_conf->align.tx_blk)
+			plat_cnf->align.burst_mode_info, \
+			plat_cnf->align.tx_blk)
 #define DEV_INFO_RX_ALIGN(dev) \
 		dev_warn(dev, "RX: %s blk %u\n", \
-			driver_conf->align.burst_mode_info, \
-			driver_conf->align.rx_blk)
+			plat_cnf->align.burst_mode_info, \
+			plat_cnf->align.rx_blk)
 
 static void SHOW_ENG_OPTION_MODE(struct device *dev)
 {
@@ -232,7 +232,7 @@ void SHOW_DEVLOG_MODE(struct device *dev)
 //-
 void SHOW_PLAT_MODE(struct device *dev)
 {
-	dev_info(dev, "Davicom: %s", driver_conf->test_info);
+	dev_info(dev, "Davicom: %s", plat_cnf->test_info);
 }
 
 int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
@@ -275,17 +275,17 @@ void SHOW_MONITOR_RXC(struct board_info *db, int scanrr)
 #define PRINT_ALIGN_INFO(n) \
 		netif_warn(db, rx_status, db->ndev, "___[TX %s mode][Alignment RX %u, Alignment RX %u] nRxc %d\n", \
 			dmplug_tx, \
-			driver_conf->align.rx_blk, \
-			driver_conf->align.tx_blk, \
+			plat_cnf->align.rx_blk, \
+			plat_cnf->align.tx_blk, \
 			n)
 
 	if (param->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
 	{
 		db->bc.nRxcF += scanrr;
 		
-		if (driver_conf->align.burst_mode == BURST_MODE_FULL)
+		if (plat_cnf->align.burst_mode == BURST_MODE_FULL)
 			PRINT_BURST_INFO(db->bc.nRxcF);
-		else if (driver_conf->align.burst_mode == BURST_MODE_ALIGN)
+		else if (plat_cnf->align.burst_mode == BURST_MODE_ALIGN)
 			PRINT_ALIGN_INFO(db->bc.nRxcF);
 	}
 }
