@@ -20,7 +20,7 @@
 //#include <linux/ptp_clock_kernel.h>
 //#include <linux/ptp_classify.h>
 
-#include "dm9051_ptp1.h"
+//#include "dm9051_ptp1.h"
 #include "dm9051.h"
 //#include "dm9051_ptpd.h"
 #define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
@@ -263,7 +263,7 @@ u8 get_ptp_message_type005(struct ptp_header *ptp_hdr) {
 //			is_ptp_delayreq_packet(message_type) ? "delayReq" :
 //			"otherPtpPacket");
 //		sprintf(db->bc.head, " TX LEN= %3d", skb->len);
-//		dm9051_dump_data0(db, skb->data, skb->len);
+//		dm9051_dump_data1(db, skb->data, skb->len);
 //	}
 //	else {
 //		printk("No [udp src 319, dst 320]\n");

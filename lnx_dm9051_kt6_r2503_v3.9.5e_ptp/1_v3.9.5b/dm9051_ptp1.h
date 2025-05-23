@@ -3,26 +3,8 @@
  * Copyright (c) 2022 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
-
 #ifndef _DM9051_PTPC_H_
 #define _DM9051_PTPC_H_
-
-#define PLUG_PTP_1588
-#ifdef PLUG_PTP_1588
-#define DMPLUG_PTP //(ptp 1588)
-
-  #define PLUG_PTP_PPS
-  #ifdef PLUG_PTP_PPS
-  #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
-  #endif
-#endif
-
-#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
-#pragma message("dm9051 PTP")
-#endif
-#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
-#warning "dm9051 PPS"
-#endif
 
 #ifdef DMPLUG_PTP
 struct board_info;
@@ -49,16 +31,6 @@ struct board_info;
 #define DM9051_1588_GPIO_TA_H 0x6D
 #define DM9051_1588_GPIO_DTA_L 0x6E
 #define DM9051_1588_GPIO_DTA_H 0x6F
-
-//// bits defines
-//// 06H RX Status Reg
-//// BIT(5),PTP use the same bit, timestamp is available
-//// BIT(3),PTP use the same bit, this is odd parity rx TimeStamp
-//// BIT(2),PTP use the same bit: 1 => 8-bytes, 0 => 4-bytes, for timestamp length
-//#define RSR_RXTS_EN		BIT(5)
-//#define RSR_RXTS_PARITY		BIT(3)
-//#define RSR_RXTS_LEN		BIT(2)
-//#define	RSR_PTP_BITS		(RSR_RXTS_EN | RSR_RXTS_PARITY | RSR_RXTS_LEN)
 
 // 61H Clock Control Reg
 #define DM9051_CCR_IDX_RST BIT(7)
@@ -201,7 +173,6 @@ enum dm_req_support {
 #define SHOW_MAC(b, a)
 #define SHOW_MONITOR_RXC(b, n)
 
-//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
 #define dm9051_headlog_regs(h, b, r1, r2)
 #define dm9051_phyread_headlog(h, b, r)	(void)0
 #define dm9051_dump_data1(b, p, l)

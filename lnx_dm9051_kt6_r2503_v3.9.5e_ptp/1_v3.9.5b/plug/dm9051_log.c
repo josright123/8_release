@@ -37,10 +37,11 @@
 #include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
  
-#define SECOND_MAIN //(sec)
+//#define SECOND_MAIN //(sec)
 #include "../dm9051.h"
 
 extern const struct plat_cnf_info *plat_cnf;
+extern const struct param_config *param;
 
 //#warning "DMPLUG: dm9051 plug-in log function"
 struct driver_rel_info {

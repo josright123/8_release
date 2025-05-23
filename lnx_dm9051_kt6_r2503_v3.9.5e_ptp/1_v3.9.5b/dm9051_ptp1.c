@@ -25,7 +25,7 @@
 //#include <linux/ptp_clock_kernel.h>
 //#include <linux/ptp_classify.h>
 
-#include "dm9051_ptp1.h"
+//#include "dm9051_ptp1.h"
 #include "dm9051.h"
 //#include "dm9051_ptpd.h"
 #define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())

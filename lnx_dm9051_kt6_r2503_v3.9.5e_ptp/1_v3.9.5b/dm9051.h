@@ -19,6 +19,8 @@
 /*#define DMPLUG_INT */ //(INT39)
 /*#define INT_CLKOUT */ //(INT39 ClkOut)
 /*#define INT_TWO_STEP */ //(INT39 two_step)
+/*#define DMPLUG_PTP */ //(ptp1588)
+/*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
 /*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
 
@@ -40,7 +42,7 @@
 
 /* Macro for already known platforms
  */
-#define PLUG_ENABLE_INT
+//#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT39)
 
@@ -68,6 +70,23 @@
 #warning "INT: TWO_STEP"
 #endif
 
+#define PLUG_PTP_1588
+#ifdef PLUG_PTP_1588
+#define DMPLUG_PTP //(ptp 1588)
+
+  #define PLUG_PTP_PPS
+  #ifdef PLUG_PTP_PPS
+  #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
+  #endif
+#endif
+
+#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
+#warning "dm9051 PTP"
+#endif
+#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
+#warning "dm9051 PPS"
+#endif
+
 //#define PLUG_BMCR
 #ifdef PLUG_BMCR
 #define DMCONF_BMCR_WR //(bmcr-work around)
@@ -85,7 +104,16 @@
 #pragma message("WORKROUND: MRR_WR")
 #endif
 
-/* Device identification */
+/* Extended support header files
+ */
+//#include "dm9051_plug.h" /* for definition of '_INT_TWO_STEP' */
+//#include "dm9051_ptpd.h" /* 0.1 ptpc */
+#if defined(DMPLUG_PTP)
+#include "dm9051_ptp1.h"
+#endif
+
+/* Device identification
+ */
 #define DM9051_ID              0x9051
 #define DRVNAME_9051           "dm9051"
 
@@ -270,9 +298,6 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 
 #define AMDIX_LOG_BUFSIZE		72
 
-//#include "dm9051_plug.h" /* for definition of '_INT_TWO_STEP' */
-//#include "dm9051_ptpd.h" /* 0.1 ptpc */
-
 /**
  * struct rx_ctl_mach - rx activities record
  * @status_err_counter: rx status error counter
@@ -439,9 +464,6 @@ struct board_info
 /* MCO, re-direct, Verification */
 #define MCO //(MainCoerce)
 
-#if defined(MCO) && defined(INT_CLKOUT) && defined(MAIN_DATA)
-#endif
-
 #if defined(MCO) && defined(INT_TWO_STEP) /* && defined(MAIN_DATA)*/
 #undef dm9051_int2_supp
 #undef dm9051_int2_irq
@@ -454,7 +476,7 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
 int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
 #endif
 
-#if defined(MCO) && defined(DMPLUG_INT) && defined(MAIN_DATA)
+#if defined(MCO) && !defined(DMPLUG_INT) && defined(MAIN_DATA)
 #undef dm9051_poll_supp
 #undef dm9051_poll_sch
 #define dm9051_poll_supp() REQUEST_SUPPORTTED
@@ -471,6 +493,8 @@ int DM9051_POLL_SCHED(struct board_info *db);
 int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val);
 #endif
 
+#if defined(MCO) && defined(INT_CLKOUT) && defined(MAIN_DATA)
+#endif
 #if defined(MCO) && defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
 #endif
 
@@ -505,22 +529,14 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 
 int get_dts_irqf(struct board_info *db);
 
-//void dm9051_dump_data0(struct board_info *db, u8 *packet_data, int packet_len);
-//void dm9051_dump_reg2(struct board_info *db, unsigned int reg1, unsigned int reg2);
-//void dm9051_dump_reg3(struct board_info *db, unsigned int reg1, unsigned int reg2, unsigned int reg3);
-//void dm9051_dump_registers(struct board_info *db);
-
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb);
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
 int dm9051_phyread(void *context, unsigned int reg, unsigned int *val);
 int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 			size_t len);
-
 int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 			size_t len);
 int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);
-
-int dm9051_nsr_poll(struct board_info *db);
 
 /* init functions */
 int dm9051_all_reinit(struct board_info *db);
@@ -528,9 +544,10 @@ void dm9051_all_restart_sum(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 /* operation functions */
-int dm9051_loop_rx(struct board_info *db); //static int _dm9051_delayp_looping_rx_tx(struct board_info *db);
+int dm9051_loop_rx(struct board_info *db);
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
+int dm9051_nsr_poll(struct board_info *db);
 
 /* Param structures
  */
@@ -572,16 +589,7 @@ const struct param_config param_conf = {
 const struct param_config *param = &param_conf;
 #endif //MAIN_DATA
 
-#ifdef SECOND_MAIN
-extern const struct param_config *param;
-#endif //SECOND_MAIN
-
 #ifdef MAIN_DATA
-/* Default driver configuration */
-//SPI_SYNC_ALIGN_MODE = 0,
-//SPI_SYNC_BURST_MODE = 1,
-//SPI_SYNC_MISC_MODE = 2,
-//MODE_NUM = 3
 enum {
 	SKB_WB_OFF = 0,
 	SKB_WB_ON = 1, //'wb'

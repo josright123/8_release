@@ -24,7 +24,7 @@
 //#include <linux/ptp_clock_kernel.h>
 //#include <linux/ptp_classify.h>
 #define MAIN_DATA
-#include "dm9051_ptp1.h"
+//#include "dm9051_ptp1.h"
 #include "dm9051.h"
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
@@ -2527,7 +2527,7 @@ static void dm9051_drv_remove(struct spi_device *spi)
 	struct board_info *db = to_dm9051_board(ndev);
 
 	printk("\n");
-	netif_warn(db, probe, db->ndev, "_[phy] remove: disconnect\r\n"); //as 'probe' type
+	netif_err(db, probe, db->ndev, "_[phy] remove: disconnect\r\n"); //as 'probe' type
 	phy_disconnect(db->phydev);
 
 	/* 3 ptpc */

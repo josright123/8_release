@@ -22,7 +22,7 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-#include "dm9051_ptp1.h"
+//#include "dm9051_ptp1.h"
 #include "dm9051.h"
 //#include "dm9051_ptpd.h"
 
