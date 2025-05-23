@@ -653,8 +653,9 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 }
 
 /* APIs */
-void ptp_new(struct board_info *db, struct net_device *ndev) {
+int ptp_new(struct board_info *db) {
 	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
+	return 1;
 }
 void ptp_init_rcr(struct board_info *db) {
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)

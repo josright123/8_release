@@ -1479,8 +1479,9 @@ static void dm9051_ptp_unregister(struct board_info *db)
 
 #ifdef DMPLUG_PTP
 /* APIs */
-void ptp_new(struct board_info *db, struct net_device *ndev) {
+int ptp_new(struct board_info *db, struct net_device *ndev) {
 	db->ptp_enable = 1; // Enable PTP - For the driver whole operations
+	return 1;
 }
 void ptp_init_rcr(struct board_info *db) {
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)

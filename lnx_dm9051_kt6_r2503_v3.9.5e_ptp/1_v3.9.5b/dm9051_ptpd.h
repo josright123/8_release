@@ -116,7 +116,7 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 u32 dm9051_get_rate_reg(struct board_info *db);
 
 //implement in ptpd
-void ptp_new(struct board_info *db, struct net_device *ndev);
+int ptp_new(struct board_info *db, struct net_device *ndev);
 void ptp_init_rcr(struct board_info *db);
 u8 ptp_status_bits(struct board_info *db);
 int is_ptp_rxts_enable(struct board_info *db);

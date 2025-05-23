@@ -1123,10 +1123,10 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	printk("\n");
 	netif_info(db, tx_done, db->ndev, "%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 		db->xmit_in, db->xmit_tc, db->xmit_zc);
-	netif_info(db, tx_done, db->ndev, "%6d [_THrd-in] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
-		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
-	netif_info(db, tx_done, db->ndev, "%6d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
-		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
+	netif_info(db, tx_done, db->ndev, "%6d [_THrd-in] on-THrd-in %u Pkt %u\n", db->xmit_thrd0,
+		db->xmit_thrd0, db->xmit_ttc0);
+	netif_info(db, tx_done, db->ndev, "%6d [_THrd-end] on-THrd-end %u Pkt %u\n", db->xmit_thrd,
+		db->xmit_thrd, db->xmit_ttc);
 
 	/*PHY_LOG*/
 	dm9051_phyread_headlog("bcr00", db, 0);
@@ -1527,10 +1527,12 @@ int dm9051_loop_rx(struct board_info *db)
 		if (ntx) {
 			db->xmit_thrd0++;
 			db->xmit_ttc0 += ntx;
+			#ifdef DMPLUG_LOG
 			if (db->xmit_thrd0 <= 9) {
-				netif_warn(db, tx_queued, db->ndev, "%2d [_THrd-in] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
+				netif_warn(db, tx_queued, db->ndev, "%2d [_THrd-in] run %u Pkt %u zero-in %u, on-THrd-in %u Pkt %u\n", db->xmit_thrd0,
 					db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
 			}
+			#endif
 		}
 #endif
 		ret = dm9051_read_mem_rxb(db, DM_SPI_MRCMDX, &rxbyte, 2);
@@ -1635,10 +1637,12 @@ int dm9051_loop_rx(struct board_info *db)
 	if (ntx) {
 		db->xmit_thrd++;
 		db->xmit_ttc += ntx;
+		#ifdef DMPLUG_LOG
 		if (db->xmit_thrd <= 9) {
-			netif_warn(db, tx_queued, db->ndev, "%2d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
+			netif_warn(db, tx_queued, db->ndev, "%2d [_THrd-end] run %u Pkt %u zero-in %u, on-THrd-end %u Pkt %u\n", db->xmit_thrd,
 				db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
 		}
+		#endif
 	}
 #endif
 	return scanrr;
@@ -1759,12 +1763,14 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 #else
 	ret = TX_MODE2_CONTI_TCR(db, skb, param->tx_timeout_us);
 #endif
-	
+
+#ifdef DMPLUG_LOG
 	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
 		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
 		(db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
 		netif_info(db, tx_queued, db->ndev, "%s. tx_send end_wr %02x\n", db->bc.head, db->tcr_wr);
 	}
+#endif
 
 	/* 6.1 tx ptpc */
 	#if 1 //0
@@ -1846,10 +1852,12 @@ static void dm9051_tx_delay(struct work_struct *work)
 	db->xmit_zc += ntx ? 0 : 1;
 	if (ntx) {
 		db->xmit_in++;
+		#ifdef DMPLUG_LOG
 		if (db->xmit_in <= 9) {
 			netif_info(db, tx_queued, db->ndev, "%2d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 				db->xmit_in, db->xmit_tc, db->xmit_zc);
 		}
+		#endif
 	}
 
 	mutex_unlock(&db->spi_lockm);
@@ -2272,7 +2280,7 @@ static const struct net_device_ops dm9051_netdev_ops = {
 	.ndo_set_features = dm9051_ndo_set_features,
 	.ndo_get_stats = dm9051_get_stats,
 	/* 5 ptpc */
-#ifdef DMPLUG_PTP
+#if defined(DMPLUG_PTP)
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
 	.ndo_do_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
 #else
@@ -2288,11 +2296,8 @@ static void CHKSUM_PTP_NDEV(struct board_info *db, struct net_device *ndev)
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 
 	/* 2 ptpc */
-	#ifdef DMPLUG_PTP
-	PTP_NEW(db, ndev);
-	if (db->ptp_enable)
+	if (PTP_NEW(db))
 		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
-	#endif
 
 	ndev->hw_features |= ndev->features;
 }
@@ -2487,9 +2492,9 @@ static int dm9051_probe(struct spi_device *spi)
 
 	//[NETIF_MSG_HW is play for phylib...]
 	//db->msg_enable = 0;
-	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP | 
-		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_INTR | NETIF_MSG_TX_DONE | NETIF_MSG_RX_STATUS |
-		NETIF_MSG_PKTDATA | NETIF_MSG_HW /*| 0*/;
+	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP |
+		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_TX_QUEUED | NETIF_MSG_INTR | NETIF_MSG_TX_DONE |
+		NETIF_MSG_RX_STATUS | NETIF_MSG_PKTDATA | NETIF_MSG_HW /*| 0*/;
 
 	mutex_init(&db->spi_lockm);
 	mutex_init(&db->reg_mutex);

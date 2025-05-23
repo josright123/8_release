@@ -118,24 +118,12 @@ void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 //implement in ptpd
 //static void dm9051_ptp_core_init(struct board_info *db);
 
-void ptp_new(struct board_info *db, struct net_device *ndev);
+int ptp_new(struct board_info *db);
 void ptp_init_rcr(struct board_info *db);
 u8 ptp_status_bits(struct board_info *db);
 int is_ptp_rxts_enable(struct board_info *db);
 void ptp_init(struct board_info *db);
 void ptp_end(struct board_info *db);
-
-/* FAK1, */
-#define FAK1 //(fake)
-
-//[fake.ptp]
-#if defined(FAK1) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
-/* fake ptpc */
-#define PTP_NEW(d, n)			d->ptp_enable = 0
-#define PTP_INIT_RCR(d)
-#define PTP_INIT(d)
-#define PTP_END(d)
-#endif
 
 /* CO1, */
 #define CO1 //(Coerce)
@@ -143,7 +131,7 @@ void ptp_end(struct board_info *db);
 /* re-direct ptpc */
 #if defined(CO1) && defined(DMPLUG_PTP) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
 #undef PTP_NEW
-#define PTP_NEW(d, n) ptp_new(d, n)
+#define PTP_NEW(d) ptp_new(d)
 #undef PTP_INIT_RCR
 #define PTP_INIT_RCR(d) ptp_init_rcr(d)
 #undef PTP_INIT

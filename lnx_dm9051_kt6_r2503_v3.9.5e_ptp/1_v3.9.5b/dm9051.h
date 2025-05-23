@@ -43,7 +43,7 @@
 
 /* Macro for already known platforms
  */
-//#define PLUG_ENABLE_INT
+#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT39)
 
@@ -71,7 +71,7 @@
 #warning "INT: TWO_STEP"
 #endif
 
-#define PLUG_PTP_1588
+//#define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
 
@@ -434,7 +434,7 @@ struct board_info
 
 	unsigned int csum_gen_val;
 	unsigned int csum_rcv_val;
-	
+
 	unsigned int n_automdix;
 	unsigned int stop_automdix_flag;
 	char automdix_log[3][AMDIX_LOG_BUFSIZE]; //u16 automdix_flag[3];
@@ -442,17 +442,19 @@ struct board_info
 	unsigned int tcr_wr;
 	unsigned int data_len;
 	unsigned int pad;
+
 	unsigned int xmit_in; //
 	unsigned int xmit_tc; //
 	unsigned int xmit_zc; //zero count
+
 	unsigned int xmit_thrd0;
 	unsigned int xmit_ttc0; //zero count
 	unsigned int xmit_thrd;
 	unsigned int xmit_ttc; //zero count
+
 	unsigned int bmsr;
 	unsigned int lpa;
 	unsigned int mdi; //= 0x0830;
-
 
 	/* 1 ptpc */
 	#if 1 //0
@@ -595,10 +597,22 @@ enum dm_req_support {
 	REQUEST_SUPPORTTED =		1,
 };
 
+/* FAK1, */
+#define FAK1 //(fake1)
+
+//[fak1.ptp]
+#if defined(FAK1) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+/* fake ptpc */
+#define PTP_NEW(d)			0
+#define PTP_INIT_RCR(d)
+#define PTP_INIT(d)
+#define PTP_END(d)
+#endif
+
 /* FAK, */
 #define FAK //(fake)
 
-//[fake.1]
+//[fak.main]
 #if defined(FAK) //&& (defined(SECOND_MAIN) || defined(MAIN_DATA))
 /* raw fake encrypt */
 #define BUS_SETUP(db)	0		//empty(NoError)
