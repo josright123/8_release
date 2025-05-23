@@ -23,6 +23,7 @@
 /*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
 /*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
+/*#define DMPLUG_LOG */ //(debug log)
 
 #if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
 #ifdef CONFIG_64BIT // 64-bit specific code
@@ -81,10 +82,12 @@
 #endif
 
 #if defined(DMPLUG_PTP) && defined(MAIN_DATA)
-#warning "dm9051 PTP"
+//#warning "dm9051 PTP"
+#pragma message("dm9051 PTP")
 #endif
 #if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
-#warning "dm9051 PPS"
+//#warning "dm9051 PPS"
+#pragma message("dm9051 PPS")
 #endif
 
 //#define PLUG_BMCR
@@ -102,6 +105,15 @@
 #endif
 #if defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
 #pragma message("WORKROUND: MRR_WR")
+#endif
+
+//#define PLUG_LOG
+#ifdef PLUG_LOG
+#define DMPLUG_LOG //(debug log, extra-print-log for detail observation!)
+#endif
+
+#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
+#pragma message("DEBUG: LOG")
 #endif
 
 /* Extended support header files
@@ -461,67 +473,6 @@ struct board_info
 	#endif
 };
 
-/* MCO, re-direct, Verification */
-#define MCO //(MainCoerce)
-
-#if defined(MCO) && defined(INT_TWO_STEP) /* && defined(MAIN_DATA)*/
-#undef dm9051_int2_supp
-#undef dm9051_int2_irq
-#define dm9051_int2_supp() REQUEST_SUPPORTTED
-#define dm9051_int2_irq(d,h) DM9051_INT2_REQUEST(d,h)
-
-void PROBE_INT2_DLY_SETUP(struct board_info *db);
-void dm9051_rx_irq_servicep(struct work_struct *work);
-irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
-int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
-#endif
-
-#if defined(MCO) && !defined(DMPLUG_INT) && defined(MAIN_DATA)
-#undef dm9051_poll_supp
-#undef dm9051_poll_sch
-#define dm9051_poll_supp() REQUEST_SUPPORTTED
-#define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
-
-void dm9051_threaded_poll(struct work_struct *work); //dm9051_poll_servicep()
-
-void PROBE_POLL_SETUP(struct board_info *db);
-void OPEN_POLL_SCHED(struct board_info *db);
-int DM9051_POLL_SCHED(struct board_info *db);
-#endif
-
-#if defined(MCO) && defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
-int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val);
-#endif
-
-#if defined(MCO) && defined(INT_CLKOUT) && defined(MAIN_DATA)
-#endif
-#if defined(MCO) && defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
-#endif
-
-/*
- * Conti: 
- */
-#if defined(MCO) && defined(DMPLUG_CONTI) && defined(MAIN_DATA)
-/* Log definitions */
-#undef dmplug_tx
-#define dmplug_tx "continue"
-void tx_contu_new(struct board_info *db);
-int TX_MOTE2_CONTI_RCR(struct board_info *db);
-int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
-#endif
-
-//[overlay]
-#if defined(MCO) && defined(DMPLUG_CRYPT) && defined(MAIN_DATA)
-//overlay by plug/
-#undef BUS_SETUP
-#define BUS_SETUP(db) bus_setup(struct board_info *db)
-#undef BUS_OPS
-#define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
-//implement in plug/
-int bus_setup(struct board_info *db);
-void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
-#endif
-
 //#define TOGG_INTVL	1
 //#define TOGG_TOT_SHOW	5
 #define NUM_TRIGGER			25
@@ -630,5 +581,177 @@ const struct plat_cnf_info plat_misc_mode = {
 		.tx_blk = 0, .rx_blk = 0},
 };
 #endif //MAIN_DATA
+
+//#define NOT_REQUEST_SUPPORTTED	0x0
+//#define VOID_REQUEST_FUNCTION		-9
+//#define REQUEST_SUPPORTTED		1 //REQUEST_SUPPORTTED (1)
+
+/* Optional functions declaration const */
+enum dm_req_not_support {
+	VOID_REQUEST_FUNCTION =		-9,
+	NOT_REQUEST_SUPPORTTED =	0,
+};
+enum dm_req_support {
+	REQUEST_SUPPORTTED =		1,
+};
+
+/* FAK, */
+#define FAK //(fake)
+
+//[fake.1]
+#if defined(FAK) //&& (defined(SECOND_MAIN) || defined(MAIN_DATA))
+/* raw fake encrypt */
+#define BUS_SETUP(db)	0		//empty(NoError)
+#define BUS_OPS(db, buff, crlen)	//empty
+
+/* fake raw tx mode */
+#define dmplug_tx "normal"
+#define TX_CONTI_NEW(d)
+
+/* poll fake */
+#define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
+#define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
+
+#define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
+#define dm9051_int2_irq(d,h)		VOID_REQUEST_FUNCTION
+
+/* raw(fake) bmsr_wr */
+#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
+
+//[fake]
+#define SHOW_DEVLOG_REFER_BEGIN(d, b)
+#define SHOW_LOG_REFER_BEGIN(b)
+#define SHOW_DEVLOG_MODE(d)
+
+#define SHOW_PLAT_MODE(d)
+#define SHOW_MAC(b, a)
+#define SHOW_MONITOR_RXC(b, n)
+
+#define dm9051_headlog_regs(h, b, r1, r2)
+#define dm9051_phyread_headlog(h, b, r)	(void)0
+#define dm9051_dump_data1(b, p, l)
+#define monitor_rxb0(b, rb)
+#endif
+
+/* MCO, re-direct, Verification */
+#define MCO //(MainCoerce)
+
+#if defined(MCO) && defined(INT_TWO_STEP) /* && defined(MAIN_DATA)*/
+#undef dm9051_int2_supp
+#undef dm9051_int2_irq
+#define dm9051_int2_supp() REQUEST_SUPPORTTED
+#define dm9051_int2_irq(d,h) DM9051_INT2_REQUEST(d,h)
+
+void PROBE_INT2_DLY_SETUP(struct board_info *db);
+void dm9051_rx_irq_servicep(struct work_struct *work);
+irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
+int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
+#endif
+
+#if defined(MCO) && !defined(DMPLUG_INT) && defined(MAIN_DATA)
+#undef dm9051_poll_supp
+#undef dm9051_poll_sch
+#define dm9051_poll_supp() REQUEST_SUPPORTTED
+#define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
+
+void dm9051_threaded_poll(struct work_struct *work); //dm9051_poll_servicep()
+void PROBE_POLL_SETUP(struct board_info *db);
+void OPEN_POLL_SCHED(struct board_info *db);
+int DM9051_POLL_SCHED(struct board_info *db);
+#endif
+
+#if defined(MCO) && defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
+int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val);
+#endif
+
+#if defined(MCO) && defined(INT_CLKOUT) && defined(MAIN_DATA)
+#endif
+#if defined(MCO) && defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
+#endif
+
+/*
+ * Conti: 
+ */
+#if defined(MCO) && defined(DMPLUG_CONTI) && defined(MAIN_DATA)
+/* Log definitions */
+#undef dmplug_tx
+#define dmplug_tx "continue"
+void tx_contu_new(struct board_info *db);
+int TX_MOTE2_CONTI_RCR(struct board_info *db);
+int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
+#endif
+
+//[overlay]
+#if defined(MCO) && defined(DMPLUG_CRYPT) && defined(MAIN_DATA)
+//overlay by plug/
+#undef BUS_SETUP
+#define BUS_SETUP(db) bus_setup(struct board_info *db)
+#undef BUS_OPS
+#define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
+//implement in plug/
+int bus_setup(struct board_info *db);
+void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
+#endif
+
+/* CO, */
+#define CO //(Coerce)
+
+/* re-direct log */
+#if defined(CO) && defined(DMPLUG_LOG) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+
+#undef SHOW_DEVLOG_REFER_BEGIN
+#undef SHOW_LOG_REFER_BEGIN
+#undef SHOW_DEVLOG_MODE
+
+#undef SHOW_PLAT_MODE
+#undef SHOW_MAC
+#undef SHOW_MONITOR_RXC
+
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+#undef dm9051_headlog_regs
+#undef dm9051_phyread_headlog
+#undef dm9051_dump_data1
+#undef monitor_rxb0
+
+#define SHOW_DEVLOG_REFER_BEGIN(d,b) show_dev_begin(d,b)
+#define SHOW_LOG_REFER_BEGIN(b) show_log(b)
+#define SHOW_DEVLOG_MODE(d) show_mode(d)
+
+#define SHOW_PLAT_MODE(d) show_pmode(d)
+#define SHOW_MAC(b,a) show_mac(b,a)
+#define SHOW_MONITOR_RXC(b,n) show_rxc(b,n)
+
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+#define dm9051_headlog_regs(h,b,r1,r2) show_log_regs(h,b,r1,r2)
+#define dm9051_phyread_headlog(h,b,r) show_log_phy(h,b,r)
+#define dm9051_dump_data1(b,p,n) dump_data(b,p,n)
+#define monitor_rxb0(b,rb) show_rxb(b,rb)
+
+void show_dev_begin(struct device *dev, struct board_info *db);
+void show_log(struct board_info *db);
+void show_mode(struct device *dev);
+
+void show_pmode(struct device *dev);
+void show_mac(struct board_info *db, u8 *addr);
+void show_rxc(struct board_info *db, int scanrr);
+
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+void show_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
+int show_log_phy(char *head, struct board_info *db, unsigned int reg);
+void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
+void show_rxb(struct board_info *db, unsigned int rxbyte);
+#endif
+
+/* re-direct bmsr_wr */
+#if defined(CO) && defined(DMCONF_BMCR_WR) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+#undef PHY_READ
+#define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
+#endif
+
+/* re-direct conti */
+#if defined(CO) && defined(DMPLUG_CONTI) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+#undef TX_CONTI_NEW
+#define TX_CONTI_NEW(d) tx_contu_new(d)
+#endif
 
 #endif /* _DM9051_H_ */

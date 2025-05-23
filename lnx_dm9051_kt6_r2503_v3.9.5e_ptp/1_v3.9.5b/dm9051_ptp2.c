@@ -357,7 +357,7 @@ static void dm9051_ptp_unregister(struct board_info *db)
 		ptp_clock_unregister(db->ptp_clock);
 		db->ptp_clock = NULL;
 		//printk("_[ptp] remove: PTP clock!!!\r\n");
-		netif_info(db, hw, db->ndev, "_[ptp] remove: PTP clock!!!\r\n");
+		netif_err(db, hw, db->ndev, "_[ptp] remove: PTP clock!!!\r\n");
 	}
 }
 

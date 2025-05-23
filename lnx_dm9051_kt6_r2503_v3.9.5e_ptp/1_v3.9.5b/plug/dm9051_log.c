@@ -51,7 +51,7 @@ const struct driver_rel_info driver_info = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
 };
 
-void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db)
+void show_dev_begin(struct device *dev, struct board_info *db) //.SHOW_DEVLOG_REFER_BEGIN
 {
 	printk("\n");
 	dev_info(dev, "dev_info Version\n");
@@ -72,7 +72,7 @@ void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db)
 	#endif
 }
 
-void SHOW_LOG_REFER_BEGIN(struct board_info *db)
+void show_log(struct board_info *db) //.SHOW_LOG_REFER_BEGIN
 {
 	printk("\n");
 	netif_info(db, probe, db->ndev, "netif_info Version\n");
@@ -174,7 +174,7 @@ static void SHOW_ENG_OPTION_MODE(struct device *dev)
 			param->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
 }
 
-void SHOW_DEVLOG_MODE(struct device *dev)
+void show_mode(struct device *dev) //.SHOW_DEVLOG_MODE
 {
 	SHOW_DRIVER(dev);
 
@@ -190,19 +190,19 @@ void SHOW_DEVLOG_MODE(struct device *dev)
 }
 
 //-
-void SHOW_PLAT_MODE(struct device *dev)
+void show_pmode(struct device *dev) //.SHOW_PLAT_MODE
 {
 	dev_info(dev, "Davicom: %s", plat_cnf->test_info);
 }
 
-void SHOW_MAC(struct board_info *db, u8 *addr)
+void show_mac(struct board_info *db, u8 *addr) //.SHOW_MAC
 {
 	dev_warn(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
 			 addr[0], addr[1], addr[2],
 			 addr[3], addr[4], addr[5]);
 }
 
-void SHOW_MONITOR_RXC(struct board_info *db, int scanrr)
+void show_rxc(struct board_info *db, int scanrr) //.SHOW_MONITOR_RXC
 {
 #define PRINT_BURST_INFO(n) \
 		netif_warn(db, rx_status, db->ndev, "___[rx/tx %s mode] nRxc %d\n", \
@@ -235,7 +235,7 @@ static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned
 	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
 }
 
-void dm9051_headlog_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2)
+void show_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2) //.dm9051_headlog_regs
 {
 	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
@@ -244,7 +244,7 @@ void dm9051_headlog_regs(char *head, struct board_info *db, unsigned int reg1, u
 
 /* dm9051_phyread.EXTEND for 'link'
  */
-int dm9051_phyread_headlog(char *head, struct board_info *db, unsigned int reg)
+int show_log_phy(char *head, struct board_info *db, unsigned int reg) //.dm9051_phyread_headlog
 {
 	unsigned int val;
 	int ret = dm9051_phyread(db, reg, &val);
@@ -256,7 +256,7 @@ int dm9051_phyread_headlog(char *head, struct board_info *db, unsigned int reg)
 	return ret;
 }
 
-void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len)
+void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051_dump_data1
 {
 	int i, j, rowsize = 32;
 	int splen; //index of start row
@@ -280,7 +280,7 @@ void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len)
 	}
 }
 
-void monitor_rxb0(struct board_info *db, unsigned int rxbyte)
+void show_rxb(struct board_info *db, unsigned int rxbyte) //.monitor_rxb0
 {
 	if (param->force_monitor_rxb)
 	{

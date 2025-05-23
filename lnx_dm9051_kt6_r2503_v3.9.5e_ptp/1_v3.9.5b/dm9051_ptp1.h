@@ -124,64 +124,12 @@ u8 ptp_status_bits(struct board_info *db);
 int is_ptp_rxts_enable(struct board_info *db);
 void ptp_init(struct board_info *db);
 void ptp_end(struct board_info *db);
-#endif
 
-//#define NOT_REQUEST_SUPPORTTED	0x0
-//#define VOID_REQUEST_FUNCTION		-9
-//#define REQUEST_SUPPORTTED		1 //REQUEST_SUPPORTTED (1)
+/* FAK1, */
+#define FAK1 //(fake)
 
-/* Optional functions declaration const */
-enum dm_req_not_support {
-	VOID_REQUEST_FUNCTION =		-9,
-	NOT_REQUEST_SUPPORTTED =	0,
-};
-enum dm_req_support {
-	REQUEST_SUPPORTTED =		1,
-};
-
-/* Optional functions and dadicated function */
-//#define SECOND_MAIN //(sec)
-#define FAK //(fake)
-
-//[fake.1]
-#if defined(FAK) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
-//#ifdef _MAIN_DATA
-/* raw fake encrypt */
-#define BUS_SETUP(db)	0		//empty(NoError)
-#define BUS_OPS(db, buff, crlen)	//empty
-
-/* fake raw tx mode */
-#define dmplug_tx "normal"
-#define TX_CONTI_NEW(d)
-
-/* poll fake */
-#define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
-#define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
-
-#define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
-#define dm9051_int2_irq(d,h)		VOID_REQUEST_FUNCTION
-
-/* raw(fake) bmsr_wr */
-#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
-
-//[fake]
-#define SHOW_DEVLOG_REFER_BEGIN(d, b)
-#define SHOW_LOG_REFER_BEGIN(b)
-#define SHOW_DEVLOG_MODE(d)
-
-#define SHOW_PLAT_MODE(d)
-#define SHOW_MAC(b, a)
-#define SHOW_MONITOR_RXC(b, n)
-
-#define dm9051_headlog_regs(h, b, r1, r2)
-#define dm9051_phyread_headlog(h, b, r)	(void)0
-#define dm9051_dump_data1(b, p, l)
-#define monitor_rxb0(b, rb)
-//#endif //_MAIN_DATA
-#endif
-
-//[fake.2]
-#if defined(FAK) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+//[fake.ptp]
+#if defined(FAK1) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
 /* fake ptpc */
 #define PTP_NEW(d, n)			d->ptp_enable = 0
 #define PTP_INIT_RCR(d)
@@ -189,11 +137,11 @@ enum dm_req_support {
 #define PTP_END(d)
 #endif
 
-/* CO, re-direct */
-#define CO //(Coerce)
+/* CO1, */
+#define CO1 //(Coerce)
 
 /* re-direct ptpc */
-#if defined(CO) && defined(DMPLUG_PTP) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+#if defined(CO1) && defined(DMPLUG_PTP) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
 #undef PTP_NEW
 #define PTP_NEW(d, n) ptp_new(d, n)
 #undef PTP_INIT_RCR
@@ -202,6 +150,7 @@ enum dm_req_support {
 #define PTP_INIT(d) ptp_init(d)
 #undef PTP_END
 #define PTP_END(d) ptp_end(d)
+#endif
 #endif
 
 #endif //_DM9051_PTPC_H_

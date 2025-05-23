@@ -1104,6 +1104,8 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 									 struct ethtool_stats *stats, u64 *data)
 {
 	struct board_info *db = to_dm9051_board(ndev);
+	unsigned int reg1, reg2;
+	unsigned int v1, v2;
 	unsigned int val;
 
 	data[0] = ndev->stats.rx_packets;
@@ -1118,14 +1120,10 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 #if MI_FIX //ee read
 	mutex_lock(&db->spi_lockm);
 #endif
-	netif_info(db, tx_done, db->ndev, "rx_psckets: %llu\n", data[0]);
-	dm9051_headlog_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
-	dm9051_headlog_regs("dump wdr registers:", db, 0x24, 0x25);
-	dm9051_headlog_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
-
+	printk("\n");
 	netif_info(db, tx_done, db->ndev, "%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 		db->xmit_in, db->xmit_tc, db->xmit_zc);
-	netif_info(db, tx_done, db->ndev, "%6d [_THrd0] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
+	netif_info(db, tx_done, db->ndev, "%6d [_THrd-in] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
 		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
 	netif_info(db, tx_done, db->ndev, "%6d [_THrd] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd,
 		db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
@@ -1136,6 +1134,28 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	dm9051_phyread_headlog("lpa05", db, 5);
 	dm9051_phyread_headlog("phy17", db, 17);
 	dm9051_phyread_headlog("phy20", db, 20);
+	
+	//netif_info(db, pkdata, db->ndev, "rx_psckets: %llu\n", data[0]);
+	//dm9051_headlog_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
+	//dm9051_headlog_regs("dump wdr registers:", db, 0x24, 0x25);
+	//dm9051_headlog_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
+	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump rcr registers:");
+	reg1 = DM9051_RCR; reg2 = DM9051_RCR;
+	dm9051_get_reg(db, reg1, &v1);
+	dm9051_get_reg(db, reg2, &v2);
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump wdr registers:");
+	reg1 = 0x24; reg2 = 0x25;
+	dm9051_get_reg(db, reg1, &v1);
+	dm9051_get_reg(db, reg2, &v2);
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump mrr registers:");
+	reg1 = DM9051_MRRL; reg2 = DM9051_MRRH;
+	dm9051_get_reg(db, reg1, &v1);
+	dm9051_get_reg(db, reg2, &v2);
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+
 	/*BMSR*/
 	/*dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
 	dm9051_phyread(db, MII_BMSR, &val);
@@ -1501,14 +1521,14 @@ int dm9051_loop_rx(struct board_info *db)
 #if 1
 		/* In rx-loop
 		 */
-		sprintf(db->bc.head, "_THrd0");
+		sprintf(db->bc.head, "_THrd-in");
 		db->bc.mode = TX_THREAD0;
 		ntx = dm9051_loop_tx(db); /* [More] and more tx better performance */
 		if (ntx) {
 			db->xmit_thrd0++;
 			db->xmit_ttc0 += ntx;
 			if (db->xmit_thrd0 <= 9) {
-				netif_warn(db, tx_queued, db->ndev, "%2d [_THrd0] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
+				netif_warn(db, tx_queued, db->ndev, "%2d [_THrd-in] run %u Pkt %u zero-in %u, on-THrd %u Pkt %u\n", db->xmit_thrd0,
 					db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
 			}
 		}
@@ -2468,7 +2488,8 @@ static int dm9051_probe(struct spi_device *spi)
 	//[NETIF_MSG_HW is play for phylib...]
 	//db->msg_enable = 0;
 	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP | 
-		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_INTR | NETIF_MSG_RX_STATUS | NETIF_MSG_PKTDATA | NETIF_MSG_HW /*| NETIF_MSG_HW*/; //0;
+		NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_INTR | NETIF_MSG_TX_DONE | NETIF_MSG_RX_STATUS |
+		NETIF_MSG_PKTDATA | NETIF_MSG_HW /*| 0*/;
 
 	mutex_init(&db->spi_lockm);
 	mutex_init(&db->reg_mutex);

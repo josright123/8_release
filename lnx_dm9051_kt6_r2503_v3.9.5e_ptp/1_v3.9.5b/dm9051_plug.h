@@ -46,57 +46,17 @@
 
 /* CO, */
 #define CO //(Coerce)
-/* re-direct bmsr_wr */
-#if defined(CO) && defined(DMCONF_BMCR_WR) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
-#undef PHY_READ
-#define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
-#endif
-
-/* re-direct conti */
-#if defined(CO) && defined(DMPLUG_CONTI) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
-#undef TX_CONTI_NEW
-#define TX_CONTI_NEW(d) tx_contu_new(d)
-#endif
 
 /* re-direct ptpc */
-#if defined(CO) && defined(DMPLUG_PTP) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
-#undef PTP_NEW
-#define PTP_NEW(d, n) ptp_new(d, n)
-#undef PTP_INIT_RCR
-#define PTP_INIT_RCR(d) ptp_init_rcr(d)
-#undef PTP_INIT
-#define PTP_INIT(d) ptp_init(d)
-#undef PTP_END
-#define PTP_END(d) ptp_end(d)
-#endif
-
-/* re-direct log */
-#if defined(CO) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
-#undef SHOW_DEVLOG_REFER_BEGIN
-#undef SHOW_LOG_REFER_BEGIN
-#undef SHOW_DEVLOG_MODE
-
-#undef SHOW_PLAT_MODE
-#undef SHOW_MAC
-#undef SHOW_MONITOR_RXC
-
-//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
-#undef dm9051_headlog_regs
-#undef dm9051_phyread_headlog
-#undef dm9051_dump_data1
-#undef monitor_rxb0
-void SHOW_DEVLOG_REFER_BEGIN(struct device *dev, struct board_info *db);
-void SHOW_LOG_REFER_BEGIN(struct board_info *db);
-void SHOW_DEVLOG_MODE(struct device *dev);
-
-void SHOW_PLAT_MODE(struct device *dev);
-void SHOW_MONITOR_RXC(struct board_info *db, int scanrr);
-
-//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
-void dm9051_headlog_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
-int dm9051_phyread_headlog(char *head, struct board_info *db, unsigned int reg);
-void dm9051_dump_data1(struct board_info *db, u8 *packet_data, int packet_len);
-void monitor_rxb0(struct board_info *db, unsigned int rxbyte);
-#endif
+//#if defined(CO) && defined(DMPLUG_PTP) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+//#undef PTP_NEW
+//#define PTP_NEW(d, n) ptp_new(d, n)
+//#undef PTP_INIT_RCR
+//#define PTP_INIT_RCR(d) ptp_init_rcr(d)
+//#undef PTP_INIT
+//#define PTP_INIT(d) ptp_init(d)
+//#undef PTP_END
+//#define PTP_END(d) ptp_end(d)
+//#endif
 
 #endif //_DM9051_PLUG_H_
