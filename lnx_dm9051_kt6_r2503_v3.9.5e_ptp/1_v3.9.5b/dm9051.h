@@ -241,6 +241,7 @@
  //0x3D 
  //Pause Packet Control Register - default = 1 
 #define PPCR_PAUSE_COUNT	0x08
+#define PPCR_PAUSE_ADVCOUNT	0x0F
 #define PPCR_PAUSE_UNLIMIT	0x00
  //0x54
 #define IPCOCR_CLKOUT		BIT(7)
@@ -619,6 +620,9 @@ enum dm_req_support {
 #define BUS_SETUP(db)	0		//empty(NoError)
 #define BUS_OPS(db, buff, crlen)	//empty
 
+/* fake clkout */
+#define INT_CLOCK(db)	0		//empty(NoError)
+
 /* fake raw tx mode */
 #define SET_RCR(b)			dm9051_set_rcr(b)
 #define TX_SEND(b,s)			dm9051_tx_send(b,s)
@@ -680,7 +684,11 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 #endif
 
 #if defined(MCO) && defined(INT_CLKOUT) && defined(MAIN_DATA)
+#undef INT_CLOCK
+#define INT_CLOCK(db) dm9051_int_clkout(struct board_info *db)
+int dm9051_int_clkout(struct board_info *db);
 #endif
+
 #if defined(MCO) && defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
 #endif
 

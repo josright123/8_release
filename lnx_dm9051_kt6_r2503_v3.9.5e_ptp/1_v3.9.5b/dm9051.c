@@ -413,6 +413,18 @@ static int dm9051_set_recv(struct board_info *db)
 	return SET_RCR(db); /* enable rx */
 }
 
+#ifdef INT_CLKOUT
+int dm9051_int_clkout(struct board_info *db)
+{
+	int ret;
+
+	netif_info(db, intr, db->ndev, "_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
+	ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
+	if (ret)
+		return ret;
+}
+#endif
+
 static int dm9051_update_fcr(struct board_info *db)
 {
 	u8 fcr = 0;
@@ -641,73 +653,25 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 	return -ENODEV;
 }
 
-static int dm9051_ndo_set_features(struct net_device *ndev,
-								   netdev_features_t features)
-{
-	// netdev_features_t changed = ndev->features ^ features;
-	struct board_info *db = to_dm9051_board(ndev);
-
-	if ((features & NETIF_F_RXCSUM) && (features & NETIF_F_HW_CSUM))
-	{
-		netif_info(db, drv, db->ndev, "_ndo set and write [Enabling TX/RX checksum]\n");
-		db->csum_gen_val = 0x7; //dm9051_set_reg(db, 0x31, 0x7);
-		db->csum_rcv_val = 0x3; //dm9051_set_reg(db, 0x32, 0x3);
-	}
-	else if (features & NETIF_F_RXCSUM)
-	{
-		netif_info(db, drv, db->ndev, "_ndo set and write [Enabling RX checksum only]\n");
-		db->csum_gen_val = 0x0; //dm9051_set_reg(db, 0x31, 0x0);
-		db->csum_rcv_val = 0x3; //dm9051_set_reg(db, 0x32, 0x3);
-	}
-	else if (features & NETIF_F_HW_CSUM)
-	{
-		netif_info(db, drv, db->ndev, "_ndo set and write [Enabling TX checksum only]\n");
-		db->csum_gen_val = 0x7; //dm9051_set_reg(db, 0x31, 0x7);
-		db->csum_rcv_val = 0x0; //dm9051_set_reg(db, 0x32, 0x0);
-	}
-	else
-	{
-		//netif_info(db, drv, db->ndev, "_ndo set and write [Disabling TX/RX checksum]\n");
-		db->csum_gen_val = 0x0; //dm9051_set_reg(db, 0x31, 0x0);
-		db->csum_rcv_val = 0x0; //dm9051_set_reg(db, 0x32, 0x0);
-	}
-
-#if MI_FIX
-	mutex_lock(&db->spi_lockm);
-#endif
-	dm9051_set_reg(db, 0x31, db->csum_gen_val);
-	dm9051_set_reg(db, 0x32, db->csum_rcv_val);
-#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-#endif
-
-	return 0;
-}
-
 /* Functions:
  */
 static int dm9051_core_init(struct board_info *db)
 {
-	int ret = BUS_SETUP(db); //reserved, customization, raw empty or overlay
+	int ret = BUS_SETUP(db); /* customization */
 	if (ret)
 		return ret;
 
 	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (plat_cnf->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
 	if (ret)
 		return ret;
-	// Spenser
-	// ret = regmap_write(db->regmap_dm, DM9051_PPCR, PPCR_PAUSE_UNLIMIT); /* from PPCR_PAUSE_COUNT, Pause Count */
-	ret = regmap_write(db->regmap_dm, DM9051_PPCR, 0xF);
+	ret = regmap_write(db->regmap_dm, DM9051_PPCR, PPCR_PAUSE_ADVCOUNT); /* Pause Count */
 	if (ret)
 		return ret;
 
-	// Checksum Offload
-	//k("dm9051_set [write TX/RX checksum] wr 0x31 0x%02x wr 0x32 0x%02x, in _core_reset\n",
-	//	db->csum_gen_val, db->csum_rcv_val);
-	ret = regmap_write(db->regmap_dm, 0x31, db->csum_gen_val);
+	ret = regmap_write(db->regmap_dm, 0x31, db->csum_gen_val); /* Checksum Offload */
 	if (ret)
 		return ret;
-	ret = regmap_write(db->regmap_dm, 0x32, db->csum_rcv_val);
+	ret = regmap_write(db->regmap_dm, 0x32, db->csum_rcv_val); /* Checksum Offload */
 	if (ret)
 		return ret;
 
@@ -718,12 +682,9 @@ static int dm9051_core_init(struct board_info *db)
 	/* Diagnostic contribute: In dm9051_enable_interrupt()
 	 * (or located in the core reset subroutine is better!!)
 	 */
-	#ifdef INT_CLKOUT
-		netif_info(db, intr, db->ndev, "_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
-		ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
-		if (ret)
-			return ret;
-	#endif
+	ret = INT_CLOCK(db); /* clock out */
+	if (ret)
+		return ret;
 
 	return ret; /* ~return dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db)) */
 }
@@ -2229,6 +2190,49 @@ static int dm9051_set_mac_address(struct net_device *ndev, void *p)
 	mutex_unlock(&db->spi_lockm);
 	#endif
 	return ret;
+}
+
+static int dm9051_ndo_set_features(struct net_device *ndev,
+								   netdev_features_t features)
+{
+	// netdev_features_t changed = ndev->features ^ features;
+	struct board_info *db = to_dm9051_board(ndev);
+
+	if ((features & NETIF_F_RXCSUM) && (features & NETIF_F_HW_CSUM))
+	{
+		netif_info(db, drv, db->ndev, "_ndo set and write [Enabling TX/RX checksum]\n");
+		db->csum_gen_val = 0x7; //dm9051_set_reg(db, 0x31, 0x7);
+		db->csum_rcv_val = 0x3; //dm9051_set_reg(db, 0x32, 0x3);
+	}
+	else if (features & NETIF_F_RXCSUM)
+	{
+		netif_info(db, drv, db->ndev, "_ndo set and write [Enabling RX checksum only]\n");
+		db->csum_gen_val = 0x0; //dm9051_set_reg(db, 0x31, 0x0);
+		db->csum_rcv_val = 0x3; //dm9051_set_reg(db, 0x32, 0x3);
+	}
+	else if (features & NETIF_F_HW_CSUM)
+	{
+		netif_info(db, drv, db->ndev, "_ndo set and write [Enabling TX checksum only]\n");
+		db->csum_gen_val = 0x7; //dm9051_set_reg(db, 0x31, 0x7);
+		db->csum_rcv_val = 0x0; //dm9051_set_reg(db, 0x32, 0x0);
+	}
+	else
+	{
+		//netif_info(db, drv, db->ndev, "_ndo set and write [Disabling TX/RX checksum]\n");
+		db->csum_gen_val = 0x0; //dm9051_set_reg(db, 0x31, 0x0);
+		db->csum_rcv_val = 0x0; //dm9051_set_reg(db, 0x32, 0x0);
+	}
+
+#if MI_FIX
+	mutex_lock(&db->spi_lockm);
+#endif
+	dm9051_set_reg(db, 0x31, db->csum_gen_val);
+	dm9051_set_reg(db, 0x32, db->csum_rcv_val);
+#if MI_FIX
+	mutex_unlock(&db->spi_lockm);
+#endif
+
+	return 0;
 }
 
 static struct net_device_stats *dm9051_get_stats(struct net_device *ndev)
