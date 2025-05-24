@@ -119,14 +119,6 @@ static void SHOW_OPEN(struct board_info *db)
 	/* amdix_log_reset(db); */ //(to be determined)
 }
 
-/* log */
-#define PRINT_REGMAP_BLK_ERR(evtstr, ret, r, n) \
-	netif_err(db, drv, db->ndev, "%s: error %d noinc %s regs %02x len %u\n", \
-		__func__, ret, \
-		evtstr, \
-		r, \
-		n)
-
 /*
  * functions: 
  */
@@ -239,7 +231,8 @@ int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 			len -= BLKTX;
 			if (ret < 0)
 			{
-				PRINT_REGMAP_BLK_ERR("writing", ret, reg, BLKTX);
+				netif_err(db, drv, db->ndev, "%s: error %d noinc writing regs %02x len %u\n",
+					__func__, ret, reg, BLKTX);
 				return ret;
 			}
 		}
@@ -303,7 +296,8 @@ int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 			ret = regmap_noinc_read(db->regmap_dm, reg, p, BLKRX);
 			if (ret < 0)
 			{
-				PRINT_REGMAP_BLK_ERR("reading", ret, reg, BLKRX);
+				netif_err(db, drv, db->ndev, "%s: error %d noinc reading regs %02x len %u\n",
+					__func__, ret, reg, BLKRX);
 				return ret;
 			}
 			p += BLKRX;
