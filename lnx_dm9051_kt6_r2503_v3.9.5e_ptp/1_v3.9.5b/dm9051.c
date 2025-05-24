@@ -29,7 +29,7 @@ const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration
 /* Tx 'wb' do skb protect */
 #define DM9051_SKB_PROTECT
 #define STICK_SKB_CHG_NOTE
-#define DM9051_INTR_BACKCODE
+#define DM9051_INTR_BACKUP
 
 int get_dts_irqf(struct board_info *db)
 {
@@ -1629,7 +1629,7 @@ int dm9051_loop_rx(struct board_info *db)
 	return scanrr;
 }
 
-#if !defined(DMPLUG_CONTI)
+#if DM9051_INTR_BACKUP //instead more backup.#if !defined(_DMPLUG_CONTI)
 #ifdef DM9051_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 {	
@@ -1647,16 +1647,14 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 #endif
 
 /* particulars, wb mode*/
-struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
+static struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
 {
-//#if !defined(_DMPLUG_CONTI)
 	db->data_len = skb->len;
 	db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
 #ifdef DM9051_SKB_PROTECT
 	if (db->pad)
 		skb = EXPAND_SKB(skb, db->pad);
 #endif
-//#endif
 	return skb;
 }
 
@@ -1678,7 +1676,7 @@ static int dm9051_req_tx(struct board_info *db)
 	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
 }
 
-static int TX_SEND(struct board_info *db, struct sk_buff *skb)
+static int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 
@@ -1726,7 +1724,6 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 #endif
 
 	/* 6 tx ptpc */
-	#if 1 //0
 	#ifdef DMPLUG_PTP
 #if 1 //tom tell, 20250522
 	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
@@ -1734,35 +1731,27 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 		netdev_dbg(db->ndev, "Yes, This is a hardware timestamp requested\n");
 	}
 #endif	
-	//u8 message_type = 
 	dm9051_ptp_txreq(db, skb);
 	#endif
-	#endif
 
-#if !defined(DMPLUG_CONTI)
 	ret = TX_SEND(db, skb);
-#else
-	ret = TX_MODE2_CONTI_TCR(db, skb, param->tx_timeout_us);
-#endif
-
-#ifdef DMPLUG_LOG
-	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
-		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
-		(db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
-		netif_info(db, tx_queued, db->ndev, "%s. tx_send end_wr %02x\n", db->bc.head, db->tcr_wr);
-	}
-#endif
 
 	/* 6.1 tx ptpc */
-	#if 1 //0
 	#ifdef DMPLUG_PTP
 	dm9051_ptp_txreq_hwtstamp(db, skb);
-	#endif
 	#endif
 
 #if defined(STICK_SKB_CHG_NOTE)
 	dev_kfree_skb(skb);
 #endif
+
+	#ifdef DMPLUG_LOG /* only config enable _log */
+	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
+		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
+		(db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
+		netif_info(db, tx_queued, db->ndev, "%s. tx_send end_wr %02x\n", db->bc.head, db->tcr_wr);
+	}
+	#endif
 	return ret;
 }
 

@@ -48,8 +48,8 @@ extern const struct param_config *param;
 #define tx_conti_ver(b)
 #else
 #define dmplug_tx "continue"
-#define tx_conti_ver(b) tx_contu_new(b)
-void tx_contu_new(struct board_info *db);
+#define tx_conti_ver(b) tx_continue_ver(b)
+void tx_continue_ver(struct board_info *db);
 #endif
 
 //#warning "DMPLUG: dm9051 plug-in log function"
