@@ -42,6 +42,11 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
+static unsigned int dm9051_init_intcr_value(struct board_info *db)
+{
+	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || get_dts_irqf(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
+}
+
 /*
  * log: 
  */
@@ -355,7 +360,6 @@ int dm9051_ncr_poll(struct board_info *db)
 /* waiting tx-end rather than tx-req
  * got faster
  */
-#if !defined(DMPLUG_CONTI) || defined(DMPLUG_PTP)
 int dm9051_nsr_poll(struct board_info *db)
 {
 	unsigned int mval;
@@ -368,7 +372,6 @@ int dm9051_nsr_poll(struct board_info *db)
 		netdev_err(db->ndev, "timeout in checking for tx end\n");
 	return ret;
 }
-#endif
 
 static int dm9051_epcr_poll(struct board_info *db)
 {
@@ -687,12 +690,6 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 
 /* Functions:
  */
-
-static unsigned int dm9051_init_intcr_value(struct board_info *db)
-{
-	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || get_dts_irqf(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
-}
-
 static int dm9051_core_init(struct board_info *db)
 {
 	int ret = BUS_SETUP(db); //reserved, customization, raw empty or overlay
