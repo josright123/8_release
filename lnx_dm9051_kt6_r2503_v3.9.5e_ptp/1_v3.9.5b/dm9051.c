@@ -399,11 +399,7 @@ static int dm9051_set_fcr(struct board_info *db)
 
 static int dm9051_set_rcr(struct board_info *db)
 {
-#if !defined(DMPLUG_CONTI)
 	return dm9051_set_reg(db, DM9051_RCR, db->rctl.rcr_all);
-#else
-	return TX_MOTE2_CONTI_RCR(db);
-#endif
 }
 
 static int dm9051_set_recv(struct board_info *db)
@@ -414,7 +410,7 @@ static int dm9051_set_recv(struct board_info *db)
 	if (ret)
 		return ret;
 
-	return dm9051_set_rcr(db); /* enable rx */
+	return SET_RCR(db); /* enable rx */
 }
 
 static int dm9051_update_fcr(struct board_info *db)

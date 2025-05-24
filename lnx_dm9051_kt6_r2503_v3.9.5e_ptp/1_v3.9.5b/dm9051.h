@@ -620,8 +620,7 @@ enum dm_req_support {
 #define BUS_OPS(db, buff, crlen)	//empty
 
 /* fake raw tx mode */
-#define dmplug_tx "normal"
-#define TX_CONTI_NEW(d)
+#define SET_RCR(b)			dm9051_set_rcr(b)
 
 /* poll fake */
 #define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
@@ -688,11 +687,10 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
  * Conti: 
  */
 #if defined(MCO) && defined(DMPLUG_CONTI) && defined(MAIN_DATA)
-/* Log definitions */
-#undef dmplug_tx
-#define dmplug_tx "continue"
-void tx_contu_new(struct board_info *db);
+#undef SET_RCR
+#define SET_RCR(b) TX_MOTE2_CONTI_RCR(b)
 int TX_MOTE2_CONTI_RCR(struct board_info *db);
+
 int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
 #endif
 
@@ -761,12 +759,6 @@ void show_rxb(struct board_info *db, unsigned int rxbyte);
 #if defined(CO) && defined(DMCONF_BMCR_WR) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
 #undef PHY_READ
 #define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
-#endif
-
-/* re-direct conti */
-#if defined(CO) && defined(DMPLUG_CONTI) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
-#undef TX_CONTI_NEW
-#define TX_CONTI_NEW(d) tx_contu_new(d)
 #endif
 
 #endif /* _DM9051_H_ */

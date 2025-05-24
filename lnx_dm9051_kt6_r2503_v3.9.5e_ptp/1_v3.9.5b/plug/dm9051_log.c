@@ -43,6 +43,15 @@
 extern const struct plat_cnf_info *plat_cnf;
 extern const struct param_config *param;
 
+#if defined(DMPLUG_CONTI)
+#define dmplug_tx "normal"
+#define tx_conti_ver(b)
+#else
+#define dmplug_tx "continue"
+#define tx_conti_ver(b) tx_contu_new(b)
+void tx_contu_new(struct board_info *db);
+#endif
+
 //#warning "DMPLUG: dm9051 plug-in log function"
 struct driver_rel_info {
 	const char *release_version;
@@ -62,7 +71,7 @@ void show_dev_begin(struct device *dev, struct board_info *db) //.SHOW_DEVLOG_RE
 	printk("\n");
 
 	/* conti */
-	TX_CONTI_NEW(db);
+	tx_conti_ver(db);
 	/* 2.0 ptpc */
 	#ifdef DMPLUG_PTP
 	if (db->ptp_enable) {
