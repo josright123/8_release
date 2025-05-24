@@ -21,10 +21,7 @@
 #include <linux/types.h>
 #include <linux/of.h>
 #include <linux/version.h>
-//#include <linux/ptp_clock_kernel.h>
-//#include <linux/ptp_classify.h>
 #define MAIN_DATA
-//#include "dm9051_ptp1.h"
 #include "dm9051.h"
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
@@ -34,9 +31,6 @@ const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration
 #define STICK_SKB_CHG_NOTE
 #define DM9051_INTR_BACKCODE
 
-/*
- * Info: 
- */
 int get_dts_irqf(struct board_info *db)
 {
 	struct spi_device *spi = db->spidev;
@@ -48,6 +42,9 @@ int get_dts_irqf(struct board_info *db)
 	return IRQF_TRIGGER_LOW;
 }
 
+/*
+ * log: 
+ */
 static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
 {
 	if (wid != DM9051_ID)
@@ -119,9 +116,6 @@ static void SHOW_OPEN(struct board_info *db)
 	/* amdix_log_reset(db); */ //(to be determined)
 }
 
-/*
- * functions: 
- */
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
 {
 	int ret;
@@ -256,27 +250,6 @@ int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen)
 	return dm9051_write_mem(db, DM_SPI_MWCMD, buff, crlen); //'!wb'
 }
 
-static int dm9051_read_mem_rxb(struct board_info *db, unsigned int reg, void *buff,
-							   size_t len)
-{
-	int ret;
-	u8 *p = buff;
-	unsigned int rb;
-
-	while (len--)
-	{
-		ret = regmap_read(db->regmap_dm, reg, &rb); // quick direct
-		*p++ = (u8)SCAN_BL(rb);
-		if (ret < 0)
-			break;
-	}
-
-	if (ret < 0)
-		netif_err(db, drv, db->ndev, "%s: error %d noinc reading regs %02x\n",
-				  __func__, ret, reg);
-	return ret;
-}
-
 int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 						   size_t len)
 {
@@ -331,15 +304,24 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 	return ret;
 }
 
-static int dm9051_ncr_poll(struct board_info *db)
+static int dm9051_read_mem_rxb(struct board_info *db, unsigned int reg, void *buff,
+							   size_t len)
 {
-	unsigned int mval;
 	int ret;
+	u8 *p = buff;
+	unsigned int rb;
 
-	ret = regmap_read_poll_timeout(db->regmap_dm, DM9051_NSR, mval,
-								   !(mval & NCR_RST), 10, 100);
-	if (ret == -ETIMEDOUT)
-		netdev_err(db->ndev, "timeout in checking for ncr reset\n");
+	while (len--)
+	{
+		ret = regmap_read(db->regmap_dm, reg, &rb); // quick direct
+		*p++ = (u8)SCAN_BL(rb);
+		if (ret < 0)
+			break;
+	}
+
+	if (ret < 0)
+		netif_err(db, drv, db->ndev, "%s: error %d noinc reading regs %02x\n",
+				  __func__, ret, reg);
 	return ret;
 }
 
@@ -356,6 +338,18 @@ static int dm9051_ncr_reset(struct board_info *db)
 	dm9051_ncr_poll(db);
 
 	return 0;
+}
+
+int dm9051_ncr_poll(struct board_info *db)
+{
+	unsigned int mval;
+	int ret;
+
+	ret = regmap_read_poll_timeout(db->regmap_dm, DM9051_NSR, mval,
+								   !(mval & NCR_RST), 10, 100);
+	if (ret == -ETIMEDOUT)
+		netdev_err(db->ndev, "timeout in checking for ncr reset\n");
+	return ret;
 }
 
 /* waiting tx-end rather than tx-req
