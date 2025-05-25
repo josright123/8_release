@@ -121,6 +121,50 @@ static void SHOW_OPEN(struct board_info *db)
 	/* amdix_log_reset(db); */ //(to be determined)
 }
 
+static SHOW_XMIT_ANALYSIS(struct board_info *db)
+{
+	netif_info(db, tx_done, db->ndev, "%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
+		db->xmit_in, db->xmit_tc, db->xmit_zc);
+	netif_info(db, tx_done, db->ndev, "%6d [_THrd-in] on-THrd-in %u Pkt %u\n", db->xmit_thrd0,
+		db->xmit_thrd0, db->xmit_ttc0);
+	netif_info(db, tx_done, db->ndev, "%6d [_THrd-end] on-THrd-end %u Pkt %u\n", db->xmit_thrd,
+		db->xmit_thrd, db->xmit_ttc);
+}
+
+static void SHOW_RX_CTRLS(struct board_info *db)
+{
+	//.dm9051_headlog_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
+	//.dm9051_headlog_regs("dump wdr registers:", db, 0x24, 0x25);
+	//.dm9051_headlog_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
+
+	//unsigned int reg1, reg2;
+	unsigned int v1, v2;
+
+	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
+	//reg1 = DM9051_RCR; reg2 = DM9051_RCR;
+	dm9051_get_reg(db, DM9051_RCR, &v1); dm9051_get_reg(db, DM9051_RCR, &v2);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump rcr registers:");
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+	//reg1 = 0x24; reg2 = 0x25;
+	dm9051_get_reg(db, 0x24, &v1); dm9051_get_reg(db, 0x25, &v2);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump wdr registers:");
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+	//reg1 = DM9051_MRRL; reg2 = DM9051_MRRH;
+	dm9051_get_reg(db, DM9051_MRRL, &v1); dm9051_get_reg(db, DM9051_MRRH, &v2);
+	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump mrr registers:");
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+}
+
+static unsigned int SHOW_BMSR(struct board_info *db)
+{
+	/*.dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
+	unsigned int val;
+
+	dm9051_phyread(db, MII_BMSR, &val);
+	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
+	return val;
+}
+
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
 {
 	int ret;
@@ -1041,77 +1085,37 @@ static int dm9051_get_sset_count(struct net_device *netdev, int sset)
 	return (sset == ETH_SS_STATS) ? ARRAY_SIZE(dm9051_stats_strings) : 0;
 }
 
-
 static void dm9051_get_ethtool_stats(struct net_device *ndev,
 									 struct ethtool_stats *stats, u64 *data)
 {
 	struct board_info *db = to_dm9051_board(ndev);
-	unsigned int reg1, reg2;
-	unsigned int v1, v2;
-	unsigned int val;
 
+	/* ethtool -S eth1, this is the extra dump parts */
 	data[0] = ndev->stats.rx_packets;
 	data[1] = ndev->stats.tx_packets;
 	data[2] = ndev->stats.rx_errors = db->bc.rx_err_counter;
 	data[3] = ndev->stats.tx_errors = db->bc.tx_err_counter;
 	data[4] = ndev->stats.rx_bytes;
 	data[5] = ndev->stats.tx_bytes;
-	data[6] = db->bc.fifo_rst_counter - 1; // Subtract Initial reset
-	
-	/* ethtool -S eth1, this is the extra dump parts */
+	data[6] = db->bc.fifo_rst_counter - 1; //Subtract Initial reset
+
+	printk("\n");
+	SHOW_XMIT_ANALYSIS(db);
+
 #if MI_FIX //ee read
 	mutex_lock(&db->spi_lockm);
 #endif
-	printk("\n");
-	netif_info(db, tx_done, db->ndev, "%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
-		db->xmit_in, db->xmit_tc, db->xmit_zc);
-	netif_info(db, tx_done, db->ndev, "%6d [_THrd-in] on-THrd-in %u Pkt %u\n", db->xmit_thrd0,
-		db->xmit_thrd0, db->xmit_ttc0);
-	netif_info(db, tx_done, db->ndev, "%6d [_THrd-end] on-THrd-end %u Pkt %u\n", db->xmit_thrd,
-		db->xmit_thrd, db->xmit_ttc);
-
 	/*PHY_LOG*/
-	dm9051_phyread_headlog("bcr00", db, 0);
-	dm9051_phyread_headlog("adv04", db, 4);
-	dm9051_phyread_headlog("lpa05", db, 5);
-	dm9051_phyread_headlog("phy17", db, 17);
-	dm9051_phyread_headlog("phy20", db, 20);
-	
-	//netif_info(db, pkdata, db->ndev, "rx_psckets: %llu\n", data[0]);
-	//dm9051_headlog_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
-	//dm9051_headlog_regs("dump wdr registers:", db, 0x24, 0x25);
-	//dm9051_headlog_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
-	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump rcr registers:");
-	reg1 = DM9051_RCR; reg2 = DM9051_RCR;
-	dm9051_get_reg(db, reg1, &v1);
-	dm9051_get_reg(db, reg2, &v2);
-	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump wdr registers:");
-	reg1 = 0x24; reg2 = 0x25;
-	dm9051_get_reg(db, reg1, &v1);
-	dm9051_get_reg(db, reg2, &v2);
-	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump mrr registers:");
-	reg1 = DM9051_MRRL; reg2 = DM9051_MRRH;
-	dm9051_get_reg(db, reg1, &v1);
-	dm9051_get_reg(db, reg2, &v2);
-	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
-
-	/*BMSR*/
-	/*dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
-	dm9051_phyread(db, MII_BMSR, &val);
-	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
-	data[7] = val;
-	dm9051_phyread(db, MII_BMSR, &val);
-	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
-	data[8] = val;
-
-	SHOW_ALL_USER_CONFIG(NULL, db);
-
+	DMPLUG_LOG_PHY(db);
+	/*rx-state and BMSRs*/
+	SHOW_RX_CTRLS(db);
+	data[7] = SHOW_BMSR(db);
+	data[8] = SHOW_BMSR(db);
 #if MI_FIX //ee write
 	mutex_unlock(&db->spi_lockm);
 #endif
+
+	SHOW_ALL_USER_CONFIG(NULL, db);
 }
 
 static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_ops dm9051_ptpd_ethtool_ops
@@ -1130,12 +1134,8 @@ static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_op
 	.get_strings = dm9051_get_strings,
 	.get_sset_count = dm9051_get_sset_count,
 	.get_ethtool_stats = dm9051_get_ethtool_stats,
-/* 4 ptpc */
-#if 1 //0
-#ifdef DMPLUG_PTP
-	.get_ts_info = dm9051_ts_info, //_15888_,
-#endif
-#endif
+	/* 4 ptpc */
+	DMPLUG_PTP_INFO(.get_ts_info) //_15888_
 };
 
 static int dm9051_all_start(struct board_info *db)
@@ -1327,9 +1327,10 @@ static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 
 		if (db->bc.evaluate_rxb_counter == 1) {
 			char head[HEAD_LOG_BUFSIZE];
-			sprintf(head, "rxb 1st %d", db->bc.evaluate_rxb_counter); 
-			dm9051_headlog_regs(head, db, 0x74, 0x75);
-			dm9051_headlog_regs(head, db, 0x24, 0x25);
+			sprintf(head, "rxb 1st %d", db->bc.evaluate_rxb_counter);
+			DMPLUG_LOG_RXPTR(head, db);
+			//dm9051_headlog_regs(head, db, DM9051_MRRL, DM9051_MRRH);
+			//dm9051_headlog_regs(head, db, 0x24, 0x25);
 		}
 
 		n += sprintf(pbff + n, "_[eval_rxb %2d]", db->bc.evaluate_rxb_counter);
@@ -1484,8 +1485,9 @@ int dm9051_loop_rx(struct board_info *db)
 		if (rx_break(db, rxbyte, ndev->features))
 		{
 			if (trap_rxb(db, &rxbyte)) {
-				dm9051_headlog_regs("rxb last", db, 0x74, 0x75);
-				dm9051_headlog_regs("rxb last", db, 0x24, 0x25);
+				DMPLUG_LOG_RXPTR("rxb last", db);
+				//dm9051_headlog_regs("rxb last", db, DM9051_MRRL, DM9051_MRRH);
+				//dm9051_headlog_regs("rxb last", db, 0x24, 0x25);
 				dm9051_all_restart(db);
 				return -EINVAL;
 			}

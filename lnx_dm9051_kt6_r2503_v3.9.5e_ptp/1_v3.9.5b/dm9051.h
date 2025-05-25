@@ -118,11 +118,26 @@
 
 /* Extended support header files
  */
-//#include "dm9051_plug.h" /* for definition of '_INT_TWO_STEP' */
-//#include "dm9051_ptpd.h" /* 0.1 ptpc */
+
+/* FAK1, */
+#define FAK1 //(fake1)
+
+//[fak1.ptp]
+#if defined(FAK1) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+/* fake ptpc */
+#define PTP_NEW(d)			0
+#define PTP_INIT_RCR(d)
+#define PTP_INIT(d)
+#define PTP_END(d)
+#define DMPLUG_PTP_INFO(s)
+#endif
+
 #if defined(DMPLUG_PTP)
 #include "dm9051_ptp1.h"
 #endif
+
+//#include "dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
+//#include "dm9051_ptpd.h" /* 0.1 ptpc */
 
 /* Device identification
  */
@@ -599,18 +614,6 @@ enum dm_req_support {
 	REQUEST_SUPPORTTED =		1,
 };
 
-/* FAK1, */
-#define FAK1 //(fake1)
-
-//[fak1.ptp]
-#if defined(FAK1) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
-/* fake ptpc */
-#define PTP_NEW(d)			0
-#define PTP_INIT_RCR(d)
-#define PTP_INIT(d)
-#define PTP_END(d)
-#endif
-
 /* FAK, */
 #define FAK //(fake)
 
@@ -624,7 +627,7 @@ enum dm_req_support {
 #define INT_CLOCK(db)	0		//empty(NoError)
 
 /* fake raw tx mode */
-#define SET_RCR(b)			dm9051_set_rcr(b)
+#define SET_RCR(b)				dm9051_set_rcr(b)
 #define TX_SEND(b,s)			dm9051_tx_send(b,s)
 
 /* poll fake */
@@ -632,7 +635,7 @@ enum dm_req_support {
 #define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
 
 #define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
-#define dm9051_int2_irq(d,h)		VOID_REQUEST_FUNCTION
+#define dm9051_int2_irq(d,h)	VOID_REQUEST_FUNCTION
 
 /* raw(fake) bmsr_wr */
 #define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
@@ -646,8 +649,9 @@ enum dm_req_support {
 #define SHOW_MAC(b, a)
 #define SHOW_MONITOR_RXC(b, n)
 
-#define dm9051_headlog_regs(h, b, r1, r2)
-#define dm9051_phyread_headlog(h, b, r)	(void)0
+#define DMPLUG_LOG_RXPTR(b) //#define dm9051_headlog_regs(h, b, r1, r2)
+#define DMPLUG_LOG_PHY(b) //#define dm9051_phyread_headlog(h, b, r)	(void)0
+
 #define dm9051_dump_data1(b, p, l)
 #define monitor_rxb0(b, rb)
 #endif
@@ -732,8 +736,9 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #undef SHOW_MONITOR_RXC
 
 //static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
-#undef dm9051_headlog_regs
-#undef dm9051_phyread_headlog
+#undef DMPLUG_LOG_RXPTR //#undef dm9051_headlog_regs
+#undef DMPLUG_LOG_PHY //#undef dm9051_phyread_headlog
+
 #undef dm9051_dump_data1
 #undef monitor_rxb0
 
@@ -746,8 +751,9 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #define SHOW_MONITOR_RXC(b,n) show_rxc(b,n)
 
 //static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
-#define dm9051_headlog_regs(h,b,r1,r2) show_log_regs(h,b,r1,r2)
-#define dm9051_phyread_headlog(h,b,r) show_log_phy(h,b,r)
+#define DMPLUG_LOG_RXPTR(h,b) dm9051_log_rxptr(h,b) //#define dm9051_headlog_regs(h,b,r1,r2) show_log_regs(h,b,r1,r2)
+#define DMPLUG_LOG_PHY(b) dm9051_log_phy(b) //#define dm9051_phyread_headlog(h,b,r) show_log_phy(h,b,r)
+
 #define dm9051_dump_data1(b,p,n) dump_data(b,p,n)
 #define monitor_rxb0(b,rb) show_rxb(b,rb)
 
@@ -760,8 +766,10 @@ void show_mac(struct board_info *db, u8 *addr);
 void show_rxc(struct board_info *db, int scanrr);
 
 //static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
-void show_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
-int show_log_phy(char *head, struct board_info *db, unsigned int reg);
+
+void dm9051_log_rxptr(char *head, struct board_info *db); //static void show_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
+void dm9051_log_phy(struct board_info *db); //static int show_log_phy(char *head, struct board_info *db, unsigned int reg);
+
 void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
 void show_rxb(struct board_info *db, unsigned int rxbyte);
 #endif

@@ -244,16 +244,21 @@ static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned
 	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
 }
 
-void show_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2) //.dm9051_headlog_regs
+static void show_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2) //.dm9051_headlog_regs
 {
 	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
 	dm9051_dump_reg2s(db, reg1, reg2);
 }
+void dm9051_log_rxptr(char *head, struct board_info *db)
+{
+	show_log_regs(head, db, DM9051_MRRL, DM9051_MRRH);
+	show_log_regs(head, db, 0x24, 0x25);
+}
 
 /* dm9051_phyread.EXTEND for 'link'
  */
-int show_log_phy(char *head, struct board_info *db, unsigned int reg) //.dm9051_phyread_headlog
+static int show_log_phy(char *head, struct board_info *db, unsigned int reg) //.dm9051_phyread_headlog
 {
 	unsigned int val;
 	int ret = dm9051_phyread(db, reg, &val);
@@ -263,6 +268,14 @@ int show_log_phy(char *head, struct board_info *db, unsigned int reg) //.dm9051_
 	}
 	netif_warn(db, link, db->ndev, "%s %04x\n", head, val);
 	return ret;
+}
+void dm9051_log_phy(struct board_info *db)
+{
+	show_log_phy("bcr00", db, 0);
+	show_log_phy("adv04", db, 4);
+	show_log_phy("lpa05", db, 5);
+	show_log_phy("phy17", db, 17);
+	show_log_phy("phy20", db, 20);
 }
 
 void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051_dump_data1

@@ -138,6 +138,8 @@ void ptp_end(struct board_info *db);
 #define PTP_INIT(d) ptp_init(d)
 #undef PTP_END
 #define PTP_END(d) ptp_end(d)
+#undef DMPLUG_PTP_INFO
+#define DMPLUG_PTP_INFO(s)	s = dm9051_ts_info,
 #endif
 #endif
 
