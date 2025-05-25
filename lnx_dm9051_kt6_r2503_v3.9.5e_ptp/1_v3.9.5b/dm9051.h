@@ -509,7 +509,6 @@ int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);
 
 /* init functions */
 int dm9051_all_reinit(struct board_info *db);
-void dm9051_all_restart_sum(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 /* operation functions */
@@ -639,6 +638,7 @@ enum dm_req_support {
 
 /* raw(fake) bmsr_wr */
 #define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
+#define LINKCHG_UPSTART(b) dm9051_all_upfcr(b)
 
 //[fake]
 #define SHOW_DEVLOG_REFER_BEGIN(d, b)
@@ -691,9 +691,6 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 #undef INT_CLOCK
 #define INT_CLOCK(db) dm9051_int_clkout(struct board_info *db)
 int dm9051_int_clkout(struct board_info *db);
-#endif
-
-#if defined(MCO) && defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
 #endif
 
 /*
@@ -778,6 +775,11 @@ void show_rxb(struct board_info *db, unsigned int rxbyte);
 #if defined(CO) && defined(DMCONF_BMCR_WR) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
 #undef PHY_READ
 #define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
+#endif
+
+#if defined(CO) && defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
+#undef LINKCHG_UPSTART
+#define LINKCHG_UPSTART(b) dm9051_all_upstart(b)
 #endif
 
 #endif /* _DM9051_H_ */

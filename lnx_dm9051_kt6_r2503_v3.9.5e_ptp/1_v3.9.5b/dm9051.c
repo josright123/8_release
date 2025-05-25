@@ -121,6 +121,17 @@ static void SHOW_OPEN(struct board_info *db)
 	/* amdix_log_reset(db); */ //(to be determined)
 }
 
+static void SHOW_RESTART_SUM(struct board_info *db)
+{
+	netif_warn(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+	   db->bc.status_err_counter + db->bc.large_err_counter,
+	   db->bc.fifo_rst_counter);
+	netif_crit(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+	   db->bc.status_err_counter + db->bc.large_err_counter,
+	   db->bc.fifo_rst_counter);
+	//netif_err(db, rx_status, db->ndev, "_[_all_restart] rxb work around done\n");
+}
+
 static SHOW_XMIT_ANALYSIS(struct board_info *db)
 {
 	netif_info(db, tx_done, db->ndev, "%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
@@ -1177,16 +1188,15 @@ static int dm9051_all_stop(struct board_info *db)
 	/* GPR power off of the internal phy,
 	 * The internal phy still could be accessed after this GPR power off control
 	 */
-	//k("_stop [dm9051_all_stop] set reg DM9051_GPCR, 0x%02x\n", (unsigned int)GPCR_GEP_CNTL);
 	ret = dm9051_set_reg(db, DM9051_GPCR, GPCR_GEP_CNTL);
 	if (ret)
 		return ret;
 
-	//k("_stop [dm9051_all_stop] set reg DM9051_GPR, 0x%02x\n", (unsigned int)GPR_PHY_OFF);
 	ret = dm9051_set_reg(db, DM9051_GPR, GPR_PHY_OFF);
 	if (ret)
 		return ret;
 
+	netif_crit(db, hw, db->ndev, "netif_crit IsExtra-phy-power-down-redundent!?\n");
 	ret = dm9051_phywrite(db, 0, 0x3900);
 	if (ret)
 		return ret;
@@ -1210,15 +1220,20 @@ static int dm9051_all_restart(struct board_info *db) //todo
 	if (ret)
 		return ret;
 
-	dm9051_all_restart_sum(db);
+	db->bc.fifo_rst_counter++;
+	SHOW_RESTART_SUM(db);
 	return 0;
 }
 
-/* to reset while link change up
+/* to re-write while link change up
  */
-#ifdef DMCONF_MRR_WR
-#if 0
-static int dm9051_all_upstart(struct board_info *db) //todo
+int dm9051_all_upfcr(struct board_info *db)
+{
+	dm9051_update_fcr(db);
+	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation not applied!\n");
+}
+//#ifdef DMCONF_MRR_WR
+int dm9051_all_upstart001(struct board_info *db) //todo
 {
 	int ret;
 
@@ -1234,8 +1249,40 @@ static int dm9051_all_upstart(struct board_info *db) //todo
 
 	return 0;
 }
-#endif
-#endif //DMCONF_MRR_WR
+int dm9051_all_upstart(struct board_info *db)
+{
+	//int ret = dm9051_all_upstart(db);
+	//if (ret)
+	//	goto dnf_end;
+	printk("_all_upstart\n"); //NOT to .netif_crit(db, rx_err, db->ndev, "_all_upstart\n");
+	do {
+		int ret = dm9051_ncr_reset(db);
+		if (ret)
+			goto dnf_end;
+		
+	//=	ret = dm9051_all_reinit(db); //up_restart
+	#if 1		
+		ret = dm9051_core_init(db);
+		if (ret)
+			goto dnf_end;
+	#endif
+		ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
+		if (ret)
+			goto dnf_end;
+
+		ret = dm9051_enable_interrupt(db);
+		if (ret)
+			goto dnf_end;
+
+		ret = dm9051_subconcl_and_rerxctrl(db);
+		if (ret)
+			goto dnf_end;
+	} while(0);
+	dm9051_update_fcr(db);
+dnf_end:
+	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation done!\n");
+}
+//#endif //DMCONF_MRR_WR
 
 /* all reinit while rx error found
  */
@@ -1265,20 +1312,6 @@ int dm9051_all_reinit(struct board_info *db)
 		return ret;
 
 	return dm9051_subconcl_and_rerxctrl(db);
-}
-
-void dm9051_all_restart_sum(struct board_info *db)
-{
-	//struct net_device *ndev = db->ndev;
-
-	db->bc.fifo_rst_counter++;
-	netif_warn(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
-	   db->bc.status_err_counter + db->bc.large_err_counter,
-	   db->bc.fifo_rst_counter);
-	netif_crit(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
-	   db->bc.status_err_counter + db->bc.large_err_counter,
-	   db->bc.fifo_rst_counter);
-	//k("_[_all_restart] rxb work around done\n");
 }
 
 int dm9051_subconcl_and_rerxctrl(struct board_info *db)
@@ -1431,12 +1464,10 @@ static int rx_head_break(struct board_info *db)
 	}
 
 	/* -rxhead ptpc */
-	#if 1 //0
 	#ifdef DMPLUG_PTP
 //	if (before_slave_ptp_packets && (!db->ptp_on) && (db->rxhdr.status & RSR_PTP_BITS)) {
 //		netif_warn(db, hw, db->ndev, "%d. On ptp_on is 0, ptp packet received!\n", before_slave_ptp_packets--);
 //	}
-	#endif
 	#endif
 	return 0;
 }
@@ -2300,41 +2331,9 @@ static void FCR_UPSTART_MRR_WR(struct board_info *db)
 	#if MI_FIX
 	mutex_lock(&db->spi_lockm);
 	#endif
-#ifdef DMCONF_MRR_WR
-	//int ret = dm9051_all_upstart(db);
-	//if (ret)
-	//	goto dnf_end;
-	printk("_all_upstart\n"); //NOT to .netif_crit(db, rx_err, db->ndev, "_all_upstart\n");
-	do {
-		int ret = dm9051_ncr_reset(db);
-		if (ret)
-			goto dnf_end;
-		
-	//=	ret = dm9051_all_reinit(db); //up_restart
-	#if 1		
-		ret = dm9051_core_init(db);
-		if (ret)
-			goto dnf_end;
-	#endif
-		ret = dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db));
-		if (ret)
-			goto dnf_end;
+	
+	LINKCHG_UPSTART(db);
 
-		ret = dm9051_enable_interrupt(db);
-		if (ret)
-			goto dnf_end;
-
-		ret = dm9051_subconcl_and_rerxctrl(db);
-		if (ret)
-			goto dnf_end;
-	} while(0);
-	dm9051_update_fcr(db);
-dnf_end:
-	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation done!\n");
-#else //DMCONF_MRR_WR
-	dm9051_update_fcr(db);
-	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation not applied!\n");
-#endif
 	#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
 	#endif
