@@ -1,0 +1,107 @@
+# 這是一個用於配置 Clang-Format 代碼格式化規則的配置文件
+# 以下是一些常用的配置選項
+# 設定代碼風格
+# 基於 LLVM 的代碼風格
+# 可選值: LLVM, Google, Chromium, Mozilla, WebKit, Microsoft
+# LLVM 風格遵循 LLVM 編碼標準 <mcreference link="https://clang.llvm.org/docs/ClangFormatStyleOptions.html" index="1">1</mcreference>
+# (BasedOnStyle: LLVM)
+
+# 縮進寬度為 4 個空格
+# 這是代碼塊縮進的基本單位
+#IndentWidth: 4
+
+# 不使用 Tab，統一使用空格進行縮進
+# 可選值: Never (從不使用), ForIndentation (僅用於縮進), Always (需要時都使用)
+# (UseTab: Never)
+
+# 每行最大長度限制為 120 個字符
+# 超過此長度的行會被自動換行
+# ColumnLimit: 120
+
+# 對齊連續的宏定義
+# 例如:
+#   #define SHORT_NAME       42
+#   #define LONGER_NAME      0x007f
+#   #define EVEN_LONGER_NAME (2)
+# AlignConsecutiveMacros: true
+
+# 對齊行尾註釋
+# 例如:
+#   int a;      // 變量 a
+#   int test;   // 變量 test
+# (AlignTrailingComments: true)
+
+# 對齊連續的賦值語句
+# 例如:
+#   int aaaa = 12;
+#   int b    = 23;
+#   int ccc  = 23;
+# .. AlignConsecutiveAssignments: true
+
+# 對齊連續的變量聲明
+# 例如:
+#   int         a = 1;
+#   double      b = 2.0;
+#   std::string c = "3";
+# .. AlignConsecutiveDeclarations: true
+
+# 只允許空函數定義寫在一行內
+# 例如: void f() {}
+# 非空函數必須多行書寫
+# AllowShortFunctionsOnASingleLine: Empty
+
+# (SpaceBeforeParens: ControlStatements)
+
+# (SortIncludes: false)
+
+# ---
+# 基於 Linux 內核風格的主要配置
+Language: Cpp
+BasedOnStyle: LLVM
+
+# 核心縮進和對齊
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AlignConsecutiveMacros: false
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments: true
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+BinPackArguments: true
+BinPackParameters: true
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Linux
+BreakBeforeTernaryOperators: true
+BreakStringLiterals: true
+ColumnLimit: 80
+ContinuationIndentWidth: 8
+FixNamespaceComments: false
+IndentCaseLabels: true
+IndentPPDirectives: AfterHash
+IndentWidth: 8
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+PointerAlignment: Right
+SpaceAfterTemplateKeyword: false
+SpacesBeforeTrailingComments: 1
+TabWidth: 8
+UseTab: Never         # Linux 用 Tab，但 Clang-Format 的 Tab 處理可能不一致，建議用空格
+                      # 若要嚴格用 Tab，改為 UseTab: Always
+
+# 函數和參數換行
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackParameters: false
+
+# 其他風格調整
+DerivePointerAlignment: false
+SortIncludes: false
+SpaceBeforeParens: ControlStatements
+SpacesInParentheses: false
+# ...

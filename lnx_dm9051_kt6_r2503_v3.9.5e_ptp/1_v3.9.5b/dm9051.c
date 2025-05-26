@@ -29,7 +29,7 @@ const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration
 /* Tx 'wb' do skb protect */
 #define DM9051_SKB_PROTECT
 #define STICK_SKB_CHG_NOTE
-#define DM9051_INTR_BACKUP
+#define DM9051_INTR_BACKUP // #ifdef DM9051_INTR_BACKUP .. #endif //instead more backup.
 
 int get_dts_irqf(struct board_info *db)
 {
@@ -132,7 +132,7 @@ static void SHOW_RESTART_SUM(struct board_info *db)
 	//netif_err(db, rx_status, db->ndev, "_[_all_restart] rxb work around done\n");
 }
 
-static SHOW_XMIT_ANALYSIS(struct board_info *db)
+static void SHOW_XMIT_ANALYSIS(struct board_info *db)
 {
 	netif_info(db, tx_done, db->ndev, "%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 		db->xmit_in, db->xmit_tc, db->xmit_zc);
@@ -155,15 +155,15 @@ static void SHOW_RX_CTRLS(struct board_info *db)
 	//reg1 = DM9051_RCR; reg2 = DM9051_RCR;
 	dm9051_get_reg(db, DM9051_RCR, &v1); dm9051_get_reg(db, DM9051_RCR, &v2);
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump rcr registers:");
-	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, DM9051_RCR, v1, DM9051_RCR, v2);
 	//reg1 = 0x24; reg2 = 0x25;
 	dm9051_get_reg(db, 0x24, &v1); dm9051_get_reg(db, 0x25, &v2);
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump wdr registers:");
-	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, 0x24, v1, 0x25, v2);
 	//reg1 = DM9051_MRRL; reg2 = DM9051_MRRH;
 	dm9051_get_reg(db, DM9051_MRRL, &v1); dm9051_get_reg(db, DM9051_MRRH, &v2);
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump mrr registers:");
-	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, DM9051_MRRL, v1, DM9051_MRRH, v2);
 }
 
 static unsigned int SHOW_BMSR(struct board_info *db)
@@ -1229,8 +1229,8 @@ static int dm9051_all_restart(struct board_info *db) //todo
  */
 int dm9051_all_upfcr(struct board_info *db)
 {
-	dm9051_update_fcr(db);
 	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation not applied!\n");
+	return dm9051_update_fcr(db);
 }
 //#ifdef DMCONF_MRR_WR
 int dm9051_all_upstart001(struct board_info *db) //todo
@@ -1251,6 +1251,8 @@ int dm9051_all_upstart001(struct board_info *db) //todo
 }
 int dm9051_all_upstart(struct board_info *db)
 {
+	int ret;
+
 	//int ret = dm9051_all_upstart(db);
 	//if (ret)
 	//	goto dnf_end;
@@ -1278,9 +1280,10 @@ int dm9051_all_upstart(struct board_info *db)
 		if (ret)
 			goto dnf_end;
 	} while(0);
-	dm9051_update_fcr(db);
+	ret = dm9051_update_fcr(db);
 dnf_end:
 	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation done!\n");
+	return ret;
 }
 //#endif //DMCONF_MRR_WR
 
@@ -1623,7 +1626,7 @@ int dm9051_loop_rx(struct board_info *db)
 	return scanrr;
 }
 
-#if DM9051_INTR_BACKUP //instead more backup.#if !defined(_DMPLUG_CONTI)
+#if !defined(_DMPLUG_CONTI)
 #ifdef DM9051_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 {	

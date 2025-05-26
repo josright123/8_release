@@ -43,10 +43,10 @@
 extern const struct plat_cnf_info *plat_cnf;
 extern const struct param_config *param;
 
-#if defined(DMPLUG_CONTI)
 #define dmplug_tx "normal"
 #define tx_conti_ver(b)
-#else
+
+#if defined(DMPLUG_CONTI)
 #define dmplug_tx "continue"
 #define tx_conti_ver(b) tx_continue_ver(b)
 void tx_continue_ver(struct board_info *db);

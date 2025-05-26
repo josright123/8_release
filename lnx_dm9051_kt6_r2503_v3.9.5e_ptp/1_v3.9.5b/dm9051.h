@@ -649,7 +649,7 @@ enum dm_req_support {
 #define SHOW_MAC(b, a)
 #define SHOW_MONITOR_RXC(b, n)
 
-#define DMPLUG_LOG_RXPTR(b) //#define dm9051_headlog_regs(h, b, r1, r2)
+#define DMPLUG_LOG_RXPTR(h,b) //#define dm9051_headlog_regs(h, b, r1, r2)
 #define DMPLUG_LOG_PHY(b) //#define dm9051_phyread_headlog(h, b, r)	(void)0
 
 #define dm9051_dump_data1(b, p, l)
