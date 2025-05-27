@@ -120,7 +120,7 @@ static int amdix_bmsr_change(struct board_info *db)
 	}
 
 	/* bmsr (change) */
-	if (db->bmsr != bmsr) {		
+	if (db->bmsr != bmsr) {
 		if (db->bmsr & BIT(2))
 			;
 		else {
@@ -149,7 +149,7 @@ static int amdix_bmsr_change(struct board_info *db)
 	return 0;
 }
 
-static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsigned int *val)
+static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsigned int *val) //reg, not used!
 {
 	/* overlay implement */
 	int ret = dm9051_phyread(db, MII_LPA, val);
@@ -164,8 +164,8 @@ static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsig
 
 	/* nt log */
 	#if 1
-	do
-	{
+	//do
+	//{
 		if (!amdix_bmsr_change(db))
 		{
 			if (!(db->bmsr & BIT(2))) {
@@ -197,7 +197,7 @@ static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsig
 				db->n_automdix++;
 				do {
 			#if 1
-						char *p = get_log_addr(db);
+					char *p = get_log_addr(db);
 					db->mdi ^= 0x0020;
 
 					do {
@@ -236,7 +236,7 @@ static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsig
 				} while(0);
 			}
 		}
-	} while (0);
+	//} while (0);
 	#endif
 
 	return ret;	
@@ -245,7 +245,7 @@ static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsig
 int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val)
 {
 	if (reg == MII_BMSR)
-		return dm9051_phyread_bmsr_wr(db, reg, val);
+		return dm9051_phyread_bmsr_wr(db, MII_BMSR, val);
 
 	return dm9051_phyread(db, reg, val);		
 }
