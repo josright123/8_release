@@ -82,6 +82,7 @@ void OPEN_POLL_SCHED(struct board_info *db)
 
 int DM9051_POLL_SCHED(struct board_info *db)
 {
+	netif_warn(db, intr, db->ndev, "schedule_delay(POLL MODE)\n");
 	OPEN_POLL_SCHED(db);
 	return 0;
 }
