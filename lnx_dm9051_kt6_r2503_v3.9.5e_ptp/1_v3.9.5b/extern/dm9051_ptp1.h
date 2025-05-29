@@ -105,42 +105,69 @@ int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info); //
 /* netdev_ops
  */
 int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
-void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
-int dm9051_read_ptp_tstamp_mem(struct board_info *db, u8 *rxTSbyte);
-void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb, u8 *rxTSbyte);
-void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
-void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
-u32 dm9051_get_rate_reg(struct board_info *db);
-
-void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 
 //implement in ptpd
 //static void dm9051_ptp_core_init(struct board_info *db);
 
+void ptp_ver(struct board_info *db);
 int ptp_new(struct board_info *db);
 void ptp_init_rcr(struct board_info *db);
-u8 ptp_status_bits(struct board_info *db);
 int is_ptp_rxts_enable(struct board_info *db);
 void ptp_init(struct board_info *db);
 void ptp_end(struct board_info *db);
+u8 ptp_status_bits(struct board_info *db);
+void on_core_init_ptp_rate(struct board_info *db);
+
+/* ptp2 */
+int dm9051_read_ptp_tstamp_mem(struct board_info *db);
+void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_rxc_from_master(struct board_info *db);
+
+int dm9051_ptp_tx_in_progress(struct sk_buff *skb);
+void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 
 /* CO1, */
 #define CO1 //(Coerce)
 
 /* re-direct ptpc */
 #if defined(CO1) && defined(DMPLUG_PTP) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+#undef DMPLUG_PTP_VER
+#define DMPLUG_PTP_VER(b)		ptp_ver(b)
 #undef PTP_NEW
-#define PTP_NEW(d) ptp_new(d)
+#define PTP_NEW(d) 				ptp_new(d)
 #undef PTP_INIT_RCR
-#define PTP_INIT_RCR(d) ptp_init_rcr(d)
+#define PTP_INIT_RCR(d) 		ptp_init_rcr(d)
 #undef PTP_INIT
-#define PTP_INIT(d) ptp_init(d)
+#define PTP_INIT(d) 			ptp_init(d)
 #undef PTP_END
-#define PTP_END(d) ptp_end(d)
+#define PTP_END(d) 				ptp_end(d)
 #undef DMPLUG_PTP_INFO
-#define DMPLUG_PTP_INFO(s)	s = dm9051_ts_info,
+#define DMPLUG_PTP_INFO(s)		s = dm9051_ts_info,
+#undef GET_RSR_BITS
+#define GET_RSR_BITS(b)			ptp_status_bits(db)
+#undef DMPLUG_PTP_TS_INFO
+#define DMPLUG_PTP_TS_INFO(s)	s = dm9051_ptp_netdev_ioctl,
+#undef DMPLUG_PTP_AT_RATE
+#define DMPLUG_PTP_AT_RATE(b)	on_core_init_ptp_rate(b)
+
+#undef DMPLUG_RX_TS_MEM
+#define DMPLUG_RX_TS_MEM(b)		dm9051_read_ptp_tstamp_mem(b)
+#undef DMPLUG_RX_HW_TS_SKB
+#define DMPLUG_RX_HW_TS_SKB(b,s) dm9051_ptp_rx_hwtstamp(b,s)
+#undef SHOW_ptp_rx_packet_monitor
+#define SHOW_ptp_rx_packet_monitor(b,s) dm9051_ptp_rx_packet_monitor(b,s)
+#undef DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER
+#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b) \
+		dm9051_ptp_rxc_from_master(b)
+
+#undef DMPLUG_PTP_TX_IN_PROGRESS
+#define DMPLUG_PTP_TX_IN_PROGRESS(s)	dm9051_ptp_tx_in_progress(s)
+#undef DMPLUG_PTP_TX_PRE
+#define DMPLUG_PTP_TX_PRE(b,s)	dm9051_ptp_txreq(b,s)
+#undef DMPLUG_TX_EMIT_TS
+#define DMPLUG_TX_EMIT_TS(b,s)	dm9051_ptp_txreq_hwtstamp(b,s)
 #endif
 //#endif
-
-
 #endif //_DM9051_PTPC_H_

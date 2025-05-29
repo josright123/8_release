@@ -14,17 +14,6 @@
 #include <linux/ip.h>
 #include <linux/udp.h>
 
-/* Macro domain
- */
-/*#define DMPLUG_INT */ //(INT39)
-/*#define INT_CLKOUT */ //(INT39 ClkOut)
-/*#define INT_TWO_STEP */ //(INT39 two_step)
-/*#define DMPLUG_PTP */ //(ptp1588)
-/*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
-/*#define DMCONF_BMCR_WR */ //(bmcr-work around)
-/*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
-/*#define DMPLUG_LOG */ //(debug log)
-
 #if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
 #ifdef CONFIG_64BIT // 64-bit specific code
 #pragma message("dm9051 @ __aarch64__")
@@ -40,6 +29,17 @@
 #pragma message("dm9051 @ __aarch32__")
 #endif
 #endif //__x86_64__ || __aarch64__
+
+/* Macro domain
+ */
+/*#define DMPLUG_INT */ //(INT39)
+/*#define INT_CLKOUT */ //(INT39 ClkOut)
+/*#define INT_TWO_STEP */ //(INT39 two_step)
+/*#define DMPLUG_PTP */ //(ptp1588)
+/*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
+/*#define DMCONF_BMCR_WR */ //(bmcr-work around)
+/*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
+/*#define DMPLUG_LOG */ //(debug log)
 
 /* Macro for already known platforms
  */
@@ -71,7 +71,7 @@
 #warning "INT: TWO_STEP"
 #endif
 
-#define PLUG_PTP_1588
+//#define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
 
@@ -119,20 +119,114 @@
 /* Extended support header files
  */
 
+//#if (defined(__x86_64__) || defined(__aarch64__))
+//#elif (!defined(__x86_64__) && !defined(__aarch64__))
+//#endif //__x86_64__ || __aarch64__
+
+#define INFO_CPU_BITS(dev, db)				// mandetory un-define and coerced
+#define INFO_CPU_MIS_CONF(dev, db)			// will un-define conditionally
+
+#if (defined(__x86_64__) || defined(__aarch64__))
+#undef INFO_CPU_BITS
+#define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch64__")
+#ifndef CONFIG_64BIT
+// config !64-bit specific code
+#undef INFO_CPU_MIS_CONF
+#define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051 CONFIG_32BIT (kconfig) ?!")
+#endif
+#elif (!defined(__x86_64__) && !defined(__aarch64__))
+#undef INFO_CPU_BITS
+#define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch32__")
+#ifdef CONFIG_64BIT
+// config 64-bit specific code
+#undef INFO_CPU_MIS_CONF
+#define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051 CONFIG_64BIT(kconfig) ?!")
+#endif
+#endif //__x86_64__ || __aarch64__
+
 /* , */
 //[FAK1.ptp]
 /* FAK1 ptpc */
 
 //#define FAK1
+#define DMPLUG_PTP_VER(b)
 #define PTP_NEW(d)				0
 #define PTP_INIT_RCR(d)
 #define PTP_INIT(d)
 #define PTP_END(d)
 #define DMPLUG_PTP_INFO(s)
+#define GET_RSR_BITS(b)			RSR_ERR_BITS
+#define DMPLUG_PTP_TS_INFO(s)
+#define DMPLUG_PTP_AT_RATE(b)
+
+#define DMPLUG_RX_TS_MEM(b)		0
+#define DMPLUG_RX_HW_TS_SKB(b,s)
+#define SHOW_ptp_rx_packet_monitor(b,s)
+#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
+
+#define DMPLUG_PTP_TX_IN_PROGRESS(s)	0
+#define DMPLUG_PTP_TX_PRE(b,s)
+#define DMPLUG_TX_EMIT_TS(b,s)
 
 #if defined(DMPLUG_PTP)
 #include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
+//#include "dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
+//#include "dm9051_ptpd.h"
 #endif
+
+//#define INFO_FAK0
+
+#if defined(DMPLUG_INT)
+#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 INT")
+#else
+#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 POL")
+#endif
+
+//#define INFO_FAK1
+
+#define INFO_INT_CLKOUT(dev, db)
+#define INFO_INT_TWOSTEP(dev, db)
+#define INFO_BMCR_WR(dev, db)
+#define INFO_MRR_WR(dev, db)
+#define INFO_CONTI(dev, db)
+#define INFO_PTP(dev, db)
+#define INFO_PPS(dev, db)
+
+#if defined(INT_CLKOUT)
+#undef INFO_INT_CLKOUT
+#define INFO_INT_CLKOUT(dev, db)			USER_CONFIG(dev, db, "INT: INT_CLKOUT")
+#endif
+
+#if defined(INT_TWO_STEP)
+#undef INFO_INT_TWOSTEP
+#define INFO_INT_TWOSTEP(dev, db)			USER_CONFIG(dev, db, "INT: TWO_STEP")
+#endif
+
+#if defined(DMCONF_BMCR_WR)
+#undef INFO_BMCR_WR
+#define INFO_BMCR_WR(dev, db)				USER_CONFIG(dev, db, "WORKROUND: BMCR_WR")
+#endif
+
+#if defined(DMCONF_MRR_WR)
+#undef INFO_MRR_WR
+#define INFO_MRR_WR(dev, db) 				USER_CONFIG(dev, db, "WORKROUND: MRR_WR")
+#endif
+
+#if defined(DMPLUG_CONTI)
+#undef INFO_CONTI
+#define INFO_CONTI(dev, db) 				USER_CONFIG(dev, db, "dm9051 CONTI")
+#endif
+
+#if defined(DMPLUG_PTP)
+#undef INFO_PTP
+#define INFO_PTP(dev, db)					USER_CONFIG(dev, db, "dm9051 PTP")
+#endif
+
+#if defined(DMPLUG_PPS_CLKOUT)
+#undef INFO_PPS
+#define INFO_PPS(dev, db)					USER_CONFIG(dev, db, "dm9051 PPS")
+#endif
+
 
 /* Device identification
  */
@@ -490,6 +584,7 @@ struct board_info
 #define	NUM_BMSR_DOWN_SHOW		5
 
 int get_dts_irqf(struct board_info *db);
+void USER_CONFIG(struct device *dev, struct board_info *db, char *str);
 
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb);
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
@@ -500,16 +595,20 @@ int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 			size_t len);
 int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);
 
+int dm9051_ncr_poll(struct board_info *db);
+int dm9051_nsr_poll(struct board_info *db);
+int dm9051_all_upfcr(struct board_info *db);
+
 /* init functions */
-int dm9051_all_reinit(struct board_info *db);
+//int dm9051_all_reinit(struct board_info *db);
+int dm9051_all_start_intr(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 /* operation functions */
 int dm9051_loop_rx(struct board_info *db);
+int dm9051_loop_tx(struct board_info *db);
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
-int dm9051_ncr_poll(struct board_info *db);
-int dm9051_nsr_poll(struct board_info *db);
 
 /* Param structures
  */
