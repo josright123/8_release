@@ -119,23 +119,19 @@
 /* Extended support header files
  */
 
+/* , */
 //[FAK1.ptp]
 /* FAK1 ptpc */
 
 //#define FAK1
-#if defined(SECOND_MAIN)
-/* fake ptpc */
-#define PTP_NEW(d)			0
+#define PTP_NEW(d)				0
 #define PTP_INIT_RCR(d)
 #define PTP_INIT(d)
 #define PTP_END(d)
 #define DMPLUG_PTP_INFO(s)
-#endif
 
 #if defined(DMPLUG_PTP)
-#include "extern/dm9051_ptp1.h"
-//#include "dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
-//#include "dm9051_ptpd.h" /* 0.1 ptpc */
+#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 #endif
 
 /* Device identification
@@ -472,8 +468,7 @@ struct board_info
 	unsigned int mdi; //= 0x0830;
 
 	/* 1 ptpc */
-	#if 1 //0
-	#ifdef DMPLUG_PTP
+	//#ifdef DMPLUG_PTP
 	int			ptp_enable;
 	struct ptp_clock        *ptp_clock;
 	struct ptp_clock_info 	ptp_caps;
@@ -486,8 +481,7 @@ struct board_info
 	struct hwtstamp_config	tstamp_config;
 	s64			pre_rate;
 	u8              	rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
-	#endif
-	#endif
+	//#endif
 };
 
 //#define TOGG_INTVL	1

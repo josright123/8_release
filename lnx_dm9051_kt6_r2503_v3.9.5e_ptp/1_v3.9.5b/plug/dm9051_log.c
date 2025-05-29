@@ -72,13 +72,9 @@ void show_dev_begin(struct device *dev, struct board_info *db) //.SHOW_DEVLOG_RE
 
 	/* conti */
 	tx_conti_ver(db);
+
 	/* 2.0 ptpc */
-	#ifdef DMPLUG_PTP
-	if (db->ptp_enable) {
-		dev_info(&db->spidev->dev, "DMPLUG PTP Version\n");
-		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
-	}
-	#endif
+	DMPLUG_PTP_VER(db);
 }
 
 void show_log(struct board_info *db) //.SHOW_LOG_REFER_BEGIN
@@ -250,6 +246,9 @@ static void show_log_regs(char *head, struct board_info *db, unsigned int reg1, 
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
 	dm9051_dump_reg2s(db, reg1, reg2);
 }
+/*dm9051_headlog_regs(DM9051_MRRL, DM9051_MRRH);
+ *dm9051_headlog_regs(0x24, 0x25);
+ */
 void dm9051_log_rxptr(char *head, struct board_info *db)
 {
 	show_log_regs(head, db, DM9051_MRRL, DM9051_MRRH);

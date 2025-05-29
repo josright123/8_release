@@ -27,6 +27,7 @@
 
 //#include "dm9051_ptp1.h"
 #include "../dm9051.h"
+#include "dm9051_ptp1.h" /* 0.1 ptpc */
 //#include "dm9051_ptpd.h"
 #define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
 
