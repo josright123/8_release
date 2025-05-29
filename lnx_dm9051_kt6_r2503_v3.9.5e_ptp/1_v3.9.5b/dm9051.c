@@ -29,7 +29,9 @@ const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration
 /* Tx 'wb' do skb protect */
 #define DM9051_SKB_PROTECT
 #define STICK_SKB_CHG_NOTE
+
 #define DM9051_INTR_BACKUP // #ifdef DM9051_INTR_BACKUP .. #endif //instead more backup.
+#define DM9051_NORM_BACKUP_TX // 
 
 int get_dts_irqf(struct board_info *db)
 {
@@ -98,7 +100,7 @@ static void SHOW_OPEN(struct board_info *db)
 	/* amdix_log_reset(db); */ //(to be determined)
 }
 
-static void SHOW_RESTART_SUM(struct board_info *db)
+static void SHOW_RESTART_SHOW_STATIISTIC(struct board_info *db)
 {
 	netif_warn(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
 	   db->bc.status_err_counter + db->bc.large_err_counter,
@@ -121,14 +123,13 @@ static void SHOW_XMIT_ANALYSIS(struct board_info *db)
 
 static void SHOW_RX_CTRLS(struct board_info *db)
 {
-	//.dm9051_headlog_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
-	//.dm9051_headlog_regs("dump wdr registers:", db, 0x24, 0x25);
-	//.dm9051_headlog_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
-
-	//unsigned int reg1, reg2;
 	unsigned int v1, v2;
 
 	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
+	//.dm9051_headlog_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
+	//.dm9051_headlog_regs("dump wdr registers:", db, 0x24, 0x25);
+	//.dm9051_headlog_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
+	//unsigned int reg1, reg2;
 	//reg1 = DM9051_RCR; reg2 = DM9051_RCR;
 	dm9051_get_reg(db, DM9051_RCR, &v1); dm9051_get_reg(db, DM9051_RCR, &v2);
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump rcr registers:");
@@ -145,9 +146,9 @@ static void SHOW_RX_CTRLS(struct board_info *db)
 
 static unsigned int SHOW_BMSR(struct board_info *db)
 {
-	/*.dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
 	unsigned int val;
 
+	/*.dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
 	dm9051_phyread(db, MII_BMSR, &val);
 	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
 	return val;
@@ -445,17 +446,14 @@ static int dm9051_set_recv(struct board_info *db)
 	return SET_RCR(db); /* enable rx */
 }
 
-#ifdef INT_CLKOUT
+/* Set DM9051_IPCOCR in case of int clkout
+ * DUTY_LEN 1 is for 40.96 us
+ */
 int dm9051_int_clkout(struct board_info *db)
 {
-	int ret;
-
 	netif_info(db, intr, db->ndev, "_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
-	ret = regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
-	if (ret)
-		return ret;
+	return regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
 }
-#endif
 
 static int dm9051_update_fcr(struct board_info *db)
 {
@@ -597,7 +595,7 @@ static int dm9051_phy_reset(struct board_info *db)
 	int ret;
 
 	/* PHY reset */
-	printk("_phy_reset\n");
+	printk("_phy_reset: [internal] mdio phywr %d %04x\n", 0, 0x8000); //netif_info(db, link, db->ndev, ..
 
 	ret = dm9051_phywrite(db, 0, 0x8000);
 	if (ret)
@@ -611,6 +609,7 @@ static int dm9051_phy_reset(struct board_info *db)
 	/* Jabber function disabled refer to bench test
 	 * meeting advice 20250226
 	 */
+	//printk("_phy_write: [internal] mdio phywr %d %04x for jabber disable\n", 18, 0x7000);
 	//ret = dm9051_phywrite(db, 18, 0x7000);
 	//if (ret)
 	//	return ret;
@@ -624,7 +623,6 @@ static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 
 	if (addr == DM9051_PHY_ADDR)
 	{
-		//=return dm9051_mdio_read_delay(db, addr, regnum, &val);
 		int ret;
 
 		#if MI_FIX
@@ -648,7 +646,6 @@ static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 {
 	struct board_info *db = bus->priv;
-	//struct device *dev1 = &db->spidev->dev; //= &spi->dev;
 
 	if (addr == DM9051_PHY_ADDR)
 	{
@@ -662,10 +659,9 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 		mutex_lock(&db->spi_lockm);
 		#endif
 
-		/* [dbg] mdio.wr BMCR */
 		do {
-			/* NOT next with k for dm9051_phywr(regnum, val) */
-			if ((regnum == 0) && (val & 0x800)) {
+			/* [dbg] Wr BMCR to power-down */
+			if ((regnum == 0) && (val & BIT(11))) { //BIT(11) = 0x800
 				netif_crit(db, link, db->ndev, "[mdio phywr] %d %04x: power down (warn)\n", regnum, val);
 				break;
 			}
@@ -901,6 +897,15 @@ static int dm9051_map_chipid(struct board_info *db)
 	return SHOW_MAP_CHIPID(dev, wid);
 }
 
+static void dm90951_get_random(struct net_device *ndev, u8 *addr)
+{
+		eth_hw_addr_random(ndev);
+		ether_addr_copy(addr, ndev->dev_addr);
+		addr[0] = 0x00;
+		addr[1] = 0x60;
+		addr[2] = 0x6e;
+}
+
 /* Read DM9051_PAR registers which is the mac address loaded from EEPROM while power-on
  */
 static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *db)
@@ -914,12 +919,7 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 
 	if (!is_valid_ether_addr(addr))
 	{
-		eth_hw_addr_random(ndev);
-
-		ether_addr_copy(addr, ndev->dev_addr);
-		addr[0] = 0x00;
-		addr[1] = 0x60;
-		addr[2] = 0x6e;
+		dm90951_get_random(ndev, addr);
 
 		ret = dm9051_set_regs(db, DM9051_PAR, addr, sizeof(addr));
 		if (ret < 0)
@@ -1212,7 +1212,7 @@ static int dm9051_all_stop(struct board_info *db)
 	return dm9051_set_reg(db, DM9051_RCR, RCR_RX_DISABLE);
 }
 
-static int dm9051_all_start_init(struct board_info *db)
+static int dm9051_all_start_mlock(struct board_info *db)
 {
 	int ret;
 
@@ -1279,7 +1279,7 @@ static int dm9051_all_restart(struct board_info *db) //todo
 	#endif
 
 	db->bc.fifo_rst_counter++;
-	SHOW_RESTART_SUM(db);
+	SHOW_RESTART_SHOW_STATIISTIC(db);
 	return 0;
 }
 
@@ -1318,8 +1318,6 @@ dnf_end:
 	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation done!\n");
 	return ret;
 }
-//#endif //DMCONF_MRR_WR
-
 
 int dm9051_all_upfcr(struct board_info *db)
 {
@@ -1385,8 +1383,6 @@ static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 			char head[HEAD_LOG_BUFSIZE];
 			sprintf(head, "rxb 1st %d", db->bc.evaluate_rxb_counter);
 			DMPLUG_LOG_RXPTR(head, db);
-			//dm9051_headlog_regs(head, db, DM9051_MRRL, DM9051_MRRH);
-			//dm9051_headlog_regs(head, db, 0x24, 0x25);
 		}
 
 		n += sprintf(pbff + n, "_[eval_rxb %2d]", db->bc.evaluate_rxb_counter);
@@ -1419,19 +1415,21 @@ static int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_
 	if (features & NETIF_F_RXCSUM)
 	{
 		//DM9051_RX_BREAK(((SCAN_BH(rxbyte) & 0x03) == DM9051_PKT_RDY), return 0, 
-		//	netif_warn(db, rx_status, db->ndev, "YES checksum check\n"); return -EINVAL);
+		//	netif_warn(db, rx_status, db->ndev, "YES checksum check\n"); 
+		//	return -EINVAL);
 		
 		do {	\
 			if (((SCAN_BH(rxbyte) & 0x03) == DM9051_PKT_RDY)) {	\
 				return 0;	\
 			} else {	\
-				netif_warn(db, rx_status, db->ndev, "YES checksum check\n"); return -EINVAL;	\
+				netif_warn(db, rx_status, db->ndev, "Oops checksum check\n"); \
+				return -EINVAL;	\
 			}	\
 		} while(0);
 	}
 	else
 		DM9051_RX_BREAK((SCAN_BH(rxbyte) == DM9051_PKT_RDY), return 0,
-			/*k("NO checksum check\n");*/ return -EINVAL);
+			return -EINVAL);
 }
 
 static int rx_head_break(struct board_info *db)
@@ -1610,7 +1608,7 @@ int dm9051_loop_rx(struct board_info *db)
 	return scanrr;
 }
 
-#if !defined(_DMPLUG_CONTI)
+#if defined(DM9051_NORM_BACKUP_TX) // -#if !defined(_DMPLUG_CONTI) -#endif
 #ifdef DM9051_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 {	
@@ -1718,9 +1716,7 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 	ret = TX_SEND(db, skb);
 
 	/* 6.1 tx ptpc */
-	#ifdef DMPLUG_PTP
-	dm9051_ptp_txreq_hwtstamp(db, skb);
-	#endif
+	DMPLUG_TX_EMIT_TS(db, skb);
 
 #if defined(STICK_SKB_CHG_NOTE)
 	dev_kfree_skb(skb);
@@ -1817,7 +1813,7 @@ static void dm9051_tx_delay(struct work_struct *work)
 #if 1
 //static void dm9051_rx_xplat_enable(struct board_info *db)
 //{
-//	dm9051_enable_interrupt(db);
+//	_dm9051_enable_interrupt(db);
 //}
 //static void dm9051_rx_xplat_loop(struct board_info *db)
 //{
@@ -1826,7 +1822,7 @@ static void dm9051_tx_delay(struct work_struct *work)
 //.	ret =
 //.	if (ret < 0)
 //.		return;
-//	dm9051_enable_interrupt(db); //"dm9051_rx_xplat_enable(struct board_info *db)"
+//	_dm9051_enable_interrupt(db); //"dm9051_rx_xplat_enable(struct board_info *db)"
 //}
 
 //static int dm9051_rx_xplat_disable(struct board_info *db)
@@ -1899,7 +1895,7 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 }
 #endif
 
-#if defined(DMPLUG_INT)
+#if defined(DM9051_INTR_BACKUP) // -#if defined(DMPLUG_INT) -#endif
 /*
  * Interrupt: 
  */
@@ -1984,7 +1980,7 @@ static int dm9051_open(struct net_device *ndev)
 
 	ndev->irq = spi->irq; /* by dts */
 
-	ret = dm9051_all_start_init(db); /* such as all start */
+	ret = dm9051_all_start_mlock(db); /* such as all start */
 	if (ret)
 		return ret;
 
