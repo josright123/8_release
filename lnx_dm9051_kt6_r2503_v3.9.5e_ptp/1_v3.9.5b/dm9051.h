@@ -35,11 +35,6 @@
 /*#define DMPLUG_INT */ //(INT39)
 /*#define INT_CLKOUT */ //(INT39 ClkOut)
 /*#define INT_TWO_STEP */ //(INT39 two_step)
-/*#define DMPLUG_PTP */ //(ptp1588)
-/*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
-/*#define DMCONF_BMCR_WR */ //(bmcr-work around)
-/*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
-/*#define DMPLUG_LOG */ //(debug log)
 
 /* Macro for already known platforms
  */
@@ -71,93 +66,11 @@
 #warning "INT: TWO_STEP"
 #endif
 
-#define PLUG_PTP_1588
-#ifdef PLUG_PTP_1588
-#define DMPLUG_PTP //(ptp 1588)
-
-  #define PLUG_PTP_PPS
-  #ifdef PLUG_PTP_PPS
-  #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
-  #endif
-#endif
-
-#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
-//#warning "dm9051 PTP"
-#pragma message("dm9051 PTP")
-#endif
-#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
-//#warning "dm9051 PPS"
-#pragma message("dm9051 PPS")
-#endif
-
-//#define PLUG_BMCR
-#ifdef PLUG_BMCR
-#define DMCONF_BMCR_WR //(bmcr-work around)
-#endif
-
-//#define PLUG_MRR
-#ifdef PLUG_MRR
-#define DMCONF_MRR_WR //(mrr-work around)
-#endif
-
-#if defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
-#pragma message("WORKROUND: BMCR_WR")
-#endif
-#if defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
-#pragma message("WORKROUND: MRR_WR")
-#endif
-
-//#define PLUG_LOG
-#ifdef PLUG_LOG
-#define DMPLUG_LOG //(debug log, extra-print-log for detail observation!)
-#endif
-
-#define PLUG_LOOPBACK_TEST
-#ifdef PLUG_LOOPBACK_TEST
-#define DMPLUG_LPBK_TST //(loopback test, extra-run a mac loopback test before driver finish initialize, still can work for networking!)
-#endif
-
-#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
-#pragma message("DEBUG: LOG")
-#endif
-
-#if defined(DMPLUG_LPBK_TST) && defined(MAIN_DATA)
-#pragma message("TEST: MAC_LOOPBACK")
-#endif
-
-/* Extended support header files
+/* macro fakes
  */
-
-//#if (defined(__x86_64__) || defined(__aarch64__))
-//#elif (!defined(__x86_64__) && !defined(__aarch64__))
-//#endif //__x86_64__ || __aarch64__
-
 #define INFO_CPU_BITS(dev, db)				// mandetory un-define and coerced
 #define INFO_CPU_MIS_CONF(dev, db)			// will un-define conditionally
 
-#if (defined(__x86_64__) || defined(__aarch64__))
-#undef INFO_CPU_BITS
-#define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch64__")
-#ifndef CONFIG_64BIT
-// config !64-bit specific code
-#undef INFO_CPU_MIS_CONF
-#define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051 CONFIG_32BIT (kconfig) ?!")
-#endif
-#elif (!defined(__x86_64__) && !defined(__aarch64__))
-#undef INFO_CPU_BITS
-#define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch32__")
-#ifdef CONFIG_64BIT
-// config 64-bit specific code
-#undef INFO_CPU_MIS_CONF
-#define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051 CONFIG_64BIT(kconfig) ?!")
-#endif
-#endif //__x86_64__ || __aarch64__
-
-/* , */
-//[FAK1.ptp]
-/* FAK1 ptpc */
-
-//#define FAK1
 #define DMPLUG_PTP_VER(b)
 #define PTP_NEW(d)				0
 #define PTP_INIT_RCR(d)
@@ -177,11 +90,92 @@
 #define DMPLUG_PTP_TX_PRE(b,s)
 #define DMPLUG_TX_EMIT_TS(b,s)
 
+//info INFO_FAK1
+#define INFO_INT_CLKOUT(dev, db)
+#define INFO_INT_TWOSTEP(dev, db)
+#define INFO_BMCR_WR(dev, db)
+#define INFO_MRR_WR(dev, db)
+#define INFO_CONTI(dev, db)
+#define INFO_PTP(dev, db)
+#define INFO_PPS(dev, db)
+
+/* FAK, */
+//[fak.main] //#define FAK //(fake)
+#define dmplug_loop_test(b)	0
+/* raw fake encrypt */
+#define BUS_SETUP(db)	0		//empty(NoError)
+#define BUS_OPS(db, buff, crlen)	//empty
+
+/* fake clkout */
+#define INT_CLOCK(db)	0		//empty(NoError)
+
+/* fake raw tx mode */
+#define SET_RCR(b)				dm9051_set_rcr(b)
+#define TX_SEND(b,s)			dm9051_tx_send(b,s)
+
+/* poll fake */
+#define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
+#define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
+
+#define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
+#define dm9051_int2_irq(d,h)	VOID_REQUEST_FUNCTION
+
+/* raw(fake) bmsr_wr */
+#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
+#define LINKCHG_UPSTART(b) dm9051_all_upfcr(b)
+
+//[fake]
+#define SHOW_DEVLOG_REFER_BEGIN(d, b)
+#define SHOW_LOG_REFER_BEGIN(b)
+#define SHOW_DEVLOG_MODE(d)
+
+#define SHOW_PLAT_MODE(d)
+#define SHOW_MAC(b, a)
+#define SHOW_MONITOR_RXC(b, n)
+
+#define DMPLUG_LOG_RXPTR(h,b) //#define dm9051_headlog_regs(h, b, r1, r2)
+#define DMPLUG_LOG_PHY(b) //#define dm9051_phyread_headlog(h, b, r)	(void)0
+
+#define dm9051_dump_data1(b, p, l)
+#define monitor_rxb0(b, rb)
+
+/* Extended support header files
+ */
+/*#include extern/extern.h */ //(extern/)
+/*#include plug/plug.h */ //(plug/)
+/*#include extern/dm9051_ptp1.h */ //(extern/)
+
+/* Extended using header files
+ */
+//#include "extern/extern.h"
+#include "plug/plug.h"
 #if defined(DMPLUG_PTP)
 #include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
-//#include "dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
-//#include "dm9051_ptpd.h"
+//#include "extern/dm9051_ptpd.h"
 #endif
+//#include "plug/dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
+
+//#if (defined(__x86_64__) || defined(__aarch64__))
+//#elif (!defined(__x86_64__) && !defined(__aarch64__))
+//#endif //__x86_64__ || __aarch64__
+
+#if (defined(__x86_64__) || defined(__aarch64__))
+#undef INFO_CPU_BITS
+#define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch64__")
+#ifndef CONFIG_64BIT
+// config !64-bit specific code
+#undef INFO_CPU_MIS_CONF
+#define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051 CONFIG_32BIT (kconfig) ?!")
+#endif
+#elif (!defined(__x86_64__) && !defined(__aarch64__))
+#undef INFO_CPU_BITS
+#define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch32__")
+#ifdef CONFIG_64BIT
+// config 64-bit specific code
+#undef INFO_CPU_MIS_CONF
+#define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051 CONFIG_64BIT(kconfig) ?!")
+#endif
+#endif //__x86_64__ || __aarch64__
 
 //#define INFO_FAK0
 
@@ -191,15 +185,7 @@
 #define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 POL")
 #endif
 
-//#define INFO_FAK1
-
-#define INFO_INT_CLKOUT(dev, db)
-#define INFO_INT_TWOSTEP(dev, db)
-#define INFO_BMCR_WR(dev, db)
-#define INFO_MRR_WR(dev, db)
-#define INFO_CONTI(dev, db)
-#define INFO_PTP(dev, db)
-#define INFO_PPS(dev, db)
+//#define INFO messages
 
 #if defined(INT_CLKOUT)
 #undef INFO_INT_CLKOUT
@@ -727,50 +713,6 @@ enum dm_req_not_support {
 enum dm_req_support {
 	REQUEST_SUPPORTTED =		1,
 };
-
-/* FAK, */
-#define FAK //(fake)
-
-//[fak.main]
-#if defined(FAK) //&& (defined(SECOND_MAIN) || defined(MAIN_DATA))
-#define dmplug_loop_test(b)	0
-/* raw fake encrypt */
-#define BUS_SETUP(db)	0		//empty(NoError)
-#define BUS_OPS(db, buff, crlen)	//empty
-
-/* fake clkout */
-#define INT_CLOCK(db)	0		//empty(NoError)
-
-/* fake raw tx mode */
-#define SET_RCR(b)				dm9051_set_rcr(b)
-#define TX_SEND(b,s)			dm9051_tx_send(b,s)
-
-/* poll fake */
-#define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
-#define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
-
-#define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
-#define dm9051_int2_irq(d,h)	VOID_REQUEST_FUNCTION
-
-/* raw(fake) bmsr_wr */
-#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
-#define LINKCHG_UPSTART(b) dm9051_all_upfcr(b)
-
-//[fake]
-#define SHOW_DEVLOG_REFER_BEGIN(d, b)
-#define SHOW_LOG_REFER_BEGIN(b)
-#define SHOW_DEVLOG_MODE(d)
-
-#define SHOW_PLAT_MODE(d)
-#define SHOW_MAC(b, a)
-#define SHOW_MONITOR_RXC(b, n)
-
-#define DMPLUG_LOG_RXPTR(h,b) //#define dm9051_headlog_regs(h, b, r1, r2)
-#define DMPLUG_LOG_PHY(b) //#define dm9051_phyread_headlog(h, b, r)	(void)0
-
-#define dm9051_dump_data1(b, p, l)
-#define monitor_rxb0(b, rb)
-#endif
 
 /* MCO, re-direct, Verification */
 #define MCO //(MainCoerce)
