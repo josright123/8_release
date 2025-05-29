@@ -71,7 +71,7 @@
 #warning "INT: TWO_STEP"
 #endif
 
-//#define PLUG_PTP_1588
+#define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
 
@@ -119,11 +119,11 @@
 /* Extended support header files
  */
 
-/* FAK1, */
-#define FAK1 //(fake1)
+//[FAK1.ptp]
+/* FAK1 ptpc */
 
-//[fak1.ptp]
-#if defined(FAK1) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+//#define FAK1
+#if defined(SECOND_MAIN)
 /* fake ptpc */
 #define PTP_NEW(d)			0
 #define PTP_INIT_RCR(d)
@@ -133,11 +133,10 @@
 #endif
 
 #if defined(DMPLUG_PTP)
-#include "dm9051_ptp1.h"
-#endif
-
+#include "extern/dm9051_ptp1.h"
 //#include "dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
 //#include "dm9051_ptpd.h" /* 0.1 ptpc */
+#endif
 
 /* Device identification
  */
