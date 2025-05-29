@@ -1696,22 +1696,18 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 
-#if !defined(DMPLUG_CONTI)
 #if defined(STICK_SKB_CHG_NOTE)
+#if !defined(DMPLUG_CONTI)
 	skb = dm9051_pad_txreq(db, skb);
 #endif
 #endif
 
-	/* 6 tx ptpc */
-	#ifdef DMPLUG_PTP
-#if 1 //tom tell, 20250522
-	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
-		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
+	/* 6.0 tx ptpc */
+	if (DMPLUG_PTP_TX_IN_PROGRESS(skb)) //tom tell, 20250522
 		netdev_dbg(db->ndev, "Yes, This is a hardware timestamp requested\n");
-	}
-#endif	
-	dm9051_ptp_txreq(db, skb);
-	#endif
+
+	/* 6 tx ptpc */
+	DMPLUG_PTP_TX_PRE(db, skb);
 
 	ret = TX_SEND(db, skb);
 
@@ -2212,12 +2208,10 @@ static const struct net_device_ops dm9051_netdev_ops = {
 	.ndo_set_features = dm9051_ndo_set_features,
 	.ndo_get_stats = dm9051_get_stats,
 	/* 5 ptpc */
-#if defined(DMPLUG_PTP)
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
-	.ndo_do_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
+	DMPLUG_PTP_TS_INFO(.ndo_do_ioctl) //.ndo_do_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
 #else
-	.ndo_eth_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
-#endif
+	DMPLUG_PTP_TS_INFO(.ndo_eth_ioctl) //.ndo_eth_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
 #endif
 };
 
@@ -2248,19 +2242,6 @@ static void DM9051_PROBE_DLYSETUP(struct board_info *db)
 	 * Polling: 
 	 */
 	PROBE_POLL_SETUP(db);
-	#endif
-}
-
-static void FCR_UPSTART_MRR_WR(struct board_info *db)
-{
-	#if MI_FIX
-	mutex_lock(&db->spi_lockm);
-	#endif
-	
-	LINKCHG_UPSTART(db);
-
-	#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
 	#endif
 }
 
@@ -2321,6 +2302,19 @@ static int dm9051_mdio_register(struct board_info *db)
 	return ret;
 }
 
+//static void FCR_UPSTART_MRR_WR(struct board_info *db)
+//{
+//	#if MI_FIX
+//	mutex_lock(&db->spi_lockm);
+//	#endif
+//	
+//	_LINKCHG_UPSTART(db);
+
+//	#if MI_FIX
+//	mutex_unlock(&db->spi_lockm);
+//	#endif
+//}
+
 static void dm9051_handle_link_change(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
@@ -2342,7 +2336,12 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 			db->pause.rx_pause = true;
 			db->pause.tx_pause = true;
 		}
-		FCR_UPSTART_MRR_WR(db);
+
+		#if MI_FIX
+		mutex_lock(&db->spi_lockm);
+		LINKCHG_UPSTART(db);
+		mutex_unlock(&db->spi_lockm);
+		#endif
 
 		printk("UNLOCK_MUTEX\n");
 		printk("\n");
