@@ -6,7 +6,7 @@
 #ifndef _DM9051_PTPC_H_
 #define _DM9051_PTPC_H_
 
-#ifdef DMPLUG_PTP
+//#ifdef DMPLUG_PTP
 struct board_info;
 /*
  * ptp 1588: 
@@ -141,6 +141,6 @@ void ptp_end(struct board_info *db);
 #undef DMPLUG_PTP_INFO
 #define DMPLUG_PTP_INFO(s)	s = dm9051_ts_info,
 #endif
-#endif
+//#endif
 
 #endif //_DM9051_PTPC_H_
