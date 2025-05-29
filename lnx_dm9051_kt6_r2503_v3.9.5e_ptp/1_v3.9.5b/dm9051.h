@@ -71,7 +71,7 @@
 #warning "INT: TWO_STEP"
 #endif
 
-//#define PLUG_PTP_1588
+#define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
 
