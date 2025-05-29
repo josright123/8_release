@@ -20,7 +20,7 @@ obj-m	:=	dm9051a.o
 #dm9051a-objs := dm9051_poll.o
 #dm9051a-objs := dm9051.o dm9051_poll.o plug/dm9051_log.o dm9051_ptp1.o dm9051_ptp2.o
 #dm9051a-objs := plug/dm9051_log.o
-dm9051a-objs := dm9051.o extern/dm9051_ptp1.o extern/dm9051_ptp2.o
+dm9051a-objs := dm9051.o extern/dm9051_ptp1.o extern/dm9051_ptp2.o plug/dm9051_lpbk_test.o
 #dm9051a-objs := dm9051.o _in_devel/dm9051_ptp1.o _in_devel/dm9051_ptp2.o
 #dm9051a-objs := + _in_devel/dm9051_ptp1.o _in_devel/dm9051_ptp2.o
 
@@ -53,7 +53,7 @@ save:
 	cp dm9051a.ko dm9051a_has_tested.ko
 
 clean:
-	rm -rf *.o plug/*.o .*.cmd plug/.*.cmd *~ core .depend *.mod.c .tmp_versions .*.o.d *.symvers *.order *.bak *.mod
+	rm -rf *.o extern/*.o extern/.*.cmd plug/*.o plug/.*.cmd .*.cmd *~ core .depend *.mod.c .tmp_versions .*.o.d *.symvers *.order *.bak *.mod
 
 ins install :
 	sudo insmod dm9051a.ko

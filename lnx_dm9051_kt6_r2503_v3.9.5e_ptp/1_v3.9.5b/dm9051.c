@@ -144,7 +144,7 @@ static void SHOW_RX_CTRLS(struct board_info *db)
 	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, DM9051_MRRL, v1, DM9051_MRRH, v2);
 }
 
-static unsigned int SHOW_BMSR(struct board_info *db)
+unsigned int SHOW_BMSR(struct board_info *db)
 {
 	unsigned int val;
 
@@ -333,7 +333,7 @@ int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
 	return dm9051_stop_mrcmd(db);
 }
 
-static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *buff,
+int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *buff,
 								 size_t crlen)
 {
 	int ret = dm9051_read_mem(db, reg, buff, crlen);
@@ -342,8 +342,8 @@ static int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *bu
 	return ret;
 }
 
-static int dm9051_read_mem_rxb(struct board_info *db, unsigned int reg, void *buff,
-							   size_t len)
+int dm9051_read_mem_rxb(struct board_info *db, unsigned int reg, void *buff,
+						size_t len)
 {
 	int ret;
 	u8 *p = buff;
@@ -1156,7 +1156,7 @@ static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_op
 //	return dm9051_subconcl_and_rerxctrl(db);
 //}
 
-static int dm9051_all_start(struct board_info *db)
+int dm9051_all_start(struct board_info *db)
 {
 	int ret;
 	
@@ -1219,12 +1219,14 @@ static int dm9051_all_start_mlock(struct board_info *db)
 	#if MI_FIX
 	mutex_lock(&db->spi_lockm); //.open
 	#endif
+	
+	ret = dmplug_loop_test(db); //.DMPLUG_LPBK_TST
+	if (ret)
+		return ret;
 
 	ret = dm9051_all_start(db);
 	if (ret)
 		return ret;
-
-
 
 	#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
@@ -1355,7 +1357,7 @@ int dm9051_subconcl_and_rerxctrl(struct board_info *db)
 		}	\
 	} while(0)
 
-static int trap_clr(struct board_info *db)
+int trap_clr(struct board_info *db)
 {
 	db->bc.evaluate_rxb_counter = 0;
 	return 0;
@@ -1364,7 +1366,7 @@ static int trap_clr(struct board_info *db)
 // check rxbs
 // return: 0 : Still not trap
 //         1 : Do reatart trap
-static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
+int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 {
 	if (SCAN_BH(*prxbyte) == 0)
 		return 0;
@@ -1409,7 +1411,7 @@ static int trap_rxb(struct board_info *db, unsigned int *prxbyte)
 	return 0;
 }
 
-static int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t features)
+int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t features)
 {
 	monitor_rxb0(db, rxbyte);
 	if (features & NETIF_F_RXCSUM)
@@ -1432,7 +1434,7 @@ static int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_
 			return -EINVAL);
 }
 
-static int rx_head_break(struct board_info *db)
+int rx_head_break(struct board_info *db)
 {
 	int rxlen;
 	//u8 err_bits = RSR_ERR_BITS;
@@ -1637,7 +1639,7 @@ static struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *s
 	return skb;
 }
 
-static int dm9051_single_tx(struct board_info *db, u8 *p)
+int dm9051_single_tx(struct board_info *db, u8 *p)
 {
 	int ret = dm9051_nsr_poll(db);
 	if (ret)
@@ -1650,7 +1652,7 @@ static int dm9051_single_tx(struct board_info *db, u8 *p)
 	return dm9051_set_regs(db, DM9051_TXPLL, &db->data_len, 2); //address of structure's field
 }
 
-static int dm9051_req_tx(struct board_info *db)
+int dm9051_req_tx(struct board_info *db)
 {
 	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
 }

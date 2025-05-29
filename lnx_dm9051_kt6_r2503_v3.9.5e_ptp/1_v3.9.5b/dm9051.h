@@ -112,8 +112,17 @@
 #define DMPLUG_LOG //(debug log, extra-print-log for detail observation!)
 #endif
 
+#define PLUG_LOOPBACK_TEST
+#ifdef PLUG_LOOPBACK_TEST
+#define DMPLUG_LPBK_TST //(loopback test, extra-run a mac loopback test before driver finish initialize, still can work for networking!)
+#endif
+
 #if defined(DMPLUG_LOG) && defined(MAIN_DATA)
 #pragma message("DEBUG: LOG")
+#endif
+
+#if defined(DMPLUG_LPBK_TST) && defined(MAIN_DATA)
+#pragma message("TEST: MAC_LOOPBACK")
 #endif
 
 /* Extended support header files
@@ -586,6 +595,8 @@ struct board_info
 int get_dts_irqf(struct board_info *db);
 void USER_CONFIG(struct device *dev, struct board_info *db, char *str);
 
+unsigned int SHOW_BMSR(struct board_info *db);
+
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb);
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
 int dm9051_phyread(void *context, unsigned int reg, unsigned int *val);
@@ -601,10 +612,22 @@ int dm9051_all_upfcr(struct board_info *db);
 
 /* init functions */
 //int dm9051_all_reinit(struct board_info *db);
+int dm9051_all_start(struct board_info *db);
 int dm9051_all_start_intr(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
+int dm9051_read_mem_rxb(struct board_info *db, unsigned int reg, void *buff,
+						size_t len);
+int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *buff,
+								 size_t crlen);
+
 /* operation functions */
+int dm9051_req_tx(struct board_info *db);
+int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t features);
+int rx_head_break(struct board_info *db);
+int trap_clr(struct board_info *db);
+int trap_rxb(struct board_info *db, unsigned int *prxbyte);
+int dm9051_single_tx(struct board_info *db, u8 *p);
 int dm9051_loop_rx(struct board_info *db);
 int dm9051_loop_tx(struct board_info *db);
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
@@ -710,6 +733,7 @@ enum dm_req_support {
 
 //[fak.main]
 #if defined(FAK) //&& (defined(SECOND_MAIN) || defined(MAIN_DATA))
+#define dmplug_loop_test(b)	0
 /* raw fake encrypt */
 #define BUS_SETUP(db)	0		//empty(NoError)
 #define BUS_OPS(db, buff, crlen)	//empty
@@ -808,6 +832,13 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeou
 //implement in plug/
 int bus_setup(struct board_info *db);
 void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
+#endif
+
+#if defined(MCO) && defined(DMPLUG_LPBK_TST) && defined(MAIN_DATA)
+#undef dmplug_loop_test
+#define dmplug_loop_test(b)	test_loop_test(b)
+//implement in plug/
+int test_loop_test(struct board_info *db);
 #endif
 
 /* CO, */
