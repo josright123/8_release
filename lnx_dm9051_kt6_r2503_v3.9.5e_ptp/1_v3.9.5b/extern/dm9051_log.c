@@ -74,7 +74,7 @@ void show_dev_begin(struct device *dev, struct board_info *db) //.SHOW_DEVLOG_RE
 	tx_conti_ver(db);
 
 	/* 2.0 ptpc */
-	DMPLUG_PTP_VER(db);
+	PTP_VER(db);
 }
 
 void show_log(struct board_info *db) //.SHOW_LOG_REFER_BEGIN

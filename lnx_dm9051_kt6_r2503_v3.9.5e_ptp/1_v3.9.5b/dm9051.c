@@ -96,7 +96,7 @@ static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
 	return 0;
 }
 
-static void on_core_reset_show(struct board_info *db)
+static void show_core_reset(struct board_info *db)
 {
 	netif_crit(db, hw, db->ndev, "dm9051.on.(all_start(open), all_upstart(link_chg), all_restart(err_fnd))\n");
 }
@@ -724,8 +724,8 @@ static int dm9051_core_reset(struct board_info *db)
 	if (ret)
 		return ret;
 
-	on_core_reset_show(db); /* core init (all_start(open), all_upstart(link_chg), all_restart(err_fnd)) -open ptpc */
-	DMPLUG_PTP_AT_RATE(db);
+	show_core_reset(db); /* core init (all_start(open), all_upstart(link_chg), all_restart(err_fnd)) -open ptpc */
+	PTP_AT_RATE(db);
 
 	return ret; /* ~return dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db)) */
 }
@@ -1136,7 +1136,7 @@ static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_op
 	.get_sset_count = dm9051_get_sset_count,
 	.get_ethtool_stats = dm9051_get_ethtool_stats,
 	/* 4 ptpc */
-	DMPLUG_PTP_INFO(.get_ts_info) //_15888_
+	PTP_ETHTOOL_INFO(.get_ts_info) //_15888_
 };
 
 /* all reinit while rx error found
@@ -1450,7 +1450,7 @@ int rx_head_break(struct board_info *db)
 	//#ifdef DMPLUG_PTP
 	//err_bits = ptp_status_bits(db);
 	//#endif
-	u8 err_bits = GET_RSR_BITS(db); /* 7 rxhead ptpc, when REG60H.D[0]=0, PTP Function enable, or REG61H.D[0]=1, and D[1]=0, then re-defined RSR */
+	u8 err_bits = PTP_STATUS_BITS(db); /* 7 rxhead ptpc, when REG60H.D[0]=0, PTP Function enable, or REG61H.D[0]=1, and D[1]=0, then re-defined RSR */
 
 	rxlen = le16_to_cpu(db->rxhdr.rxlen);
 	if (db->rxhdr.status & err_bits || rxlen > DM9051_PKT_MAX)
@@ -2220,9 +2220,9 @@ static const struct net_device_ops dm9051_netdev_ops = {
 	.ndo_get_stats = dm9051_get_stats,
 	/* 5 ptpc */
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
-	DMPLUG_PTP_TS_INFO(.ndo_do_ioctl) //.ndo_do_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
+	PTP_NETDEV_IOCTL(.ndo_do_ioctl) //.ndo_do_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
 #else
-	DMPLUG_PTP_TS_INFO(.ndo_eth_ioctl) //.ndo_eth_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
+	PTP_NETDEV_IOCTL(.ndo_eth_ioctl) //.ndo_eth_ioctl = dm9051_ptp_netdev_ioctl, //_15888_
 #endif
 };
 

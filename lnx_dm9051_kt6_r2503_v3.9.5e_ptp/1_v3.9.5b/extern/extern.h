@@ -66,8 +66,8 @@
 /*#define CO1*/ //(Coerce)
 #if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1)*/
 /* re-direct ptpc */
-#undef DMPLUG_PTP_VER
-#define DMPLUG_PTP_VER(b)		ptp_ver(b)
+#undef PTP_VER
+#define PTP_VER(b)		ptp_ver(b)
 #undef PTP_NEW
 #define PTP_NEW(d) 				ptp_new(d)
 #undef PTP_INIT_RCR
@@ -76,14 +76,14 @@
 #define PTP_INIT(d) 			ptp_init(d)
 #undef PTP_END
 #define PTP_END(d) 				ptp_end(d)
-#undef DMPLUG_PTP_INFO
-#define DMPLUG_PTP_INFO(s)		s = dm9051_ts_info,
-#undef GET_RSR_BITS
-#define GET_RSR_BITS(b)			ptp_status_bits(db)
-#undef DMPLUG_PTP_TS_INFO
-#define DMPLUG_PTP_TS_INFO(s)	s = dm9051_ptp_netdev_ioctl,
-#undef DMPLUG_PTP_AT_RATE
-#define DMPLUG_PTP_AT_RATE(b)	on_core_init_ptp_rate(b)
+#undef PTP_ETHTOOL_INFO
+#define PTP_ETHTOOL_INFO(s)		s = dm9051_ts_info,
+#undef PTP_STATUS_BITS
+#define PTP_STATUS_BITS(b)			ptp_status_bits(db)
+#undef PTP_NETDEV_IOCTL
+#define PTP_NETDEV_IOCTL(s)	s = dm9051_ptp_netdev_ioctl,
+#undef PTP_AT_RATE
+#define PTP_AT_RATE(b)	on_core_init_ptp_rate(b)
 
 #undef DMPLUG_RX_TS_MEM
 #define DMPLUG_RX_TS_MEM(b)		dm9051_read_ptp_tstamp_mem(b)

@@ -79,15 +79,15 @@ struct board_info;
 #define INFO_PTP(dev, db)
 #define INFO_PPS(dev, db)
 
-#define DMPLUG_PTP_VER(b)
+#define PTP_VER(b)
 #define PTP_NEW(d)				0
 #define PTP_INIT_RCR(d)
 #define PTP_INIT(d)
 #define PTP_END(d)
-#define DMPLUG_PTP_INFO(s)
-#define GET_RSR_BITS(b)			RSR_ERR_BITS
-#define DMPLUG_PTP_TS_INFO(s)
-#define DMPLUG_PTP_AT_RATE(b)
+#define PTP_ETHTOOL_INFO(s)
+#define PTP_STATUS_BITS(b)			RSR_ERR_BITS
+#define PTP_NETDEV_IOCTL(s)
+#define PTP_AT_RATE(b)
 
 void ptp_ver(struct board_info *db);
 int ptp_new(struct board_info *db);
