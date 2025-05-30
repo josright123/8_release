@@ -22,6 +22,15 @@
 #include <linux/of.h>
 #include <linux/version.h>
 #define MAIN_DATA
+
+//#include "extern/extern.h"
+#include "plug/plug.h"
+
+#if defined(DMPLUG_PTP)
+#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
+//#include "plug/dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
+#endif
+
 #include "dm9051.h"
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */

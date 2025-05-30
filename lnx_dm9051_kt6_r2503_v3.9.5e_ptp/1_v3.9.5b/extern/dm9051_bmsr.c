@@ -24,6 +24,11 @@
 #include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
 
+//#define TOGG_INTVL	1
+//#define TOGG_TOT_SHOW	5
+#define NUM_TRIGGER			25
+#define	NUM_BMSR_DOWN_SHOW		5
+
 #ifdef DMCONF_BMCR_WR
 char *get_log_addr(struct board_info *db)
 {

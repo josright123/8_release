@@ -68,8 +68,14 @@
 
 /* macro fakes
  */
-#define INFO_CPU_BITS(dev, db)				// mandetory un-define and coerced
-#define INFO_CPU_MIS_CONF(dev, db)			// will un-define conditionally
+//info INFO_FAK1
+#define INFO_INT_CLKOUT(dev, db)
+#define INFO_INT_TWOSTEP(dev, db)
+#define INFO_BMCR_WR(dev, db)
+#define INFO_MRR_WR(dev, db)
+#define INFO_CONTI(dev, db)
+#define INFO_PTP(dev, db)
+#define INFO_PPS(dev, db)
 
 #define DMPLUG_PTP_VER(b)
 #define PTP_NEW(d)				0
@@ -89,15 +95,6 @@
 #define DMPLUG_PTP_TX_IN_PROGRESS(s)	0
 #define DMPLUG_PTP_TX_PRE(b,s)
 #define DMPLUG_TX_EMIT_TS(b,s)
-
-//info INFO_FAK1
-#define INFO_INT_CLKOUT(dev, db)
-#define INFO_INT_TWOSTEP(dev, db)
-#define INFO_BMCR_WR(dev, db)
-#define INFO_MRR_WR(dev, db)
-#define INFO_CONTI(dev, db)
-#define INFO_PTP(dev, db)
-#define INFO_PPS(dev, db)
 
 /* FAK, */
 //[fak.main] //#define FAK //(fake)
@@ -147,17 +144,20 @@
 
 /* Extended using header files
  */
-//#include "extern/extern.h"
-#include "plug/plug.h"
-#if defined(DMPLUG_PTP)
-#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
-//#include "extern/dm9051_ptpd.h"
-#endif
-//#include "plug/dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
+ 
+////#include "extern/extern.h"
+//#include "plug/plug.h"
+//#if defined(DMPLUG_PTP)
+//#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
+////#include "plug/dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
+//#endif
 
 //#if (defined(__x86_64__) || defined(__aarch64__))
 //#elif (!defined(__x86_64__) && !defined(__aarch64__))
 //#endif //__x86_64__ || __aarch64__
+
+#define INFO_CPU_BITS(dev, db)				// mandetory un-define and coerced
+#define INFO_CPU_MIS_CONF(dev, db)			// will un-define conditionally
 
 #if (defined(__x86_64__) || defined(__aarch64__))
 #undef INFO_CPU_BITS
@@ -572,11 +572,6 @@ struct board_info
 	u8              	rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
 	//#endif
 };
-
-//#define TOGG_INTVL	1
-//#define TOGG_TOT_SHOW	5
-#define NUM_TRIGGER			25
-#define	NUM_BMSR_DOWN_SHOW		5
 
 int get_dts_irqf(struct board_info *db);
 void USER_CONFIG(struct device *dev, struct board_info *db, char *str);
