@@ -67,39 +67,42 @@
 #if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1)*/
 /* re-direct ptpc */
 #undef PTP_VER
-#define PTP_VER(b)		ptp_ver(b)
 #undef PTP_NEW
-#define PTP_NEW(d) 				ptp_new(d)
 #undef PTP_INIT_RCR
-#define PTP_INIT_RCR(d) 		ptp_init_rcr(d)
 #undef PTP_INIT
-#define PTP_INIT(d) 			ptp_init(d)
 #undef PTP_END
-#define PTP_END(d) 				ptp_end(d)
 #undef PTP_ETHTOOL_INFO
-#define PTP_ETHTOOL_INFO(s)		s = dm9051_ts_info,
-#undef PTP_STATUS_BITS
-#define PTP_STATUS_BITS(b)			ptp_status_bits(db)
 #undef PTP_NETDEV_IOCTL
-#define PTP_NETDEV_IOCTL(s)	s = dm9051_ptp_netdev_ioctl,
+#undef PTP_STATUS_BITS
 #undef PTP_AT_RATE
+
+#define PTP_VER(b)		ptp_ver(b)
+#define PTP_NEW(d) 				ptp_new(d)
+#define PTP_INIT_RCR(d) 		ptp_init_rcr(d)
+#define PTP_INIT(d) 			ptp_init(d)
+#define PTP_END(d) 				ptp_end(d)
+#define PTP_ETHTOOL_INFO(s)		s = dm9051_ts_info,
+#define PTP_STATUS_BITS(b)			ptp_status_bits(db)
+#define PTP_NETDEV_IOCTL(s)	s = dm9051_ptp_netdev_ioctl,
 #define PTP_AT_RATE(b)	on_core_init_ptp_rate(b)
 
 #undef DMPLUG_RX_TS_MEM
-#define DMPLUG_RX_TS_MEM(b)		dm9051_read_ptp_tstamp_mem(b)
 #undef DMPLUG_RX_HW_TS_SKB
-#define DMPLUG_RX_HW_TS_SKB(b,s) dm9051_ptp_rx_hwtstamp(b,s)
 #undef SHOW_ptp_rx_packet_monitor
-#define SHOW_ptp_rx_packet_monitor(b,s) dm9051_ptp_rx_packet_monitor(b,s)
 #undef DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER
+
+#define DMPLUG_RX_TS_MEM(b)		dm9051_read_ptp_tstamp_mem(b)
+#define DMPLUG_RX_HW_TS_SKB(b,s) dm9051_ptp_rx_hwtstamp(b,s)
+#define SHOW_ptp_rx_packet_monitor(b,s) dm9051_ptp_rx_packet_monitor(b,s)
 #define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b) \
 		dm9051_ptp_rxc_from_master(b)
 
 #undef DMPLUG_PTP_TX_IN_PROGRESS
-#define DMPLUG_PTP_TX_IN_PROGRESS(s)	dm9051_ptp_tx_in_progress(s)
 #undef DMPLUG_PTP_TX_PRE
-#define DMPLUG_PTP_TX_PRE(b,s)	dm9051_ptp_txreq(b,s)
 #undef DMPLUG_TX_EMIT_TS
+
+#define DMPLUG_PTP_TX_IN_PROGRESS(s)	dm9051_ptp_tx_in_progress(s)
+#define DMPLUG_PTP_TX_PRE(b,s)	dm9051_ptp_txreq(b,s)
 #define DMPLUG_TX_EMIT_TS(b,s)	dm9051_ptp_txreq_hwtstamp(b,s)
 #endif
  
