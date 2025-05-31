@@ -15,22 +15,6 @@
 #include <linux/ip.h>
 #include <linux/udp.h>
 
-#if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
-#ifdef CONFIG_64BIT // 64-bit specific code
-#pragma message("dm9051 @ __aarch64__")
-#else
-#warning "dm9051 @ __aarch64__"
-#warning "dm9051 but is @ CONFIG_32BIT"
-#endif
-#elif (!defined(__x86_64__) && !defined(__aarch64__)) && defined(MAIN_DATA)
-#ifdef CONFIG_64BIT // 64-bit specific code
-#warning "dm9051 @ __aarch32__"
-#warning "dm9051 but is @ CONFIG_64BIT"
-#else
-#pragma message("dm9051 @ __aarch32__")
-#endif
-#endif //__x86_64__ || __aarch64__
-
 /* Macro domain
  */
 /*#define DMPLUG_INT */ //(INT39)
@@ -39,7 +23,7 @@
 
 /* Macro for already known platforms
  */
-#define PLUG_ENABLE_INT
+//#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT39)
 
@@ -161,9 +145,6 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #define dm9051_dump_data1(b, p, l)
 #define monitor_rxb0(b, rb)
 
-//implement in plug/dm9051_lpbk_test.c
-int test_loop_test(struct board_info *db);
-
 /* Extended support header files
  */
 /*#include extern/dm9051_ptp1.h */ //(extern/)
@@ -172,34 +153,48 @@ int test_loop_test(struct board_info *db);
 
 /* Extended using header files
  */
- 
 //#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 ////#include "extern/extern.h"
 //#include "plug/plug.h"
 ////#include "plug/dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
 
 //#if (defined(__x86_64__) || defined(__aarch64__))
-//#elif (!defined(__x86_64__) && !defined(__aarch64__))
 //#endif //__x86_64__ || __aarch64__
 
-#define INFO_CPU_BITS(dev, db)				// mandetory un-define and coerced
-#define INFO_CPU_MIS_CONF(dev, db)			// will un-define conditionally
+#if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
+#ifdef CONFIG_64BIT // 64-bit specific code
+#pragma message("dm9051 @ __aarch64__")
+#else
+#warning "dm9051 @ __aarch64__"
+#warning "dm9051 but is @ CONFIG_32BIT"
+#endif
+#elif (!defined(__x86_64__) && !defined(__aarch64__)) && defined(MAIN_DATA)
+#ifdef CONFIG_64BIT // 64-bit specific code
+#warning "dm9051 @ __aarch32__"
+#warning "dm9051 but is @ CONFIG_64BIT"
+#else
+#pragma message("dm9051 @ __aarch32__")
+#endif
+#endif //__x86_64__ || __aarch64__
 
+//#if (defined(__x86_64__) || defined(__aarch64__))
+//#endif //__x86_64__ || __aarch64__
+
+//#define INFO_CPU_BITS(dev, db)				// mandetory un-define and coerced
+//#define INFO_CPU_MIS_CONF(dev, db)			// will re-define conditionally
 #if (defined(__x86_64__) || defined(__aarch64__))
-#undef INFO_CPU_BITS
 #define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch64__")
-#ifndef CONFIG_64BIT
-// config !64-bit specific code
-#undef INFO_CPU_MIS_CONF
+#ifdef CONFIG_64BIT
+#define INFO_CPU_MIS_CONF(dev, db)			// silence conditionally
+#else // config !64-bit specific code
 #define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051 CONFIG_32BIT (kconfig) ?!")
 #endif
 #elif (!defined(__x86_64__) && !defined(__aarch64__))
-#undef INFO_CPU_BITS
 #define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch32__")
-#ifdef CONFIG_64BIT
-// config 64-bit specific code
-#undef INFO_CPU_MIS_CONF
+#ifdef CONFIG_64BIT // config 64-bit specific code
 #define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051 CONFIG_64BIT(kconfig) ?!")
+#else
+#define INFO_CPU_MIS_CONF(dev, db)			// silence conditionally
 #endif
 #endif //__x86_64__ || __aarch64__
 

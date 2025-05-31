@@ -22,7 +22,7 @@
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
-#include "dm9051.h"
+#include "../dm9051.h"
 
 #ifndef DMPLUG_INT
 

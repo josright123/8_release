@@ -1933,7 +1933,7 @@ static int dm9051_threaded_irq(struct board_info *db, irq_handler_t handler)
 	return 0;
 #endif
 
-#if defined(DMPLUG_INT)
+#if defined(DM9051_INTR_BACKUP) //defined(DMPLUG_INT)
 	if (dm9051_int2_supp())
 		return dm9051_int2_irq(db, dm9051_rx_int2_delay);
 

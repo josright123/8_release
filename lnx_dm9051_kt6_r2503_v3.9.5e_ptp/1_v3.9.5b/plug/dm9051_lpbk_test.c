@@ -179,7 +179,9 @@ int dump_regs(struct board_info *db)
 
 int dm9051_single_rx(struct board_info *db)
 {
+#ifdef DMPLUG_PTP
 	ptp_board_info_t *pbi = &db->pbi;
+#endif
 	struct net_device *ndev = db->ndev;
 	int ret, rxlen, padlen;
 	unsigned int rxbyte;

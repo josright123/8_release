@@ -13,7 +13,7 @@
 /*#define DMPLUG_PTP */ //(ptp1588)
 /*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
 
-#define PLUG_PTP_1588
+//#define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
 
