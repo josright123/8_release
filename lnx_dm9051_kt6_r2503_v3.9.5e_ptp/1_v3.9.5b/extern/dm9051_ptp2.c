@@ -22,15 +22,20 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-//#include "dm9051_ptp1.h"
-#include "../dm9051.h"
 #include "dm9051_ptp1.h" /* 0.1 ptpc */
 //#include "dm9051_ptpd.h"
+#include "../dm9051.h"
+/*#include extern/extern.h */ //(extern/)
+#include "extern.h"
+#ifdef DMPLUG_PTP
 
 int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm)
 {
 //struct aq_ptp_s *aq_ptp = container_of(ptp, struct aq_ptp_s, ptp_info);
-    struct board_info *db = container_of(caps, struct board_info, ptp_caps);
+//    struct board_info *db = container_of(caps, struct board_info, ptp_caps);
+	struct board_info *db = container_of(caps, struct board_info, pbi.ptp_caps /*pbi*/ /*pbi.ptp_caps*/ /*ptp_caps*/);
+	ptp_board_info_t *pbi = &db->pbi;
+
     s64 ppm;
     s64 s64_adj;
     s64 subrate;
@@ -72,7 +77,7 @@ static int adjfine5 = 5;
     mutex_lock(&db->spi_lockm);
 
     /* 計算與上次調整的差值 */
-    subrate = s64_adj - db->pre_rate;
+    subrate = s64_adj - pbi->pre_rate;
 
     /* 處理正負值 */
     if (subrate < 0) {
@@ -100,7 +105,7 @@ static int adjfine5 = 5;
 
 if (adjfine5) {
 printk("%d. Ent 0x%lX offset_pps %llX, pre_rat %llX, s64_delta_rat= 0x%llX, u32_rat= %X, sign= %d\n",
-	adjfine5--, scaled_ppm, s64_adj, db->pre_rate, subrate, rate, neg_adj);
+	adjfine5--, scaled_ppm, s64_adj, pbi->pre_rate, subrate, rate, neg_adj);
 }
 
     /* 重置PTP時鐘控制寄存器 */
@@ -122,7 +127,7 @@ printk("%d. Ent 0x%lX offset_pps %llX, pre_rat %llX, s64_delta_rat= 0x%llX, u32_
     mutex_unlock(&db->spi_lockm);
 
     /* 存儲當前調整值供下次使用 */
-    db->pre_rate = s64_adj;
+    pbi->pre_rate = s64_adj;
 
     return 0;
 }
@@ -135,8 +140,12 @@ int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 	//remark1-slave
 	//printk("...ptp_9051_adjtime\n");
 	
+//	struct board_info *db = container_of(caps, struct board_info,
+//					     ptp_caps);
 	struct board_info *db = container_of(caps, struct board_info,
-					     ptp_caps);
+						pbi.ptp_caps);
+	//ptp_board_info_t *pbi = &db->pbi;
+
 	struct timespec64 ts;
 	int sign = 1;
 	int i;
@@ -231,8 +240,11 @@ int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 int ptp_9051_gettime(struct ptp_clock_info *caps,
 	struct timespec64 *ts)
 {
+//struct board_info *db = container_of(caps, struct board_info,
+//			 ptp_caps);
 struct board_info *db = container_of(caps, struct board_info,
-			 ptp_caps);
+					pbi.ptp_caps);
+//ptp_board_info_t *pbi = &db->pbi;
 unsigned int temp[8];
 int i;
 unsigned int uIntTemp;
@@ -274,8 +286,11 @@ int ptp_9051_settime(struct ptp_clock_info *caps,
 	const struct timespec64 *ts)
 {
 
+//struct board_info *db = container_of(caps, struct board_info,
+//			 ptp_caps);
 struct board_info *db = container_of(caps, struct board_info,
-			 ptp_caps);
+			pbi.ptp_caps);
+//ptp_board_info_t *pbi = &db->pbi;
 mutex_lock(&db->spi_lockm);
 printk("...ptp_9051_settime\n");
 
@@ -470,7 +485,9 @@ static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 
 void on_core_init_ptp_rate(struct board_info *db)
 {
-	if (db->ptp_on) { /* all_start, all_upstart, all_restart */
+	ptp_board_info_t *pbi = &db->pbi;
+
+	if (pbi->ptp_on) { /* all_start, all_upstart, all_restart */
 		u32 rate_reg = dm9051_get_rate_reg(db); //15888, dm9051_get_rate_reg(db);
 		netif_warn(db, hw, db->ndev, "dm9051.on.Pre-RateReg value = 0x%08X\n", rate_reg);
 	}
@@ -530,6 +547,8 @@ static u64 rx_extract_ts(u8 *rxTSbyte)
 
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
+	ptp_board_info_t *pbi = &db->pbi;
+
 #if 0 //[wait further test..]
 		if (is_ptp_rxts_enable(db)) //if T1/T4, // Is it inserted Timestamp?
 #endif
@@ -542,12 +561,12 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 			/* following, with netif_rx(skb),
 			 * slave4l can parse the T1 and/or T4 rx tstamp from master
 			 */
-			if(db->ptp_on) { //NOT by db->ptp-enable
+			if(pbi->ptp_on) { //NOT by db->ptp-enable
 				//printk("==> dm9051_ptp_rx_hwtstamp in\r\n");
 				/* Since we cannot turn off the Rx timestamp logic if the device is
 				 * doing Tx timestamping, check if Rx timestamping is configured.
 				 */
-				u64 ns = rx_extract_ts(db->rxTSbyte);
+				u64 ns = rx_extract_ts(pbi->rxTSbyte);
 				do {
 					struct skb_shared_hwtstamps *shhwtstamps =
 						skb_hwtstamps(skb); //for pass T2 the HW rx tstamp
@@ -565,15 +584,17 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 /* receive rx_tstamp */
 int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 {
+	ptp_board_info_t *pbi = &db->pbi;
+
 	//_15888_
 	//if (db->ptp_on) { //Even NOT ptp_on, need do.
-	if (db->ptp_enable) {
+	if (pbi->ptp_enable) {
 	if (is_ptp_rxts_enable(db)) {	// Inserted Timestamp
 		struct net_device *ndev = db->ndev;
 		int ret;
 		//printk("Had RX Timestamp... rxstatus = 0x%x\n", db->rxhdr.status);
 		if(db->rxhdr.status & RSR_RXTS_LEN) {	// 8 bytes Timestamp
-			ret = dm9051_read_mem(db, DM_SPI_MRCMD, db->rxTSbyte, 8);
+			ret = dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 8);
 			if (ret) {
 				netdev_dbg(ndev, "Read TimeStamp error: %02x\n", ret);
 				return ret;
@@ -581,7 +602,7 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 		}else{
 			/* 4bytes, dm9051a NOT supported 
 			 */
-			ret = dm9051_read_mem(db, DM_SPI_MRCMD, db->rxTSbyte, 4);
+			ret = dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 4);
 			if (ret) {
 				netdev_dbg(ndev, "Read TimeStamp error: %02x\n", ret);
 				return ret;
@@ -594,20 +615,22 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 
 static void dm9051_ptp_register(struct board_info *db)
 {
+	ptp_board_info_t *pbi = &db->pbi;
+
 	printk("\n");
 	netif_info(db, hw, db->ndev, "DM9051A Driver PTP Init\n");
 
-	db->ptp_caps = dm9051a_ptp_info; //.name = "DM9051A PTP",
-	strncpy(db->ptp_caps.name, "DM9051A PTP", sizeof(db->ptp_caps.name));
+	pbi->ptp_caps = dm9051a_ptp_info; //.name = "DM9051A PTP",
+	strncpy(pbi->ptp_caps.name, "DM9051A PTP", sizeof(pbi->ptp_caps.name));
 
-	db->ptp_clock = ptp_clock_register(&db->ptp_caps,
+	pbi->ptp_clock = ptp_clock_register(&pbi->ptp_caps /*&db->pbi.ptp_caps*/ /*&db->ptp_caps*/,
 					   &db->ndev->dev);
-	if (IS_ERR(db->ptp_clock)) {
-		db->ptp_clock = NULL;
+	if (IS_ERR(pbi->ptp_clock)) {
+		pbi->ptp_clock = NULL;
 		dev_err(&db->spidev->dev, "ptp_clock_register failed\n");
-	}  else if (db->ptp_clock) {
+	}  else if (pbi->ptp_clock) {
 		netif_warn(db, hw, db->ndev, "ptp_clock_register added PHC, index %d on %s\n",
-		       ptp_clock_index(db->ptp_clock), db->ndev->name);
+		       ptp_clock_index(pbi->ptp_clock), db->ndev->name);
 		
 	}
 	//db->ptp_flags |= IGB_PTP_ENABLED;	// Spenser - no used
@@ -615,28 +638,33 @@ static void dm9051_ptp_register(struct board_info *db)
 
 static void dm9051_ptp_unregister(struct board_info *db)
 {
+	ptp_board_info_t *pbi = &db->pbi;
+
 	/* Disable PTP for if switch to standard version from PLUG_PTP version*/
 	//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x01); //Disable PTP function Register offset 0x60, value 0x01
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, 0x02); //Disable PTP clock function Register offset 0x61, value 0x02
 
-	if (db->ptp_clock) {
-		ptp_clock_unregister(db->ptp_clock);
-		db->ptp_clock = NULL;
+	if (pbi->ptp_clock) {
+		ptp_clock_unregister(pbi->ptp_clock);
+		pbi->ptp_clock = NULL;
 		//printk("_[ptp] remove: PTP clock!!!\r\n");
 		netif_err(db, hw, db->ndev, "_[ptp] remove: PTP clock!!!\r\n");
 	}
 }
 
 void ptp_init(struct board_info *db) {
+	ptp_board_info_t *pbi = &db->pbi;
+
 	/* Turn on by ptp4l run command
 	 * db->ptp_on = 1; */
-	db->ptp_on = 0;
+	pbi->ptp_on = 0;
 	dm9051_ptp_register(db); //_15888_
 	dm9051_ptp_core_init(db); //only by _probe [for further functionality test, do eliminate here, put to _open, and further _core_init]
 }
 void ptp_end(struct board_info *db) {
 	dm9051_ptp_unregister(db); //_15888_ todo
 }
+#endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, ptp2"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
 MODULE_LICENSE("GPL");

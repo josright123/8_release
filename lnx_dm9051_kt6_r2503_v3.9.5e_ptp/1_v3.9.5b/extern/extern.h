@@ -5,32 +5,9 @@
  */
 #ifndef _DM9051_EXTERN_H_
 #define _DM9051_EXTERN_H_
-/*#define DMPLUG_PTP */ //(ptp1588)
-/*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
 /*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
 /*#define DMPLUG_LOG */ //(debug log)
-
-#define PLUG_PTP_1588
-#ifdef PLUG_PTP_1588
-#define DMPLUG_PTP //(ptp 1588)
-
-  #define PLUG_PTP_PPS
-  #ifdef PLUG_PTP_PPS
-  #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
-  #endif
-#endif
-
-/* pragma
- */
-#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
-//#warning "dm9051 PTP"
-#pragma message("dm9051 PTP")
-#endif
-#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
-//#warning "dm9051 PPS"
-#pragma message("dm9051 PPS")
-#endif
 
 //#define PLUG_BMCR
 #ifdef PLUG_BMCR
@@ -42,7 +19,7 @@
 #define DMCONF_MRR_WR //(mrr-work around)
 #endif
 
-//#define PLUG_LOG
+#define PLUG_LOG
 #ifdef PLUG_LOG
 #define DMPLUG_LOG //(debug log, extra-print-log for detail observation!)
 #endif
@@ -64,8 +41,12 @@
  */
 /* CO1, */
 /*#define CO1*/ //(Coerce)
+
+/* ptp */
 #if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1)*/
 /* re-direct ptpc */
+#undef INFO_PTP
+
 #undef PTP_VER
 #undef PTP_NEW
 #undef PTP_INIT_RCR
@@ -75,6 +56,8 @@
 #undef PTP_NETDEV_IOCTL
 #undef PTP_STATUS_BITS
 #undef PTP_AT_RATE
+
+#define INFO_PTP(dev, db)	USER_CONFIG(dev, db, "dm9051 PTP")
 
 #define PTP_VER(b)		ptp_ver(b)
 #define PTP_NEW(d) 				ptp_new(d)
@@ -104,6 +87,19 @@
 #define DMPLUG_PTP_TX_IN_PROGRESS(s)	dm9051_ptp_tx_in_progress(s)
 #define DMPLUG_PTP_TX_PRE(b,s)	dm9051_ptp_txreq(b,s)
 #define DMPLUG_TX_EMIT_TS(b,s)	dm9051_ptp_txreq_hwtstamp(b,s)
+#endif
+
+/* ptp clkout */
+#if defined(DMPLUG_PPS_CLKOUT)
+#undef INFO_PPS
+
+#define INFO_PPS(dev, db)					USER_CONFIG(dev, db, "dm9051 PPS")
+#endif
+
+#if defined(DMPLUG_LOG)
+#undef INFO_LOG
+
+#define INFO_LOG(dev, db)					USER_CONFIG(dev, db, "dm9051 LOG")
 #endif
  
 #endif //_DM9051_EXTERN_H_

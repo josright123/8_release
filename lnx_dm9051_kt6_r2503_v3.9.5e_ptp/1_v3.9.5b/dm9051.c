@@ -21,17 +21,18 @@
 #include <linux/types.h>
 #include <linux/of.h>
 #include <linux/version.h>
+
+/*#include dm9051.h */
 #define MAIN_DATA
-
-//#include "extern/extern.h"
-#include "plug/plug.h"
-
-#if defined(DMPLUG_PTP)
 #include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
-//#include "plug/dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
-#endif
-
 #include "dm9051.h"
+
+/*#include extern/extern.h */ //(extern/)
+/*#include plug/plug.h */ //(plug/)
+/*#include extern/dm9051_ptp1.h */ //(extern/)
+#include "extern/extern.h"
+#include "plug/plug.h"
+//#include "plug/dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
 
@@ -77,11 +78,13 @@ static void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
 	INFO_INT(dev, db);
 	INFO_INT_CLKOUT(dev, db);
 	INFO_INT_TWOSTEP(dev, db);
+	INFO_PTP(dev, db);
+	INFO_PPS(dev, db);
+	INFO_LOG(dev, db);
 	INFO_BMCR_WR(dev, db);
 	INFO_MRR_WR(dev, db);
 	INFO_CONTI(dev, db);
-	INFO_PTP(dev, db);
-	INFO_PPS(dev, db);
+	INFO_LPBK_TST(dev, db);
 }
 
 static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)

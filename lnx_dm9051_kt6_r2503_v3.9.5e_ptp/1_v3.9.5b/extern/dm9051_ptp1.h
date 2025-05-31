@@ -5,7 +5,37 @@
  */
 #ifndef _DM9051_PTPC_H_
 #define _DM9051_PTPC_H_
+//#include <linux/ptp_clock_kernel.h>
+//#include <linux/ptp_classify.h>
+//#include <linux/ip.h>
+//#include <linux/udp.h>
+
+/*#define DMPLUG_PTP */ //(ptp1588)
+/*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
+
+#define PLUG_PTP_1588
+#ifdef PLUG_PTP_1588
+#define DMPLUG_PTP //(ptp 1588)
+
+  #define PLUG_PTP_PPS
+  #ifdef PLUG_PTP_PPS
+  #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
+  #endif
+#endif
+
+/* pragma
+ */
+#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
+//#warning "dm9051 PTP"
+#pragma message("dm9051 PTP")
+#endif
+#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
+//#warning "dm9051 PPS"
+#pragma message("dm9051 PPS")
+#endif
+
 //#ifdef DMPLUG_PTP .. #endif
+
 /*
  * ptp 1588: 
  */
@@ -93,6 +123,21 @@ enum ptp_sync_type {
     PTP_ONE_STEP = 1,     /* One-step sync message */
     PTP_TWO_STEP = 2,     /* Two-step sync message */
 };
+
+//typedef struct ptp_board_info {
+//	//#ifdef DMPLUG_PTP
+//	struct ptp_clock_info 	ptp_caps;
+//	int						ptp_enable;
+//	int						ptp_on; //_15888_
+//	struct ptp_clock        *ptp_clock;
+//	u8						ptp_step; //dividual
+//	u8						_ptp_rsrv; //ptp_packet; //dividual
+
+//	struct hwtstamp_config	tstamp_config;
+//	s64						pre_rate;
+//	u8              		rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
+//	//#endif
+//} ptp_board_info_t;
 
 /* ethtool_ops
  */

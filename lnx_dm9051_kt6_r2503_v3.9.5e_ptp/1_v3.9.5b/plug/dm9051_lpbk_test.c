@@ -37,10 +37,13 @@
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
+#include "../extern/dm9051_ptp1.h" /* 0.1 ptpc */
 #include "../dm9051.h"
+#include "../extern/extern.h"
+#include "plug.h"
 
 //#warning "DMPLUG: dm9051 mac loopback test implement source file - dm9051_lpbk_test.c"
-#pragma message("DMPLUG: dm9051 mac loopback test implement source file - dm9051_lpbk_test.c")
+//#pragma message("DMPLUG: dm9051 mac loopback test implement source file - dm9051_lpbk_test.c")
 
 extern const struct plat_cnf_info *plat_cnf;
 
@@ -176,6 +179,7 @@ int dump_regs(struct board_info *db)
 
 int dm9051_single_rx(struct board_info *db)
 {
+	ptp_board_info_t *pbi = &db->pbi;
 	struct net_device *ndev = db->ndev;
 	int ret, rxlen, padlen;
 	unsigned int rxbyte;
@@ -222,7 +226,7 @@ int dm9051_single_rx(struct board_info *db)
 	db->bc.nRxcF++;
 	printk("\n");
 #ifdef DMPLUG_PTP
-	if (db->ptp_enable && is_ptp_rxts_enable(db))
+	if (pbi->ptp_enable && is_ptp_rxts_enable(db))
 		printk("recv packet %d, rx tstamp %d bytes and %d bytes\n", db->bc.nRxcF, 8, rxlen);
 	else
 #endif
@@ -236,10 +240,10 @@ int dm9051_single_rx(struct board_info *db)
 
 	//SHOW_ptp_rx_packet_monitor(db, skb);
 #ifdef DMPLUG_PTP
-	if (db->ptp_enable) {
+	if (pbi->ptp_enable) {
 	if (is_ptp_rxts_enable(db)) {	// Inserted Timestamp
 		sprintf(db->bc.head, "dump rx-tstamp %d", 8);
-		dump_data_001(db, db->rxTSbyte, 8);
+		dump_data_001(db, pbi->rxTSbyte, 8);
 	}}
 #endif
 	

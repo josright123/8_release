@@ -15,4 +15,16 @@
 #if defined(DMPLUG_LPBK_TST) && defined(MAIN_DATA)
 #pragma message("TEST: MAC_LOOPBACK")
 #endif
+
+#if defined(DMPLUG_LPBK_TST)
+#undef INFO_LPBK_TST
+
+#define INFO_LPBK_TST(dev, db)				USER_CONFIG(dev, db, "dm9051 MAC Loopback Test")
+#endif
+
+#if defined(DMPLUG_LPBK_TST)
+#undef dmplug_loop_test
+
+#define dmplug_loop_test(b)	test_loop_test(b)
+#endif
 #endif //_DM9051_PLUG_H_

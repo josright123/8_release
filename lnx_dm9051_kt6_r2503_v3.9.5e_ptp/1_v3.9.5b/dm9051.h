@@ -9,6 +9,7 @@
 #include <linux/bits.h>
 #include <linux/netdevice.h>
 #include <linux/types.h>
+
 #include <linux/ptp_clock_kernel.h>
 #include <linux/ptp_classify.h>
 #include <linux/ip.h>
@@ -73,11 +74,13 @@ struct board_info;
 //info INFO_FAK1
 #define INFO_INT_CLKOUT(dev, db)
 #define INFO_INT_TWOSTEP(dev, db)
+#define INFO_PTP(dev, db)
+#define INFO_PPS(dev, db)
+#define INFO_LOG(dev, db)
 #define INFO_BMCR_WR(dev, db)
 #define INFO_MRR_WR(dev, db)
 #define INFO_CONTI(dev, db)
-#define INFO_PTP(dev, db)
-#define INFO_PPS(dev, db)
+#define INFO_LPBK_TST(dev, db)
 
 #define PTP_VER(b)
 #define PTP_NEW(d)				0
@@ -158,21 +161,22 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #define dm9051_dump_data1(b, p, l)
 #define monitor_rxb0(b, rb)
 
+//implement in plug/dm9051_lpbk_test.c
+int test_loop_test(struct board_info *db);
+
 /* Extended support header files
  */
+/*#include extern/dm9051_ptp1.h */ //(extern/)
 /*#include extern/extern.h */ //(extern/)
 /*#include plug/plug.h */ //(plug/)
-/*#include extern/dm9051_ptp1.h */ //(extern/)
 
 /* Extended using header files
  */
  
+//#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 ////#include "extern/extern.h"
 //#include "plug/plug.h"
-//#if defined(DMPLUG_PTP)
-//#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 ////#include "plug/dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
-//#endif
 
 //#if (defined(__x86_64__) || defined(__aarch64__))
 //#elif (!defined(__x86_64__) && !defined(__aarch64__))
@@ -233,17 +237,6 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #undef INFO_CONTI
 #define INFO_CONTI(dev, db) 				USER_CONFIG(dev, db, "dm9051 CONTI")
 #endif
-
-#if defined(DMPLUG_PTP)
-#undef INFO_PTP
-#define INFO_PTP(dev, db)					USER_CONFIG(dev, db, "dm9051 PTP")
-#endif
-
-#if defined(DMPLUG_PPS_CLKOUT)
-#undef INFO_PPS
-#define INFO_PPS(dev, db)					USER_CONFIG(dev, db, "dm9051 PPS")
-#endif
-
 
 /* Device identification
  */
@@ -500,6 +493,21 @@ struct dm9051_rxhdr
 	__le16 rxlen;
 };
 
+typedef struct ptp_board_info {
+	//#ifdef DMPLUG_PTP
+	struct ptp_clock_info 	ptp_caps;
+	int						ptp_enable;
+	int						ptp_on; //_15888_
+	struct ptp_clock        *ptp_clock;
+	u8						ptp_step; //dividual
+	u8						_ptp_rsrv; //ptp_packet; //dividual
+
+	struct hwtstamp_config	tstamp_config;
+	s64						pre_rate;
+	u8              		rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
+	//#endif
+} ptp_board_info_t;
+
 /**
  * struct board_info - maintain the saved data
  * @msg_enable: message level value
@@ -579,24 +587,24 @@ struct board_info
 	unsigned int mdi; //= 0x0830;
 
 	/* 1 ptpc */
-	//#ifdef DMPLUG_PTP
-	int			ptp_enable;
-	struct ptp_clock        *ptp_clock;
-	struct ptp_clock_info 	ptp_caps;
+	ptp_board_info_t pbi; //=struct ptp_board_info pbi;
+//	//#ifdef DMPLUG_PTP
+//	struct ptp_clock_info 	ptp_caps;
+//	int						ptp_enable;
+//	int						ptp_on; //_15888_
+//	struct ptp_clock        *ptp_clock;
+//	u8						ptp_step; //dividual
+//	u8						_ptp_rsrv; //ptp_packet; //dividual
 
-	int			ptp_on; //_15888_
-
-	u8			ptp_step; //dividual
-	u8			_ptp_rsrv; //ptp_packet; //dividual
-
-	struct hwtstamp_config	tstamp_config;
-	s64			pre_rate;
-	u8              	rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
-	//#endif
+//	struct hwtstamp_config	tstamp_config;
+//	s64						pre_rate;
+//	u8              		rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
+//	//#endif
+	
 };
 
 int get_dts_irqf(struct board_info *db);
-void USER_CONFIG(struct device *dev, struct board_info *db, char *str);
+void USER_CONFIG(struct device *dev, struct board_info *db, char *str); //implement in dm9051.c
 
 unsigned int SHOW_BMSR(struct board_info *db);
 
@@ -791,13 +799,6 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeou
 //implement in plug/
 int bus_setup(struct board_info *db);
 void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
-#endif
-
-#if defined(MCO) && defined(DMPLUG_LPBK_TST) && defined(MAIN_DATA)
-#undef dmplug_loop_test
-#define dmplug_loop_test(b)	test_loop_test(b)
-//implement in plug/
-int test_loop_test(struct board_info *db);
 #endif
 
 /* CO, */
