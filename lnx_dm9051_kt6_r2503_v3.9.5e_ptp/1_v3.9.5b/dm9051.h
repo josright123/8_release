@@ -20,6 +20,7 @@
 /*#define DMPLUG_INT */ //(INT39)
 /*#define INT_CLKOUT */ //(INT39 ClkOut)
 /*#define INT_TWO_STEP */ //(INT39 two_step)
+/*#define DMPLUG_WD */ //(wd mode)
 
 /* Macro for already known platforms
  */
@@ -38,6 +39,11 @@
   #endif
 #endif
 
+//#define PLUG_ENABLE_WD
+#ifdef PLUG_ENABLE_WD
+#define DMPLUG_WD //(wd mode)
+#endif
+
 #if defined(DMPLUG_INT) && defined(MAIN_DATA)
 #pragma message("dm9051 INT")
 #endif
@@ -49,6 +55,13 @@
 #endif
 #if defined(INT_TWO_STEP) && defined(MAIN_DATA)
 #warning "INT: TWO_STEP"
+#endif
+
+#if defined(DMPLUG_WD) && defined(MAIN_DATA)
+#pragma message("dm9051 WD")
+#endif
+#if !defined(DMPLUG_WD) && defined(MAIN_DATA)
+#pragma message("dm9051 BD")
 #endif
 
 /* macro fakes
@@ -657,7 +670,7 @@ enum {
 
 struct plat_cnf_info {
 	char *test_info;
-	int skb_wb_mode;
+	//int skb_wb_mode;
 	int checksuming;
 	struct align_config
 	{
@@ -692,7 +705,7 @@ enum {
 
 const struct plat_cnf_info plat_align_mode = {
 	.test_info = "Test in rpi5 bcm2712",
-	.skb_wb_mode = SKB_WB_ON, //SKB_WB_OFF, //SKB_WB_ON,
+	//.skb_wb_mode = SKB_WB_ON, //SKB_WB_OFF, //SKB_WB_ON,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
 	.align = {
 		.burst_mode_info = "Alignment",
@@ -702,7 +715,7 @@ const struct plat_cnf_info plat_align_mode = {
 
 const struct plat_cnf_info plat_burst_mode = {
 	.test_info = "Test in rpi4 bcm2711",
-	.skb_wb_mode = SKB_WB_ON,
+	//.skb_wb_mode = SKB_WB_ON,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
 	.align = {
 		.burst_mode_info = "Burst",
@@ -712,7 +725,7 @@ const struct plat_cnf_info plat_burst_mode = {
 
 const struct plat_cnf_info plat_misc_mode = {
 	.test_info = "Test in processor Cortex-A",
-	.skb_wb_mode = SKB_WB_OFF,
+	//.skb_wb_mode = SKB_WB_OFF,
 	.checksuming = DEFAULT_CHECKSUM_OFF,
 	.align = {
 		.burst_mode_info = "Burst",

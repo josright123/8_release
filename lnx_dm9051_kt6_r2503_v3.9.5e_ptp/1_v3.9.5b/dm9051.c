@@ -702,7 +702,15 @@ static int dm9051_core_reset(struct board_info *db)
 	if (ret)
 		return ret;
 
-	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, (plat_cnf->skb_wb_mode) ? MBNDRY_WORD : MBNDRY_BYTE); /* MemBound */
+	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY,
+#ifdef DMPLUG_WD
+		MBNDRY_WORD
+#else
+		MBNDRY_BYTE
+#endif
+//		(plat_cnf->skb_wb_mode) ? 
+//		MBNDRY_WORD : MBNDRY_BYTE
+		); /* MemBound */
 	if (ret)
 		return ret;
 	ret = regmap_write(db->regmap_dm, DM9051_PPCR, PPCR_PAUSE_ADVCOUNT); /* Pause Count */
@@ -1565,7 +1573,14 @@ int dm9051_loop_rx(struct board_info *db)
 			return ret;
 
 		rxlen = le16_to_cpu(db->rxhdr.rxlen);
-		padlen = (plat_cnf->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
+		padlen = 
+#ifdef DMPLUG_WD
+			(rxlen & 1) ? rxlen + 1 : rxlen
+#else
+			rxlen
+#endif
+			//(plat_cnf->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen
+			;
 		skb = dev_alloc_skb(padlen);
 		if (!skb)
 		{
@@ -1623,6 +1638,7 @@ int dm9051_loop_rx(struct board_info *db)
 }
 
 #if defined(DM9051_NORM_BACKUP_TX) // -#if !defined(_DMPLUG_CONTI) -#endif
+#ifdef DMPLUG_WD
 #ifdef DM9051_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 {	
@@ -1643,13 +1659,14 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 static struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
 {
 	db->data_len = skb->len;
-	db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
+	db->pad = (skb->len & 1) ? 1 : 0; //db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
 #ifdef DM9051_SKB_PROTECT
 	if (db->pad)
 		skb = EXPAND_SKB(skb, db->pad);
 #endif
 	return skb;
 }
+#endif
 
 int dm9051_single_tx(struct board_info *db, u8 *p)
 {
@@ -1710,10 +1727,15 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 
-#if defined(STICK_SKB_CHG_NOTE)
+#ifdef DMPLUG_WD
+//#if defined(STICK_SKB_CHG_NOTE)
 #if !defined(DMPLUG_CONTI)
 	skb = dm9051_pad_txreq(db, skb);
 #endif
+//#endif
+#else
+	db->data_len = skb->len;
+	db->pad = 0;
 #endif
 
 	/* 6.0 tx ptpc */

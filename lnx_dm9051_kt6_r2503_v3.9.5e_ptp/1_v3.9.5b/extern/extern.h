@@ -19,7 +19,7 @@
 #define DMCONF_MRR_WR //(mrr-work around)
 #endif
 
-#define PLUG_LOG
+//#define PLUG_LOG
 #ifdef PLUG_LOG
 #define DMPLUG_LOG //(debug log, extra-print-log for detail observation!)
 #endif
