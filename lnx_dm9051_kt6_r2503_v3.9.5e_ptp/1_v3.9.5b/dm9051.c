@@ -26,10 +26,11 @@
 /*#include extern/extern.h */ //(extern/)
 /*#include plug/plug.h */ //(plug/)
 #define MAIN_DATA
-#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
+//#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 #include "dm9051.h"
 #include "extern/extern.h"
 #include "plug/plug.h"
+#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
 
@@ -56,23 +57,23 @@ static unsigned int dm9051_init_intcr_value(struct board_info *db)
 /*
  * log: 
  */
-static void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
-{
-	INFO_CPU_BITS(dev, db);
-	INFO_CPU_MIS_CONF(dev, db);
+//static void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
+//{
+//	INFO_CPU_BITS(dev, db);
+//	INFO_CPU_MIS_CONF(dev, db);
 
-	INFO_INT(dev, db);
-	INFO_INT_CLKOUT(dev, db);
-	INFO_INT_TWOSTEP(dev, db);
-	INFO_WD(dev, db);
-	INFO_PTP(dev, db);
-	INFO_PPS(dev, db);
-	INFO_LOG(dev, db);
-	INFO_BMCR_WR(dev, db);
-	INFO_MRR_WR(dev, db);
-	INFO_CONTI(dev, db);
-	INFO_LPBK_TST(dev, db);
-}
+//	INFO_INT(dev, db);
+//	INFO_INT_CLKOUT(dev, db);
+//	INFO_INT_TWOSTEP(dev, db);
+//	INFO_WD(dev, db);
+//	INFO_PTP(dev, db);
+//	INFO_PPS(dev, db);
+//	INFO_LOG(dev, db);
+//	INFO_BMCR_WR(dev, db);
+//	INFO_MRR_WR(dev, db);
+//	INFO_CONTI(dev, db);
+//	INFO_LPBK_TST(dev, db);
+//}
 
 static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
 {

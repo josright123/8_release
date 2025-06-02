@@ -38,10 +38,10 @@
 #include <linux/ptp_clock_kernel.h>
  
 //#define SECOND_MAIN //(sec)
-#include "../extern/dm9051_ptp1.h" /* 0.1 ptpc */
 #include "../dm9051.h"
 /*#include extern/extern.h */ //(extern/)
 #include "extern.h"
+#include "../extern/dm9051_ptp1.h" /* 0.1 ptpc */
 
 extern const struct plat_cnf_info *plat_cnf;
 extern const struct param_config *param;

@@ -38,10 +38,10 @@
 #include <linux/ptp_clock_kernel.h>
  
 //#define SECOND_MAIN //(sec)
-#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 #include "dm9051.h"
 /*#include extern/extern.h */ //(extern/)
 #include "extern/extern.h"
+#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 
 /* Tx 'wb' do skb protect */
 #define DM9051_SKB_PROTECT

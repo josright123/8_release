@@ -22,13 +22,13 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-#include "dm9051_ptp1.h" /* 0.1 ptpc */
 //#include "dm9051_ptpd.h"
 #include "../dm9051.h"
 /*#include extern/extern.h */ //(extern/)
 #include "extern.h"
-#ifdef DMPLUG_PTP
+#include "dm9051_ptp1.h" /* 0.1 ptpc */
 
+#ifdef DMPLUG_PTP
 int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm)
 {
 //struct aq_ptp_s *aq_ptp = container_of(ptp, struct aq_ptp_s, ptp_info);

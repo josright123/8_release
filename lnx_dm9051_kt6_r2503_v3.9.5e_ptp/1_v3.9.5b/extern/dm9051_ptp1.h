@@ -173,4 +173,49 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 //void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
 //void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 
+/* macro fakes
+ */
+#if 1
+//struct board_info;
+
+#define PTP_VER(b)
+#define PTP_NEW(d)				0
+#define PTP_INIT_RCR(d)
+#define PTP_INIT(d)
+#define PTP_END(d)
+#define PTP_ETHTOOL_INFO(s)
+#define PTP_STATUS_BITS(b)			RSR_ERR_BITS
+#define PTP_NETDEV_IOCTL(s)
+#define PTP_AT_RATE(b)
+
+void ptp_ver(struct board_info *db);
+int ptp_new(struct board_info *db);
+void ptp_init_rcr(struct board_info *db);
+void ptp_init(struct board_info *db);
+void ptp_end(struct board_info *db);
+u8 ptp_status_bits(struct board_info *db);
+void on_core_init_ptp_rate(struct board_info *db);
+
+int is_ptp_rxts_enable(struct board_info *db);
+
+/* ptp2 */
+#define DMPLUG_RX_TS_MEM(b)		0
+#define DMPLUG_RX_HW_TS_SKB(b,s)
+#define SHOW_ptp_rx_packet_monitor(b,s)
+#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
+
+#define DMPLUG_PTP_TX_IN_PROGRESS(s)	0
+#define DMPLUG_PTP_TX_PRE(b,s)
+#define DMPLUG_TX_EMIT_TS(b,s)
+
+int dm9051_read_ptp_tstamp_mem(struct board_info *db);
+void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_rxc_from_master(struct board_info *db);
+
+int dm9051_ptp_tx_in_progress(struct sk_buff *skb);
+void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
+#endif
+
 #endif //_DM9051_PTPC_H_

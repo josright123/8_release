@@ -37,10 +37,11 @@
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
-#include "../extern/dm9051_ptp1.h" /* 0.1 ptpc */
+
 #include "../dm9051.h"
 #include "../extern/extern.h"
 #include "plug.h"
+#include "../extern/dm9051_ptp1.h" /* 0.1 ptpc */
 
 //#warning "DMPLUG: dm9051 mac loopback test implement source file - dm9051_lpbk_test.c"
 //#pragma message("DMPLUG: dm9051 mac loopback test implement source file - dm9051_lpbk_test.c")

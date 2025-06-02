@@ -66,7 +66,7 @@
 
 /* macro fakes
  */
-
+#if 0
 struct board_info;
 
 #define PTP_VER(b)
@@ -107,6 +107,7 @@ void dm9051_ptp_rxc_from_master(struct board_info *db);
 int dm9051_ptp_tx_in_progress(struct sk_buff *skb);
 void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
+#endif
 
 /* FAK, */
 //[fak.main] //#define FAK //(fake)
@@ -652,6 +653,24 @@ static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *
 		dev_warn(dev, "%s\n", str);
 	else if (db)
 		netif_info(db, drv, db->ndev, "%s\n", str);
+}
+
+static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
+{
+	INFO_CPU_BITS(dev, db);
+	INFO_CPU_MIS_CONF(dev, db);
+
+	INFO_INT(dev, db);
+	INFO_INT_CLKOUT(dev, db);
+	INFO_INT_TWOSTEP(dev, db);
+	INFO_WD(dev, db);
+	INFO_PTP(dev, db);
+	INFO_PPS(dev, db);
+	INFO_LOG(dev, db);
+	INFO_BMCR_WR(dev, db);
+	INFO_MRR_WR(dev, db);
+	INFO_CONTI(dev, db);
+	INFO_LPBK_TST(dev, db);
 }
 
 int get_dts_irqf(struct board_info *db);
