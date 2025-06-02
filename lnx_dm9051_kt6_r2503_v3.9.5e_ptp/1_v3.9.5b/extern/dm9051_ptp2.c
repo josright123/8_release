@@ -33,8 +33,10 @@ int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm)
 {
 //struct aq_ptp_s *aq_ptp = container_of(ptp, struct aq_ptp_s, ptp_info);
 //    struct board_info *db = container_of(caps, struct board_info, ptp_caps);
-	struct board_info *db = container_of(caps, struct board_info, pbi.ptp_caps /*pbi*/ /*pbi.ptp_caps*/ /*ptp_caps*/);
-	ptp_board_info_t *pbi = &db->pbi;
+//	struct board_info *db = container_of(caps, struct board_info, pbi.ptp_caps /*pbi*/ /*pbi.ptp_caps*/ /*ptp_caps*/);
+//	ptp_board_info_t *pbi = &db->pbi;
+struct ptp_board_info *pbi = container_of(caps, struct ptp_board_info, ptp_caps);
+struct board_info *db = pbi->db;
 
     s64 ppm;
     s64 s64_adj;
@@ -142,8 +144,11 @@ int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 	
 //	struct board_info *db = container_of(caps, struct board_info,
 //					     ptp_caps);
-	struct board_info *db = container_of(caps, struct board_info,
-						pbi.ptp_caps);
+//	struct board_info *db = container_of(caps, struct board_info,
+//						pbi.ptp_caps);
+struct ptp_board_info *pbi = container_of(caps, struct ptp_board_info, ptp_caps);
+struct board_info *db = pbi->db;
+	
 	//ptp_board_info_t *pbi = &db->pbi;
 
 	struct timespec64 ts;
@@ -242,8 +247,11 @@ int ptp_9051_gettime(struct ptp_clock_info *caps,
 {
 //struct board_info *db = container_of(caps, struct board_info,
 //			 ptp_caps);
-struct board_info *db = container_of(caps, struct board_info,
-					pbi.ptp_caps);
+//struct board_info *db = container_of(caps, struct board_info,
+//					pbi.ptp_caps);
+struct ptp_board_info *pbi = container_of(caps, struct ptp_board_info, ptp_caps);
+struct board_info *db = pbi->db;
+
 //ptp_board_info_t *pbi = &db->pbi;
 unsigned int temp[8];
 int i;
@@ -288,8 +296,11 @@ int ptp_9051_settime(struct ptp_clock_info *caps,
 
 //struct board_info *db = container_of(caps, struct board_info,
 //			 ptp_caps);
-struct board_info *db = container_of(caps, struct board_info,
-			pbi.ptp_caps);
+//struct board_info *db = container_of(caps, struct board_info,
+//			pbi.ptp_caps);
+struct ptp_board_info *pbi = container_of(caps, struct ptp_board_info, ptp_caps);
+struct board_info *db = pbi->db;
+
 //ptp_board_info_t *pbi = &db->pbi;
 mutex_lock(&db->spi_lockm);
 printk("...ptp_9051_settime\n");
@@ -620,6 +631,7 @@ static void dm9051_ptp_register(struct board_info *db)
 	printk("\n");
 	netif_info(db, hw, db->ndev, "DM9051A Driver PTP Init\n");
 
+	pbi->db = db;
 	pbi->ptp_caps = dm9051a_ptp_info; //.name = "DM9051A PTP",
 	strncpy(pbi->ptp_caps.name, "DM9051A PTP", sizeof(pbi->ptp_caps.name));
 

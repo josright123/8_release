@@ -515,6 +515,7 @@ struct dm9051_rxhdr
 
 typedef struct ptp_board_info {
 	//#ifdef DMPLUG_PTP
+	struct board_info		*db;
 	struct ptp_clock_info 	ptp_caps;
 	int						ptp_enable;
 	int						ptp_on; //_15888_
@@ -607,7 +608,7 @@ struct board_info
 	unsigned int mdi; //= 0x0830;
 
 	/* 1 ptpc */
-	ptp_board_info_t pbi; //=struct ptp_board_info pbi;
+	struct ptp_board_info pbi; //=struct ptp_board_info pbi;
 //	//#ifdef DMPLUG_PTP
 //	struct ptp_clock_info 	ptp_caps;
 //	int						ptp_enable;
