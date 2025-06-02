@@ -1719,6 +1719,8 @@ static int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
+	unsigned char flags;
+	static int flags_count = 0;
 
 #ifdef DMPLUG_WD
 //#if defined(STICK_SKB_CHG_NOTE)
@@ -1732,8 +1734,14 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 #endif
 
 	/* 6.0 tx ptpc */
-	if (DMPLUG_PTP_TX_IN_PROGRESS(skb)) //tom tell, 20250522
-		netdev_dbg(db->ndev, "Yes, This is a hardware timestamp requested\n");
+	flags= skb_shinfo(skb)->tx_flags;
+	if (DMPLUG_PTP_TX_IN_PROGRESS(skb)) { //tom tell, 20250522
+		flags_count++;
+		//netdev_dbg(db->ndev, "Yes, This is a hardware timestamp requested\n");
+		//netif_crit(db, hw, db->ndev, "Yes, %05d skb_shared_info %02x | %02x to %02x, This is a hardware timestamp requested\n",
+		//	flags_count, flags, SKBTX_IN_PROGRESS, skb_shinfo(skb)->tx_flags);
+		flags= skb_shinfo(skb)->tx_flags;
+	}
 
 	/* 6 tx ptpc */
 	DMPLUG_PTP_TX_PRE(db, skb);
@@ -1742,6 +1750,10 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 
 	/* 6.1 tx ptpc */
 	DMPLUG_TX_EMIT_TS(db, skb);
+if (flags & SKBTX_IN_PROGRESS) {
+	netif_crit(db, hw, db->ndev, "Yes, %05d dm9051_nsr_poll\n", flags_count);
+	netif_info(db, hw, db->ndev, "Yes, %05d skb_tstamp_tx\n", flags_count);
+}
 
 #if defined(STICK_SKB_CHG_NOTE)
 	dev_kfree_skb(skb);

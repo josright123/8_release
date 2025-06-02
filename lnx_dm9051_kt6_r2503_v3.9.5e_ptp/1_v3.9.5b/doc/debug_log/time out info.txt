@@ -1,0 +1,28 @@
+ increasing tx_timestamp_timeout or increasing kworker priority may correct this issue, but a driver bug likely causes it
+
+//analysis
+ptp4l[435904.084]: master offset        -81 s2 freq +25020629 path delay     30347
+ptp4l[435905.041]: master offset        728 s2 freq +25021414 path delay     30347
+ptp4l[435906.084]: master offset        615 s2 freq +25021520 path delay     30347
+ptp4l[435907.087]: master offset       -780 s2 freq +25020309 path delay     30347
+ptp4l[435907.678]: timed out while polling for tx timestamp
+ptp4l[435907.678]: increasing tx_timestamp_timeout or increasing kworker priority may correct this issue, but a driver bug likely causes it
+ptp4l[435907.678]: port 1 (eth1): send delay request failed
+ptp4l[435907.678]: port 1 (eth1): SLAVE to FAULTY on FAULT_DETECTED (FT_UNSPECIFIED)
+ptp4l[435923.678]: port 1 (eth1): FAULTY to LISTENING on INIT_COMPLETE
+ptp4l[435925.087]: port 1 (eth1): new foreign master 00606e.fffe.e27dfe-1
+ptp4l[435929.063]: port 1 (eth1): LISTENING to UNCALIBRATED on RS_SLAVE
+ptp4l[435930.085]: master offset      13088 s2 freq +25033943 path delay     30347
+ptp4l[435930.085]: port 1 (eth1): UNCALIBRATED to SLAVE on MASTER_CLOCK_SELECTED
+ptp4l[435931.087]: master offset        222 s2 freq +25025003 path delay     30347
+ptp4l[435932.049]: master offset      -4144 s2 freq +25020704 path delay     30347
+ptp4l[435933.049]: master offset      -3734 s2 freq +25019871 path delay     30347
+ptp4l[435934.085]: master offset      -2419 s2 freq +25020066 path delay     30347
+ptp4l[435935.087]: master offset      -1520 s2 freq +25020239 path delay     30347
+ptp4l[435936.085]: master offset       -713 s2 freq +25020590 path delay     30347
+ptp4l[435937.087]: master offset       -495 s2 freq +25020594 path delay     30347
+ptp4l[435938.085]: master offset       -845 s2 freq +25020096 path delay     30347
+ptp4l[435939.087]: master offset        383 s2 freq +25021070 path delay     30347
+ptp4l[435940.085]: master offset        163 s2 freq +25020965 path delay     30347
+ptp4l[435941.087]: master offset        123 s2 freq +25020974 path delay     30347
+ptp4l[435942.085]: master offset        -45 s2 freq +25020843 path delay     30347

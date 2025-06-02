@@ -590,21 +590,21 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 	//if (db->ptp_on) { //Even NOT ptp_on, need do.
 	if (pbi->ptp_enable) {
 	if (is_ptp_rxts_enable(db)) {	// Inserted Timestamp
-		struct net_device *ndev = db->ndev;
 		int ret;
 		//printk("Had RX Timestamp... rxstatus = 0x%x\n", db->rxhdr.status);
 		if(db->rxhdr.status & RSR_RXTS_LEN) {	// 8 bytes Timestamp
 			ret = dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 8);
 			if (ret) {
-				netdev_dbg(ndev, "Read TimeStamp error: %02x\n", ret);
+				netif_err(db, hw, db->ndev, "Read TimeStamp8 error: %02x\n", ret);
 				return ret;
 			}
-		}else{
-			/* 4bytes, dm9051a NOT supported 
+		}
+		else {	// 4 bytes Timestamp
+			/* 4bytes, dm9051a NOT supported, Will only support for OASPI function chip. 
 			 */
 			ret = dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 4);
 			if (ret) {
-				netdev_dbg(ndev, "Read TimeStamp error: %02x\n", ret);
+				netif_err(db, hw, db->ndev, "Read TimeStamp4 error: %02x\n", ret);
 				return ret;
 			}
 		}			
