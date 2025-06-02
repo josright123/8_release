@@ -43,7 +43,12 @@
 /*#include extern/extern.h */ //(extern/)
 #include "extern/extern.h"
 
-#ifdef DMPLUG_WD
+/* Tx 'wb' do skb protect */
+#define DM9051_SKB_PROTECT
+
+//#ifdef DMPLUG_WD
+//#endif
+
 #ifdef DM9051_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 {	
@@ -61,7 +66,7 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 #endif
 
 /* particulars, wb mode*/
-static struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
+struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
 {
 	db->data_len = skb->len;
 	db->pad = (skb->len & 1) ? 1 : 0; //db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
@@ -71,7 +76,6 @@ static struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *s
 #endif
 	return skb;
 }
-#endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, wd-function");
 MODULE_LICENSE("GPL");

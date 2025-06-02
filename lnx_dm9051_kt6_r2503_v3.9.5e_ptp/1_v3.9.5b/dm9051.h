@@ -257,10 +257,11 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #if defined(DMPLUG_WD)
 #undef BOUND_CONF_BIT
 #define BOUND_CONF_BIT						MBNDRY_WORD
-#undef TX_PAD
-#define TX_PAD(b,s)							dm9051_pad_txreq(b,s) //wd
 #undef PAD_LEN
 #define PAD_LEN(len)						(len & 1) ? len + 1 : len
+#undef TX_PAD
+#define TX_PAD(b,s)							dm9051_pad_txreq(b,s) //wd
+struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb);
 #endif
 
 #if defined(DMCONF_BMCR_WR)

@@ -22,24 +22,18 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-/*#include dm9051.h */
+/*#include extern/dm9051_ptp1.h */ //(extern/)
+/*#include extern/extern.h */ //(extern/)
+/*#include plug/plug.h */ //(plug/)
 #define MAIN_DATA
 #include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 #include "dm9051.h"
-
-/*#include extern/extern.h */ //(extern/)
-/*#include plug/plug.h */ //(plug/)
-/*#include extern/dm9051_ptp1.h */ //(extern/)
 #include "extern/extern.h"
 #include "plug/plug.h"
-//#include "plug/dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
 
-/* Tx 'wb' do skb protect */
-#define DM9051_SKB_PROTECT
 #define STICK_SKB_CHG_NOTE
-
 #define DM9051_INTR_BACKUP // #ifdef DM9051_INTR_BACKUP .. #endif //instead more backup.
 #define DM9051_NORM_BACKUP_TX // 
 
@@ -113,7 +107,6 @@ static void SHOW_RESTART_SHOW_STATIISTIC(struct board_info *db)
 	netif_crit(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
 	   db->bc.status_err_counter + db->bc.large_err_counter,
 	   db->bc.fifo_rst_counter);
-	//netif_err(db, rx_status, db->ndev, "_[_all_restart] rxb work around done\n");
 }
 
 static void SHOW_XMIT_ANALYSIS(struct board_info *db)
@@ -134,17 +127,13 @@ static void SHOW_RX_CTRLS(struct board_info *db)
 	//.dm9051_headlog_regs("dump rcr registers:", db, DM9051_RCR, DM9051_RCR);
 	//.dm9051_headlog_regs("dump wdr registers:", db, 0x24, 0x25);
 	//.dm9051_headlog_regs("dump mrr registers:", db, DM9051_MRRL, DM9051_MRRH);
-	//unsigned int reg1, reg2;
-	//reg1 = DM9051_RCR; reg2 = DM9051_RCR;
-	dm9051_get_reg(db, DM9051_RCR, &v1); dm9051_get_reg(db, DM9051_RCR, &v2);
+	dm9051_get_reg(db, DM9051_RCR, &v1); dm9051_get_reg(db, DM9051_RCR, &v2); //reg1 = DM9051_RCR; reg2 = DM9051_RCR;
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump rcr registers:");
 	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, DM9051_RCR, v1, DM9051_RCR, v2);
-	//reg1 = 0x24; reg2 = 0x25;
-	dm9051_get_reg(db, 0x24, &v1); dm9051_get_reg(db, 0x25, &v2);
+	dm9051_get_reg(db, 0x24, &v1); dm9051_get_reg(db, 0x25, &v2); //reg1 = 0x24; reg2 = 0x25;
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump wdr registers:");
 	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, 0x24, v1, 0x25, v2);
-	//reg1 = DM9051_MRRL; reg2 = DM9051_MRRH;
-	dm9051_get_reg(db, DM9051_MRRL, &v1); dm9051_get_reg(db, DM9051_MRRH, &v2);
+	dm9051_get_reg(db, DM9051_MRRL, &v1); dm9051_get_reg(db, DM9051_MRRH, &v2); //reg1 = DM9051_MRRL; reg2 = DM9051_MRRH;
 	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, "dump mrr registers:");
 	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, DM9051_MRRL, v1, DM9051_MRRH, v2);
 }
@@ -153,8 +142,7 @@ unsigned int SHOW_BMSR(struct board_info *db)
 {
 	unsigned int val;
 
-	/*.dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
-	dm9051_phyread(db, MII_BMSR, &val);
+	dm9051_phyread(db, MII_BMSR, &val); /*.dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
 	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
 	return val;
 }
@@ -1668,20 +1656,17 @@ struct sk_buff *dm9051_tx_data_len(struct board_info *db, struct sk_buff *skb)
 
 int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 {
-	int ret;
-	unsigned char flags;
-	static int flags_count = 0;
+	int ret, in_progress;
+	unsigned char flags = skb_shinfo(skb)->tx_flags; //to debug show
+	static int flags_count = 0; //to debug show
 
 #if defined(STICK_SKB_CHG_NOTE)
 	skb = TX_PAD(db, skb); //db->data_len = skb->len; db->pad = ..
-#endif
 
 	/* 6.0 tx ptpc */
-	flags= skb_shinfo(skb)->tx_flags;
-	if (DMPLUG_PTP_TX_IN_PROGRESS(skb)) { //tom tell, 20250522 //Or using for two step ?
-		flags= skb_shinfo(skb)->tx_flags;
-		flags_count++;
-	}
+	in_progress = DMPLUG_PTP_TX_IN_PROGRESS(skb); //tom tell, 20250522 //Or using for two step ?
+	if (in_progress)
+		flags = skb_shinfo(skb)->tx_flags;
 
 	/* 6 tx ptpc */
 	DMPLUG_PTP_TX_PRE(db, skb);
@@ -1690,13 +1675,13 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 
 	/* 6.1 tx ptpc */
 	DMPLUG_TX_EMIT_TS(db, skb);
-if (flags & SKBTX_IN_PROGRESS) {
-	netif_crit(db, hw, db->ndev, "Yes, %05d dm9051_nsr_poll\n", flags_count);
-	netif_info(db, hw, db->ndev, "Yes, %05d skb_tstamp_tx\n", flags_count);
-}
+	if (flags & SKBTX_IN_PROGRESS) {
+		flags_count++;
+		netif_crit(db, hw, db->ndev, "Yes, %05d dm9051_nsr_poll\n", flags_count);
+		netif_info(db, hw, db->ndev, "Yes, %05d skb_tstamp_tx\n", flags_count);
+	}
 
-#if defined(STICK_SKB_CHG_NOTE)
-	dev_kfree_skb(skb);
+	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb. 
 #endif
 
 	SHOW_DEVLOG_TCR_WR(db);
