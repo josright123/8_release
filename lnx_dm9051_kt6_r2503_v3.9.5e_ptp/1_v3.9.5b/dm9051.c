@@ -62,14 +62,6 @@ static unsigned int dm9051_init_intcr_value(struct board_info *db)
 /*
  * log: 
  */
-void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
-{
-	if (dev)
-		dev_warn(dev, "%s\n", str);
-	else if (db)
-		netif_info(db, drv, db->ndev, "%s\n", str);
-}
-
 static void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
 {
 	INFO_CPU_BITS(dev, db);

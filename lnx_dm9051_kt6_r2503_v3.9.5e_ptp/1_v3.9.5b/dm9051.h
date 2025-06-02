@@ -39,7 +39,7 @@
   #endif
 #endif
 
-#define PLUG_ENABLE_WD
+//#define PLUG_ENABLE_WD
 #ifdef PLUG_ENABLE_WD
 #define DMPLUG_WD //(wd mode)
 #endif
@@ -66,20 +66,8 @@
 
 /* macro fakes
  */
-struct board_info;
 
-//info INFO_FAK1
-#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 POL")
-#define INFO_INT_CLKOUT(dev, db)
-#define INFO_INT_TWOSTEP(dev, db)
-#define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051 BD")
-#define INFO_PTP(dev, db)
-#define INFO_PPS(dev, db)
-#define INFO_LOG(dev, db)
-#define INFO_BMCR_WR(dev, db)
-#define INFO_MRR_WR(dev, db)
-#define INFO_CONTI(dev, db)
-#define INFO_LPBK_TST(dev, db)
+struct board_info;
 
 #define PTP_VER(b)
 #define PTP_NEW(d)				0
@@ -212,6 +200,22 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #define INFO_CPU_MIS_CONF(dev, db)			// silence conditionally
 #endif
 #endif //__x86_64__ || __aarch64__
+
+/* macro fakes
+ */
+
+//info INFO_FAK1
+#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 POL")
+#define INFO_INT_CLKOUT(dev, db)
+#define INFO_INT_TWOSTEP(dev, db)
+#define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051 BD")
+#define INFO_PTP(dev, db)
+#define INFO_PPS(dev, db)
+#define INFO_LOG(dev, db)
+#define INFO_BMCR_WR(dev, db)
+#define INFO_MRR_WR(dev, db)
+#define INFO_CONTI(dev, db)
+#define INFO_LPBK_TST(dev, db)
 
 //#define INFO_FAK0
 
@@ -619,8 +623,16 @@ struct board_info
 	
 };
 
+static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
+{
+	if (dev)
+		dev_warn(dev, "%s\n", str);
+	else if (db)
+		netif_info(db, drv, db->ndev, "%s\n", str);
+}
+
 int get_dts_irqf(struct board_info *db);
-void USER_CONFIG(struct device *dev, struct board_info *db, char *str); //implement in dm9051.c
+//static void USER_CONFIG(struct device *dev, struct board_info *db, char *str); //implement in dm9051.c
 
 unsigned int SHOW_BMSR(struct board_info *db);
 
