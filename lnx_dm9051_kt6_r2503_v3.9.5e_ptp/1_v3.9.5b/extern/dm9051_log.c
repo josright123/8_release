@@ -197,6 +197,37 @@ void show_mode(struct device *dev) //.SHOW_DEVLOG_MODE
 	SHOW_ENG_OPTION_MODE(dev);
 }
 
+void show_xmit_thrd0(struct board_info *db)
+{
+	if (db->xmit_thrd0 <= 9) {
+		netif_warn(db, tx_queued, db->ndev, "%2d [_THrd-in] run %u Pkt %u zero-in %u, on-THrd-in %u Pkt %u\n", db->xmit_thrd0,
+			db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
+	}
+}
+void show_xmit_thrd(struct board_info *db)
+{
+	if (db->xmit_thrd <= 9) {
+		netif_warn(db, tx_queued, db->ndev, "%2d [_THrd-end] run %u Pkt %u zero-in %u, on-THrd-end %u Pkt %u\n", db->xmit_thrd,
+			db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
+	}
+}
+void show_xmit_in(struct board_info *db)
+{
+	if (db->xmit_in <= 9) {
+		netif_info(db, tx_queued, db->ndev, "%2d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
+			db->xmit_in, db->xmit_tc, db->xmit_zc);
+	}
+}
+
+void show_tcr_wr(struct board_info *db)
+{
+	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
+		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
+		(db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
+		netif_info(db, tx_queued, db->ndev, "%s. tx_send end_wr %02x\n", db->bc.head, db->tcr_wr);
+	}
+}
+
 //-
 void show_pmode(struct device *dev) //.SHOW_PLAT_MODE
 {

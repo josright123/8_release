@@ -1525,12 +1525,7 @@ int dm9051_loop_rx(struct board_info *db)
 		if (ntx) {
 			db->xmit_thrd0++;
 			db->xmit_ttc0 += ntx;
-			#ifdef DMPLUG_LOG
-			if (db->xmit_thrd0 <= 9) {
-				netif_warn(db, tx_queued, db->ndev, "%2d [_THrd-in] run %u Pkt %u zero-in %u, on-THrd-in %u Pkt %u\n", db->xmit_thrd0,
-					db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
-			}
-			#endif
+			SHOW_DEVLOG_XMIT_THRD0(db);
 		}
 #endif
 		ret = dm9051_read_mem_rxb(db, DM_SPI_MRCMDX, &rxbyte, 2);
@@ -1619,48 +1614,13 @@ int dm9051_loop_rx(struct board_info *db)
 	if (ntx) {
 		db->xmit_thrd++;
 		db->xmit_ttc += ntx;
-		#ifdef DMPLUG_LOG
-		if (db->xmit_thrd <= 9) {
-			netif_warn(db, tx_queued, db->ndev, "%2d [_THrd-end] run %u Pkt %u zero-in %u, on-THrd-end %u Pkt %u\n", db->xmit_thrd,
-				db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
-		}
-		#endif
+		SHOW_DEVLOG_XMIT_THRD(db);
 	}
 #endif
 	return scanrr;
 }
 
 #if defined(DM9051_NORM_BACKUP_TX) // -#if !defined(_DMPLUG_CONTI) -#endif
-#ifdef DMPLUG_WD
-#ifdef DM9051_SKB_PROTECT
-static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
-{	
-	struct sk_buff *skb2;
-
-	skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
-	if (skb2) {
-		dev_kfree_skb(skb);
-		return skb2;
-	}
-
-	//.netif_warn(db, tx_queued, db->ndev, "[WB_SUPPORT] warn on len %d, skb_copy_expand get memory leak!\n", skb->len);
-	return skb;
-}
-#endif
-
-/* particulars, wb mode*/
-static struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
-{
-	db->data_len = skb->len;
-	db->pad = (skb->len & 1) ? 1 : 0; //db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
-#ifdef DM9051_SKB_PROTECT
-	if (db->pad)
-		skb = EXPAND_SKB(skb, db->pad);
-#endif
-	return skb;
-}
-#endif
-
 int dm9051_single_tx(struct board_info *db, u8 *p)
 {
 	int ret = dm9051_nsr_poll(db);
@@ -1716,31 +1676,28 @@ static int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 }
 #endif
 
+struct sk_buff *dm9051_tx_data_len(struct board_info *db, struct sk_buff *skb)
+{
+	db->data_len = skb->len;
+	db->pad = 0;
+	return skb;
+}
+
 int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 	unsigned char flags;
 	static int flags_count = 0;
 
-#ifdef DMPLUG_WD
-//#if defined(STICK_SKB_CHG_NOTE)
-#if !defined(DMPLUG_CONTI)
-	skb = dm9051_pad_txreq(db, skb);
-#endif
-//#endif
-#else
-	db->data_len = skb->len;
-	db->pad = 0;
+#if defined(STICK_SKB_CHG_NOTE)
+	skb = TX_PAD(db, skb); //db->data_len = skb->len; db->pad = ..
 #endif
 
 	/* 6.0 tx ptpc */
 	flags= skb_shinfo(skb)->tx_flags;
-	if (DMPLUG_PTP_TX_IN_PROGRESS(skb)) { //tom tell, 20250522
-		flags_count++;
-		//netdev_dbg(db->ndev, "Yes, This is a hardware timestamp requested\n");
-		//netif_crit(db, hw, db->ndev, "Yes, %05d skb_shared_info %02x | %02x to %02x, This is a hardware timestamp requested\n",
-		//	flags_count, flags, SKBTX_IN_PROGRESS, skb_shinfo(skb)->tx_flags);
+	if (DMPLUG_PTP_TX_IN_PROGRESS(skb)) { //tom tell, 20250522 //Or using for two step ?
 		flags= skb_shinfo(skb)->tx_flags;
+		flags_count++;
 	}
 
 	/* 6 tx ptpc */
@@ -1759,13 +1716,7 @@ if (flags & SKBTX_IN_PROGRESS) {
 	dev_kfree_skb(skb);
 #endif
 
-	#ifdef DMPLUG_LOG /* only config enable _log */
-	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
-		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
-		(db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
-		netif_info(db, tx_queued, db->ndev, "%s. tx_send end_wr %02x\n", db->bc.head, db->tcr_wr);
-	}
-	#endif
+	SHOW_DEVLOG_TCR_WR(db);
 	return ret;
 }
 
@@ -1836,12 +1787,7 @@ static void dm9051_tx_delay(struct work_struct *work)
 	db->xmit_zc += ntx ? 0 : 1;
 	if (ntx) {
 		db->xmit_in++;
-		#ifdef DMPLUG_LOG
-		if (db->xmit_in <= 9) {
-			netif_info(db, tx_queued, db->ndev, "%2d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
-				db->xmit_in, db->xmit_tc, db->xmit_zc);
-		}
-		#endif
+		SHOW_DEVLOG_XMIT_IN(db);
 	}
 
 	mutex_unlock(&db->spi_lockm);
@@ -1973,30 +1919,11 @@ static void dm9051_thread_irq_free(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
 
-	#ifdef INT_TWO_STEP
-	cancel_delayed_work_sync(&db->irq_servicep);
-	#endif //_INT_TWO_STEP
-
+	CANCEL_DLY_IRQ2(db);
 	free_irq(db->spidev->irq, db);
 	netif_err(db, intr, ndev, "_[stop] remove: free irq %d\n", db->spidev->irq);
 }
 #endif
-
-static void dm9051_free_irqworks(struct board_info *db)
-{
-	/* schedule delay work */
-	#if defined(DMPLUG_INT)
-	/*
-	 * Interrupt: 
-	 */
-	dm9051_thread_irq_free(db->ndev);
-	#else
-	/*
-	 * Polling: 
-	 */
-	cancel_delayed_work_sync(&db->irq_workp);
-	#endif
-}
 
 /* Open network device
  * Called when the network device is marked active, such as a user executing
@@ -2053,7 +1980,7 @@ static int dm9051_open(struct net_device *ndev)
 
 	if (ret) {
 		phy_stop(db->phydev);
-		dm9051_free_irqworks(db);
+		FREE_IRQ(db); //dm9051_free_irqworks(db);
 		return ret;
 	}
 
@@ -2087,7 +2014,7 @@ static int dm9051_stop(struct net_device *ndev)
 
 	phy_stop(db->phydev);
 
-	dm9051_free_irqworks(db);
+	FREE_IRQ(db); //dm9051_free_irqworks(db);
 
 	netif_stop_queue(ndev);
 
@@ -2267,23 +2194,6 @@ static void CHKSUM_PTP_NDEV(struct board_info *db, struct net_device *ndev)
 		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
 
 	ndev->hw_features |= ndev->features;
-}
-
-static void DM9051_PROBE_DLYSETUP(struct board_info *db)
-{
-	#if defined(DMPLUG_INT)
-	/*
-	 * Interrupt: 
-	 */
-	#ifdef INT_TWO_STEP
-		PROBE_INT2_DLY_SETUP(db);
-	#endif
-	#else
-	/*
-	 * Polling: 
-	 */
-	PROBE_POLL_SETUP(db);
-	#endif
 }
 
 static void dm9051_operation_clear(struct board_info *db)

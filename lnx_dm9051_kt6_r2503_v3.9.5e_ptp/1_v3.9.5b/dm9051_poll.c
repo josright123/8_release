@@ -68,6 +68,22 @@ void dm9051_threaded_poll(struct work_struct *work) //.dm9051_poll_servicep()
 /*
  * Polling: 
  */
+//static void DM9051_PROBE_DLYSETUP(struct board_info *db)
+//{
+//	#if defined(DMPLUG_INT)
+//	/*
+//	 * Interrupt: 
+//	 */
+//	#ifdef INT_TWO_STEP
+//		PROBE_INT2_DLY_SETUP(db);
+//	#endif
+//	#else
+//	/*
+//	 * Polling: 
+//	 */
+//	PROBE_POLL_SETUP(db);
+//	#endif
+//}
 void PROBE_POLL_SETUP(struct board_info *db)
 {
 	/* schedule delay work */
@@ -86,4 +102,24 @@ int DM9051_POLL_SCHED(struct board_info *db)
 	OPEN_POLL_SCHED(db);
 	return 0;
 }
+
+//static void dm9051_free_irqworks(struct board_info *db)
+//{
+//	/* schedule delay work */
+//	#if defined(DMPLUG_INT)
+//	/*
+//	 * Interrupt: 
+//	 */
+//	dm9051_thread_irq_free(db->ndev);
+//	#else
+//	/*
+//	 * Polling: 
+//	 */
+//	cancel_delayed_work_sync(&db->irq_workp);
+//	#endif
+//}
+
+//	#ifdef INT_TWO_STEP
+//	cancel_delayed_work_sync(&db->irq_servicep);
+//	#endif //_INT_TWO_STEP
 #endif

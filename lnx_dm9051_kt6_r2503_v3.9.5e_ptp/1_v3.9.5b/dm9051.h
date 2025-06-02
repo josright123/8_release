@@ -115,11 +115,18 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #define BUS_SETUP(db)	0		//empty(NoError)
 #define BUS_OPS(db, buff, crlen)	//empty
 
+/* fake int */
+#define FREE_IRQ(b)					//empty
+#define CANCEL_DLY_IRQ2(b)			//empty
+#define DM9051_PROBE_DLYSETUP(b)	//empty
 /* fake clkout */
 #define INT_CLOCK(db)	0		//empty(NoError)
 
-/* fake raw tx mode */
+/* fake raw rx mode */
 #define SET_RCR(b)				dm9051_set_rcr(b)
+
+/* fake raw tx mode */
+#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
 #define TX_SEND(b,s)			dm9051_tx_send(b,s)
 
 /* poll fake */
@@ -137,6 +144,10 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #define SHOW_DEVLOG_REFER_BEGIN(d, b)
 #define SHOW_LOG_REFER_BEGIN(b)
 #define SHOW_DEVLOG_MODE(d)
+#define SHOW_DEVLOG_XMIT_THRD0(b)
+#define SHOW_DEVLOG_XMIT_THRD(b)
+#define SHOW_DEVLOG_XMIT_IN(b)
+#define SHOW_DEVLOG_TCR_WR(b)
 
 #define SHOW_PLAT_MODE(d)
 #define SHOW_MAC(b, a)
@@ -241,6 +252,10 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #if defined(DMPLUG_WD)
 #undef INFO_WD
 #define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051 WD")
+#endif
+#if defined(DMPLUG_WD)
+#undef TX_PAD
+#define TX_PAD(b,s)							dm9051_pad_txreq(b,s) //wd
 #endif
 
 #if defined(DMCONF_BMCR_WR)
@@ -771,6 +786,24 @@ enum dm_req_support {
 /* MCO, re-direct, Verification */
 #define MCO //(MainCoerce)
 
+#if defined(MCO) && defined(DMPLUG_INT)
+#undef FREE_IRQ
+#define FREE_IRQ(db) dm9051_thread_irq_free(db->ndev) //dm9051_free_irqworks(db);
+#if defined(INT_TWO_STEP)
+#undef DM9051_PROBE_DLYSETUP
+#define DM9051_PROBE_DLYSETUP(b) PROBE_INT2_DLY_SETUP(b)
+#undef CANCEL_DLY_IRQ2
+#define CANCEL_DLY_IRQ2(db) cancel_delayed_work_sync(&db->irq_servicep) //of dm9051_thread_irq_free(ndev)
+#endif
+#endif
+
+#if defined(MCO) && !defined(DMPLUG_INT)
+#undef FREE_IRQ
+#define FREE_IRQ(db) cancel_delayed_work_sync(&db->irq_workp) //dm9051_free_irqworks(db)
+#undef DM9051_PROBE_DLYSETUP
+#define DM9051_PROBE_DLYSETUP(b) PROBE_POLL_SETUP(b)
+#endif
+
 #if defined(MCO) && defined(INT_TWO_STEP) /* && defined(MAIN_DATA)*/
 #undef dm9051_int2_supp
 #undef dm9051_int2_irq
@@ -808,6 +841,10 @@ int dm9051_int_clkout(struct board_info *db);
 /*
  * Conti: 
  */
+#if defined(DMPLUG_CONTI)
+#undef TX_PAD
+#define TX_PAD(b,s)							s //~wd~bd, cause by tc-conti 
+#endif
 #if defined(MCO) && defined(DMPLUG_CONTI) && defined(MAIN_DATA)
 #undef SET_RCR
 #define SET_RCR(b) TX_MOTE2_CONTI_RCR(b)
@@ -839,6 +876,10 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #undef SHOW_DEVLOG_REFER_BEGIN
 #undef SHOW_LOG_REFER_BEGIN
 #undef SHOW_DEVLOG_MODE
+#undef SHOW_DEVLOG_XMIT_THRD0
+#undef SHOW_DEVLOG_XMIT_THRD
+#undef SHOW_DEVLOG_XMIT_IN
+#undef SHOW_DEVLOG_TCR_WR
 
 #undef SHOW_PLAT_MODE
 #undef SHOW_MAC
@@ -854,6 +895,10 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #define SHOW_DEVLOG_REFER_BEGIN(d,b) show_dev_begin(d,b)
 #define SHOW_LOG_REFER_BEGIN(b) show_log(b)
 #define SHOW_DEVLOG_MODE(d) show_mode(d)
+#define SHOW_DEVLOG_XMIT_THRD0(b) show_xmit_thrd0(b)
+#define SHOW_DEVLOG_XMIT_THRD(b) show_xmit_thrd(b)
+#define SHOW_DEVLOG_XMIT_IN(b) show_xmit_in(b)
+#define SHOW_DEVLOG_TCR_WR(b) show_tcr_wr(b)
 
 #define SHOW_PLAT_MODE(d) show_pmode(d)
 #define SHOW_MAC(b,a) show_mac(b,a)
@@ -869,6 +914,7 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 void show_dev_begin(struct device *dev, struct board_info *db);
 void show_log(struct board_info *db);
 void show_mode(struct device *dev);
+void show_tcr_wr(struct board_info *db);
 
 void show_pmode(struct device *dev);
 void show_mac(struct board_info *db, u8 *addr);

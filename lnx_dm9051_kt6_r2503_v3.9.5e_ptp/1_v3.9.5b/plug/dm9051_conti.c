@@ -27,7 +27,7 @@
  */
 #ifdef DMPLUG_CONTI
 void tx_continue_ver(struct board_info *db) {
-	dev_info(&db->spidev->dev, "DMPLUG_CONTI Version\n");
+	dev_info(&db->spidev->dev, "DMPLUG CONTI Version\n");
 }
 
 /* transmit a packet,
