@@ -124,6 +124,7 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 
 /* fake raw rx mode */
 #define SET_RCR(b)				dm9051_set_rcr(b)
+#define PAD_LEN(len)			len
 
 /* fake raw tx mode */
 #define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
@@ -254,8 +255,12 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051 WD")
 #endif
 #if defined(DMPLUG_WD)
+#undef BOUND_CONF_BIT
+#define BOUND_CONF_BIT						MBNDRY_WORD
 #undef TX_PAD
 #define TX_PAD(b,s)							dm9051_pad_txreq(b,s) //wd
+#undef PAD_LEN
+#define PAD_LEN(len)						(len & 1) ? len + 1 : len
 #endif
 
 #if defined(DMCONF_BMCR_WR)
@@ -408,6 +413,7 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 /* 0x5E */
 #define MBNDRY_BYTE		BIT(7)
 #define MBNDRY_WORD		0
+#define BOUND_CONF_BIT	MBNDRY_BYTE
  //0xFE 
 #define ISR_MBS			BIT(7)
 #define ISR_LNKCHG		BIT(5)

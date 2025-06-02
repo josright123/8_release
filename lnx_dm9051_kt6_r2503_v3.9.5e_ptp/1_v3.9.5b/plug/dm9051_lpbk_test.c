@@ -223,13 +223,7 @@ int dm9051_single_rx(struct board_info *db)
 		return ret;
 
 	rxlen = le16_to_cpu(db->rxhdr.rxlen);
-	padlen = 
-#ifdef DMPLUG_WD
-		(rxlen & 1) ? rxlen + 1 : rxlen
-#else
-		rxlen
-#endif
-		;
+	padlen = PAD_LEN(rxlen);
 	//padlen = (plat_cnf->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
 	
 	db->bc.nRxcF++;

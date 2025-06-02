@@ -695,15 +695,7 @@ static int dm9051_core_reset(struct board_info *db)
 	if (ret)
 		return ret;
 
-	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY,
-#ifdef DMPLUG_WD
-		MBNDRY_WORD
-#else
-		MBNDRY_BYTE
-#endif
-//		(plat_cnf->skb_wb_mode) ? 
-//		MBNDRY_WORD : MBNDRY_BYTE
-		); /* MemBound */
+	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, BOUND_CONF_BIT); /* MemBound */
 	if (ret)
 		return ret;
 	ret = regmap_write(db->regmap_dm, DM9051_PPCR, PPCR_PAUSE_ADVCOUNT); /* Pause Count */
@@ -1449,14 +1441,12 @@ int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t featu
 
 int rx_head_break(struct board_info *db)
 {
-	int rxlen;
 	//u8 err_bits = RSR_ERR_BITS;
 	//#ifdef DMPLUG_PTP
 	//err_bits = ptp_status_bits(db);
 	//#endif
 	u8 err_bits = PTP_STATUS_BITS(db); /* 7 rxhead ptpc, when REG60H.D[0]=0, PTP Function enable, or REG61H.D[0]=1, and D[1]=0, then re-defined RSR */
-
-	rxlen = le16_to_cpu(db->rxhdr.rxlen);
+	int rxlen = le16_to_cpu(db->rxhdr.rxlen);
 	if (db->rxhdr.status & err_bits || rxlen > DM9051_PKT_MAX)
 	{
 		netif_warn(db, rx_status, db->ndev, "Err: [dm9.Monitor headbyte/status/rxlen %2x %2x %04x]\n",
@@ -1561,14 +1551,7 @@ int dm9051_loop_rx(struct board_info *db)
 			return ret;
 
 		rxlen = le16_to_cpu(db->rxhdr.rxlen);
-		padlen = 
-#ifdef DMPLUG_WD
-			(rxlen & 1) ? rxlen + 1 : rxlen
-#else
-			rxlen
-#endif
-			//(plat_cnf->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen
-			;
+		padlen = PAD_LEN(rxlen);
 		skb = dev_alloc_skb(padlen);
 		if (!skb)
 		{
