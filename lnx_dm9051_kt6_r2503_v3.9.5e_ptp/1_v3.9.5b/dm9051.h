@@ -39,7 +39,7 @@
   #endif
 #endif
 
-//#define PLUG_ENABLE_WD
+#define PLUG_ENABLE_WD
 #ifdef PLUG_ENABLE_WD
 #define DMPLUG_WD //(wd mode)
 #endif
@@ -69,8 +69,10 @@
 struct board_info;
 
 //info INFO_FAK1
+#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 POL")
 #define INFO_INT_CLKOUT(dev, db)
 #define INFO_INT_TWOSTEP(dev, db)
+#define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051 BD")
 #define INFO_PTP(dev, db)
 #define INFO_PPS(dev, db)
 #define INFO_LOG(dev, db)
@@ -214,9 +216,10 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 //#define INFO_FAK0
 
 #if defined(DMPLUG_INT)
+#undef INFO_INT
 #define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 INT")
-#else
-#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 POL")
+//#else
+//#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 POL")
 #endif
 
 //#define INFO messages
@@ -229,6 +232,11 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #if defined(INT_TWO_STEP)
 #undef INFO_INT_TWOSTEP
 #define INFO_INT_TWOSTEP(dev, db)			USER_CONFIG(dev, db, "INT: TWO_STEP")
+#endif
+
+#if defined(DMPLUG_WD)
+#undef INFO_WD
+#define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051 WD")
 #endif
 
 #if defined(DMCONF_BMCR_WR)

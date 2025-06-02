@@ -78,6 +78,7 @@ static void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
 	INFO_INT(dev, db);
 	INFO_INT_CLKOUT(dev, db);
 	INFO_INT_TWOSTEP(dev, db);
+	INFO_WD(dev, db);
 	INFO_PTP(dev, db);
 	INFO_PPS(dev, db);
 	INFO_LOG(dev, db);
