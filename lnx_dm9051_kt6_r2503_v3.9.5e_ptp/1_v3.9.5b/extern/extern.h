@@ -37,63 +37,81 @@
 #pragma message("DEBUG: LOG")
 #endif
 
-/* functions re-construct
- */
-/* CO1, */
-/*#define CO1*/ //(Coerce)
+/* ECO, */
+#define ECO //(Coerce)
 
-/* ptp */
-#if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1)*/
-/* re-direct ptpc */
-#undef INFO_PTP
-
-#undef PTP_VER
-#undef PTP_NEW
-#undef PTP_INIT_RCR
-#undef PTP_INIT
-#undef PTP_END
-#undef PTP_ETHTOOL_INFO
-#undef PTP_NETDEV_IOCTL
-#undef PTP_STATUS_BITS
-#undef PTP_AT_RATE
-
-#define INFO_PTP(dev, db)	USER_CONFIG(dev, db, "dm9051 PTP")
-
-#define PTP_VER(b)		ptp_ver(b)
-#define PTP_NEW(d) 				ptp_new(d)
-#define PTP_INIT_RCR(d) 		ptp_init_rcr(d)
-#define PTP_INIT(d) 			ptp_init(d)
-#define PTP_END(d) 				ptp_end(d)
-#define PTP_ETHTOOL_INFO(s)		s = dm9051_ts_info,
-#define PTP_STATUS_BITS(b)			ptp_status_bits(db)
-#define PTP_NETDEV_IOCTL(s)	s = dm9051_ptp_netdev_ioctl,
-#define PTP_AT_RATE(b)	on_core_init_ptp_rate(b)
-
-#undef DMPLUG_RX_TS_MEM
-#undef DMPLUG_RX_HW_TS_SKB
-#undef SHOW_ptp_rx_packet_monitor
-#undef DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER
-
-#define DMPLUG_RX_TS_MEM(b)		dm9051_read_ptp_tstamp_mem(b)
-#define DMPLUG_RX_HW_TS_SKB(b,s) dm9051_ptp_rx_hwtstamp(b,s)
-#define SHOW_ptp_rx_packet_monitor(b,s) dm9051_ptp_rx_packet_monitor(b,s)
-#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b) \
-		dm9051_ptp_rxc_from_master(b)
-
-#undef DMPLUG_PTP_TX_IN_PROGRESS
-#undef DMPLUG_PTP_TX_PRE
-#undef DMPLUG_TX_EMIT_TS
-
-#define DMPLUG_PTP_TX_IN_PROGRESS(s)	dm9051_ptp_tx_in_progress(s)
-#define DMPLUG_PTP_TX_PRE(b,s)	dm9051_ptp_txreq(b,s)
-#define DMPLUG_TX_EMIT_TS(b,s)	dm9051_ptp_txreq_hwtstamp(b,s)
+/* re-direct bmsr_wr */
+#if defined(ECO) && defined(DMCONF_BMCR_WR) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+#undef PHY_READ
+#define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
 #endif
 
-/* ptp clkout */
-#if defined(DMPLUG_PPS_CLKOUT)
-#undef INFO_PPS
+#if defined(ECO) && defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
+#undef LINKCHG_UPSTART
+#define LINKCHG_UPSTART(b) dm9051_all_upstart(b)
+#endif
 
-#define INFO_PPS(dev, db)					USER_CONFIG(dev, db, "dm9051 PPS")
+#if defined(ECO) && defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
+int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val);
+#endif
+
+/* re-direct log */
+#if defined(ECO) && defined(DMPLUG_LOG) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+
+#undef SHOW_DEVLOG_REFER_BEGIN
+#undef SHOW_LOG_REFER_BEGIN
+#undef SHOW_DEVLOG_MODE
+#undef SHOW_DEVLOG_XMIT_THRD0
+#undef SHOW_DEVLOG_XMIT_THRD
+#undef SHOW_DEVLOG_XMIT_IN
+#undef SHOW_DEVLOG_TCR_WR
+
+#undef SHOW_PLAT_MODE
+#undef SHOW_MAC
+#undef SHOW_MONITOR_RXC
+
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+#undef DMPLUG_LOG_RXPTR //#undef dm9051_headlog_regs
+#undef DMPLUG_LOG_PHY //#undef dm9051_phyread_headlog
+
+#undef dm9051_dump_data1
+#undef monitor_rxb0
+
+#define SHOW_DEVLOG_REFER_BEGIN(d,b) show_dev_begin(d,b)
+#define SHOW_LOG_REFER_BEGIN(b) show_log(b)
+#define SHOW_DEVLOG_MODE(d) show_mode(d)
+#define SHOW_DEVLOG_XMIT_THRD0(b) show_xmit_thrd0(b)
+#define SHOW_DEVLOG_XMIT_THRD(b) show_xmit_thrd(b)
+#define SHOW_DEVLOG_XMIT_IN(b) show_xmit_in(b)
+#define SHOW_DEVLOG_TCR_WR(b) show_tcr_wr(b)
+
+#define SHOW_PLAT_MODE(d) show_pmode(d)
+#define SHOW_MAC(b,a) show_mac(b,a)
+#define SHOW_MONITOR_RXC(b,n) show_rxc(b,n)
+
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+#define DMPLUG_LOG_RXPTR(h,b) dm9051_log_rxptr(h,b) //#define dm9051_headlog_regs(h,b,r1,r2) show_log_regs(h,b,r1,r2)
+#define DMPLUG_LOG_PHY(b) dm9051_log_phy(b) //#define dm9051_phyread_headlog(h,b,r) show_log_phy(h,b,r)
+
+#define dm9051_dump_data1(b,p,n) dump_data(b,p,n)
+#define monitor_rxb0(b,rb) show_rxb(b,rb)
+
+void show_dev_begin(struct device *dev, struct board_info *db);
+void show_log(struct board_info *db);
+void show_mode(struct device *dev);
+void show_tcr_wr(struct board_info *db);
+
+void show_pmode(struct device *dev);
+void show_mac(struct board_info *db, u8 *addr);
+void show_rxc(struct board_info *db, int scanrr);
+
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
+
+void dm9051_log_rxptr(char *head, struct board_info *db); //static void show_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
+void dm9051_log_phy(struct board_info *db); //static int show_log_phy(char *head, struct board_info *db, unsigned int reg);
+
+void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
+void show_rxb(struct board_info *db, unsigned int rxbyte);
 #endif
 
 #if defined(DMPLUG_LOG)

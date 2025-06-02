@@ -705,7 +705,7 @@ static int dm9051_core_reset(struct board_info *db)
 	/* Diagnostic contribute: In dm9051_enable_interrupt()
 	 * (or located in the core reset subroutine is better!!)
 	 */
-	ret = INT_CLOCK(db); /* clock out */
+	ret = INT_SET_CLKOUT(db); /* clock out */
 	if (ret)
 		return ret;
 
