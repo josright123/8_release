@@ -2002,20 +2002,11 @@ static netdev_tx_t dm9051_start_xmit(struct sk_buff *skb, struct net_device *nde
 {
 	struct board_info *db = to_dm9051_board(ndev);
 
-	#if defined(DMPLUG_PTP_SW)
-	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) {
-		skb_tx_timestamp(skb); // Add SW_TSTAMP
-	}
-	#endif
+	DMPLUG_PTP_TX_TIMESTAMPING_SW(skb);
 
 	skb_queue_tail(&db->txq, skb); // Add skb to send queue
 	if (skb_queue_len(&db->txq) > DM9051_TX_QUE_HI_WATER)
 		netif_stop_queue(ndev); /* enforce limit queue size */
-
-	#if 0
-//	//show_ptp_type(skb);	//Show PTP message type
-//	skb_tx_timestamp(skb); //Spenser - Report software Timestamp v.s. - Report HW Timestamp
-	#endif
 
 	schedule_work(&db->tx_work);
 

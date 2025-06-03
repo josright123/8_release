@@ -175,6 +175,8 @@ enum ptp_sync_type {
 //	//#endif
 //} ptp_board_info_t;
 
+int is_ptp_rxts_enable(struct board_info *db);
+
 struct ptp_header *get_ptp_header(struct sk_buff *skb);
 u8 get_ptp_message_type005(struct ptp_header *ptp_hdr);
 int is_ptp_sync_packet(u8 msgtype);
@@ -195,16 +197,6 @@ int is_ptp_delayreq_packet(u8 msgtype);
 #define PTP_NETDEV_IOCTL(s)
 #define PTP_AT_RATE(b)
 
-void ptp_ver(struct board_info *db);
-int ptp_new(struct board_info *db);
-void ptp_init_rcr(struct board_info *db);
-void ptp_init(struct board_info *db);
-void ptp_end(struct board_info *db);
-u8 ptp_status_bits(struct board_info *db);
-void on_core_init_ptp_rate(struct board_info *db);
-
-int is_ptp_rxts_enable(struct board_info *db);
-
 /* ptp2 */
 #define DMPLUG_RX_TS_MEM(b)		0
 #define DMPLUG_RX_HW_TS_SKB(b,s)
@@ -215,28 +207,18 @@ int is_ptp_rxts_enable(struct board_info *db);
 #define DMPLUG_PTP_TX_PRE(b,s)
 #define DMPLUG_TX_EMIT_TS(b,s)
 
-int dm9051_read_ptp_tstamp_mem(struct board_info *db);
-void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
-void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
-void dm9051_ptp_rxc_from_master(struct board_info *db);
-
-int dm9051_ptp_tx_in_progress(struct sk_buff *skb);
-void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
-void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
+/* ptp sw */
+#define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)
 #endif
 
-/* netdev_ops
- */
-int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
-
-/* ethtool_ops
- */
 //#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
 //int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info); //kt612
 //#else
 //int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info); //kt66
 //#endif
 
+/* ethtool_ops
+ */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
 static inline int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
 #else
@@ -282,6 +264,10 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
 	return 0;
 }
 
+/* netdev_ops
+ */
+int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
+
 /* functions re-construct
  */
 /* CO1, */
@@ -291,6 +277,8 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
 #if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
 #undef PTP_ETHTOOL_INFO
 #define PTP_ETHTOOL_INFO(s)		s = dm9051_ts_info,
+#undef PTP_NETDEV_IOCTL
+#define PTP_NETDEV_IOCTL(s)		s = dm9051_ptp_netdev_ioctl,
 #endif
 
 #if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1)*/
@@ -300,7 +288,6 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
 #undef PTP_INIT_RCR
 #undef PTP_INIT
 #undef PTP_END
-#undef PTP_NETDEV_IOCTL
 #undef PTP_STATUS_BITS
 #undef PTP_AT_RATE
 
@@ -310,7 +297,6 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
 #define PTP_INIT(d) 			ptp_init(d)
 #define PTP_END(d) 				ptp_end(d)
 #define PTP_STATUS_BITS(b)			ptp_status_bits(db)
-#define PTP_NETDEV_IOCTL(s)	s = dm9051_ptp_netdev_ioctl,
 #define PTP_AT_RATE(b)	on_core_init_ptp_rate(b)
 
 #undef DMPLUG_RX_TS_MEM
@@ -332,6 +318,31 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
 #define DMPLUG_PTP_TX_PRE(b,s)	dm9051_ptp_txreq(b,s)
 #define DMPLUG_TX_EMIT_TS(b,s)	dm9051_ptp_txreq_hwtstamp(b,s)
 #endif
+
+void ptp_ver(struct board_info *db);
+int ptp_new(struct board_info *db);
+void ptp_init_rcr(struct board_info *db);
+void ptp_init(struct board_info *db);
+void ptp_end(struct board_info *db);
+u8 ptp_status_bits(struct board_info *db);
+void on_core_init_ptp_rate(struct board_info *db);
+
+int dm9051_read_ptp_tstamp_mem(struct board_info *db);
+void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_rxc_from_master(struct board_info *db);
+
+int dm9051_ptp_tx_in_progress(struct sk_buff *skb);
+void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
+
+#if defined(DMPLUG_PTP_SW)
+/* re-direct ptp sw */
+#undef DMPLUG_PTP_TX_TIMESTAMPING_SW
+#define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)	dm9051_ptp_tx_swtstamp(s)
+#endif
+
+void dm9051_ptp_tx_swtstamp(struct sk_buff *skb);
 
 /* ptp, clkout, 2step */
 #if defined(DMPLUG_PTP)

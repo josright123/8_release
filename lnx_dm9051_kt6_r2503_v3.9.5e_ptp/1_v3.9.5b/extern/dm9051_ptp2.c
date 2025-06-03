@@ -661,6 +661,15 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 	return 0;
 }
 
+void dm9051_ptp_tx_swtstamp(struct sk_buff *skb)
+{
+	#if defined(DMPLUG_PTP_SW)
+	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) {
+		skb_tx_timestamp(skb); // Add SW_TSTAMP
+	}
+	#endif
+}
+
 static void dm9051_ptp_register(struct board_info *db)
 {
 	ptp_board_info_t *pbi = &db->pbi;
