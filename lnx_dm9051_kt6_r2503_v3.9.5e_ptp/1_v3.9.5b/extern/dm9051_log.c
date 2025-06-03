@@ -78,6 +78,7 @@ void show_dev_begin(struct device *dev, struct board_info *db) //.SHOW_DEVLOG_RE
 
 	/* 2.0 ptpc */
 	PTP_VER(db);
+	PTP_VER_SOFTWARE(db);
 }
 
 void show_log(struct board_info *db) //.SHOW_LOG_REFER_BEGIN

@@ -188,6 +188,8 @@ int is_ptp_delayreq_packet(u8 msgtype);
 //struct board_info;
 
 #define PTP_VER(b)
+#define PTP_VER_SOFTWARE(b)
+
 #define PTP_NEW(d)				0
 #define PTP_INIT_RCR(d)
 #define PTP_INIT(d)
@@ -338,10 +340,14 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 
 #if defined(DMPLUG_PTP_SW)
 /* re-direct ptp sw */
+#undef PTP_VER_SOFTWARE
+#define PTP_VER_SOFTWARE(b)	ptp_ver_software(b)
+
 #undef DMPLUG_PTP_TX_TIMESTAMPING_SW
 #define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)	dm9051_ptp_tx_swtstamp(s)
 #endif
 
+void ptp_ver_software(struct board_info *db);
 void dm9051_ptp_tx_swtstamp(struct sk_buff *skb);
 
 /* ptp, clkout, 2step */

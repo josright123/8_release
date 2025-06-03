@@ -335,9 +335,11 @@ struct dm9051_rxhdr
 
 typedef struct ptp_board_info {
 	//#ifdef DMPLUG_PTP
+	int						hw_master_role; //0: software master mode 1: hardware master mode
+	int						ptp_enable;
+
 	struct board_info		*db;
 	struct ptp_clock_info 	ptp_caps;
-	int						ptp_enable;
 	int						ptp_on; //_15888_
 	struct ptp_clock        *ptp_clock;
 	u8						ptp_step; //dividual

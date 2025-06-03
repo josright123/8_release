@@ -454,10 +454,16 @@ void ptp_ver(struct board_info *db) {
 	ptp_board_info_t *pbi = &db->pbi;
 
 	if (pbi->ptp_enable) {
-		dev_info(&db->spidev->dev, "DMPLUG PTP Version\n");
-		dev_info(&db->spidev->dev, "Enable PTP must COERCE to disable checksum_offload\n");
+		dev_info(&db->spidev->dev, "DMPLUG PTP HW Version\n");
+		dev_info(&db->spidev->dev, "Enable PTP HW must COERCE to disable checksum_offload\n");
 	}
 }
+
+void ptp_ver_software(struct board_info *db)
+{
+	dev_info(&db->spidev->dev, "DMPLUG PTP Software Version\n");
+}
+
 int ptp_new(struct board_info *db) {
 	ptp_board_info_t *pbi = &db->pbi;
 
