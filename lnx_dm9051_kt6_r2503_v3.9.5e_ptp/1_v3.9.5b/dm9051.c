@@ -1279,7 +1279,9 @@ static int dm9051_all_restart(struct board_info *db) //todo
 	return 0;
 }
 
-/* to re-write while link change up
+/* To re-write while link change up
+ * A dm9051_mrr.c is not created for this function procedure code.
+ * Put here is good to make a comparison between all_start/all_restaart/all_upsatrt
  */
 int dm9051_all_upstart(struct board_info *db)
 {
@@ -1307,17 +1309,17 @@ int dm9051_all_upstart(struct board_info *db)
 	#endif
 	} while(0);
 	/* Commented: Just done by dm9051_set_fcr(db),
-	 *            No need update.
+	 *            No need update again.
 	 * ret = dm9051_update_fcr(db);
 	 */
 dnf_end:
-	netif_crit(db, rx_err, db->ndev, "DMCONF_MRR_WR operation done!\n");
+	netif_crit(db, rx_err, db->ndev, "DMPLUG_MRR_WR operation done!\n");
 	return ret;
 }
 
 int dm9051_all_upfcr(struct board_info *db)
 {
-	netif_crit(db, link, db->ndev, "DMCONF_MRR_WR operation not applied!\n");
+	netif_crit(db, link, db->ndev, "DMPLUG_MRR_WR operation not applied!\n");
 	netif_crit(db, link, db->ndev, "So does (all_start(open), all_upstart(link_chg), all_restart(err_fnd)) not applied!\n");
 	return dm9051_update_fcr(db);
 }

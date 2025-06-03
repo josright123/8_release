@@ -524,21 +524,6 @@ struct board_info
 #define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051 WD")
 #endif
 
-#if defined(DMCONF_BMCR_WR)
-#undef INFO_BMCR_WR
-#define INFO_BMCR_WR(dev, db)				USER_CONFIG(dev, db, "WORKROUND: BMCR_WR")
-#endif
-
-#if defined(DMCONF_MRR_WR)
-#undef INFO_MRR_WR
-#define INFO_MRR_WR(dev, db) 				USER_CONFIG(dev, db, "WORKROUND: MRR_WR")
-#endif
-
-#if defined(DMPLUG_CONTI)
-#undef INFO_CONTI
-#define INFO_CONTI(dev, db) 				USER_CONFIG(dev, db, "dm9051 CONTI")
-#endif
-
 static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
 {
 	if (dev)

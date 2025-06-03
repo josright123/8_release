@@ -6,7 +6,7 @@
 #ifndef _DM9051_EXTERN_H_
 #define _DM9051_EXTERN_H_
 /*#define DMCONF_BMCR_WR */ //(bmcr-work around)
-/*#define DMCONF_MRR_WR */ //(mrr-work around, when link change to up)
+/*#define DMPLUG_MRR_WR */ //(mrr-work around, when link change to up)
 /*#define DMPLUG_LOG */ //(debug log)
 
 //#define PLUG_BMCR
@@ -16,7 +16,7 @@
 
 //#define PLUG_MRR
 #ifdef PLUG_MRR
-#define DMCONF_MRR_WR //(mrr-work around)
+#define DMPLUG_MRR_WR //(mrr-work around)
 #endif
 
 //#define PLUG_LOG
@@ -29,12 +29,29 @@
 #if defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
 #pragma message("WORKROUND: BMCR_WR")
 #endif
-#if defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
+#if defined(DMPLUG_MRR_WR) && defined(MAIN_DATA)
 #pragma message("WORKROUND: MRR_WR")
 #endif
 
 #if defined(DMPLUG_LOG) && defined(MAIN_DATA)
 #pragma message("DEBUG: LOG")
+#endif
+
+/* USER_CONFIG, show for starting
+ */
+#if defined(DMCONF_BMCR_WR)
+#undef INFO_BMCR_WR
+#define INFO_BMCR_WR(dev, db)				USER_CONFIG(dev, db, "WORKROUND: BMCR_WR")
+#endif
+
+#if defined(DMPLUG_MRR_WR)
+#undef INFO_MRR_WR
+#define INFO_MRR_WR(dev, db) 				USER_CONFIG(dev, db, "WORKROUND: MRR_WR")
+#endif
+
+#if defined(DMPLUG_LOG)
+#undef INFO_LOG
+#define INFO_LOG(dev, db)					USER_CONFIG(dev, db, "dm9051 LOG")
 #endif
 
 /* ECO, */
@@ -46,7 +63,7 @@
 #define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
 #endif
 
-#if defined(ECO) && defined(DMCONF_MRR_WR) && defined(MAIN_DATA)
+#if defined(ECO) && defined(DMPLUG_MRR_WR) && defined(MAIN_DATA)
 #undef LINKCHG_UPSTART
 #define LINKCHG_UPSTART(b) dm9051_all_upstart(b)
 #endif
@@ -112,12 +129,6 @@ void dm9051_log_phy(struct board_info *db); //static int show_log_phy(char *head
 
 void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
 void show_rxb(struct board_info *db, unsigned int rxbyte);
-#endif
-
-#if defined(DMPLUG_LOG)
-#undef INFO_LOG
-
-#define INFO_LOG(dev, db)					USER_CONFIG(dev, db, "dm9051 LOG")
 #endif
  
 #endif //_DM9051_EXTERN_H_

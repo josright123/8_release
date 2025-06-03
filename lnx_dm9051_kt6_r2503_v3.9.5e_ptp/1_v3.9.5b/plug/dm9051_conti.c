@@ -145,5 +145,5 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeou
 }
 #endif
 
-MODULE_DESCRIPTION("Davicom DM9051 driver, Plug-in"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
+MODULE_DESCRIPTION("Davicom DM9051 driver, TX conti plug-in"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
 MODULE_LICENSE("GPL");

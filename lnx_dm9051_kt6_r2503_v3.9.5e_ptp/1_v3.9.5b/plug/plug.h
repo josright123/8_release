@@ -5,21 +5,16 @@
  */
 #ifndef _DM9051_PLUG_H_
 #define _DM9051_PLUG_H_
-/*#define DMPLUG_LPBK_TST */ //(mac loopback test)
+/* reserved-rsrv
+ */
+/*#define DMPLUG_CRYPT */ //(crypt plug-in)
 
-//#define PLUG_LOOPBACK_TEST
-#ifdef PLUG_LOOPBACK_TEST
-#define DMPLUG_LPBK_TST //(loopback test, extra-run a mac loopback test before driver finish initialize, still can work for networking!)
-#endif
+//#define PLUG_CRYPT
+//#ifdef PLUG_CRYPT
+//#define DMPLUG_CRYPT //(crypt plug-in)
+//#endif
 
-#if defined(DMPLUG_LPBK_TST) && defined(MAIN_DATA)
-#pragma message("TEST: MAC_LOOPBACK")
-#endif
-
-/* PCO, */
-#define PCO //(Coerce)
-
-//[overlay]
+//[overlay rsrv]
 #if defined(PCO) && defined(DMPLUG_CRYPT) && defined(MAIN_DATA)
 //overlay by plug/
 #undef BUS_SETUP
@@ -32,7 +27,43 @@ int bus_setup(struct board_info *db);
 void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #endif
 
+/* plug-in
+ */
+/*#define DMPLUG_CONTI */ //(tx conti)
+/*#define DMPLUG_LPBK_TST */ //(mac loopback test)
+
+//#define PLUG_CONTI
+#ifdef PLUG_CONTI
+#define DMPLUG_CONTI //(tx conti)
+#endif
+
+//#define PLUG_LOOPBACK_TEST
+#ifdef PLUG_LOOPBACK_TEST
+#define DMPLUG_LPBK_TST //(loopback test, extra-run a mac loopback test before driver finish initialize, still can work for networking!)
+#endif
+
+#if defined(DMPLUG_CONTI) && defined(MAIN_DATA)
+#pragma message("TX: CONTI Plug-in")
+#endif
+
+#if defined(DMPLUG_LPBK_TST) && defined(MAIN_DATA)
+#pragma message("TEST: MAC_LOOPBACK")
+#endif
+
 #if defined(DMPLUG_CONTI)
+#undef INFO_CONTI
+#define INFO_CONTI(dev, db) 				USER_CONFIG(dev, db, "dm9051 CONTI")
+#endif
+
+#if defined(DMPLUG_LPBK_TST)
+#undef INFO_LPBK_TST
+#define INFO_LPBK_TST(dev, db)				USER_CONFIG(dev, db, "dm9051 MAC Loopback Test")
+#endif
+
+/* PCO, */
+#define PCO //(Coerce)
+
+#if defined(PCO) && defined(DMPLUG_CONTI) && defined(MAIN_DATA)
 #undef TX_PAD
 #define TX_PAD(b,s)							s //~wd~bd, cause by tc-conti 
 #endif
@@ -55,12 +86,6 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeou
 
 //implement in plug/
 int test_loop_test(struct board_info *db); //implement in plug/dm9051_lpbk_test.c
-#endif
-
-#if defined(DMPLUG_LPBK_TST)
-#undef INFO_LPBK_TST
-
-#define INFO_LPBK_TST(dev, db)				USER_CONFIG(dev, db, "dm9051 MAC Loopback Test")
 #endif
 
 #endif //_DM9051_PLUG_H_

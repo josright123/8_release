@@ -106,5 +106,5 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
 	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
 }
 
-MODULE_DESCRIPTION("Davicom DM9051 driver, Crypt-in");
+MODULE_DESCRIPTION("Davicom DM9051 driver, Crypt plug in");
 MODULE_LICENSE("GPL");
