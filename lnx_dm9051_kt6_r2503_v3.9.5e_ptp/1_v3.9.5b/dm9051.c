@@ -38,22 +38,6 @@ const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration
 #define DM9051_INTR_BACKUP // #ifdef DM9051_INTR_BACKUP .. #endif //instead more backup.
 #define DM9051_NORM_BACKUP_TX // 
 
-int get_dts_irqf(struct board_info *db)
-{
-	struct spi_device *spi = db->spidev;
-	int irq_type = irq_get_trigger_type(spi->irq);
-
-	if (irq_type)
-		return irq_type;
-
-	return IRQF_TRIGGER_LOW;
-}
-
-static unsigned int dm9051_init_intcr_value(struct board_info *db)
-{
-	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || get_dts_irqf(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
-}
-
 /*
  * log: 
  */
@@ -74,6 +58,40 @@ static unsigned int dm9051_init_intcr_value(struct board_info *db)
 //	INFO_CONTI(dev, db);
 //	INFO_LPBK_TST(dev, db);
 //}
+static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
+{
+	INFO_CPU_BITS(dev, db);
+	INFO_CPU_MIS_CONF(dev, db);
+
+	INFO_INT(dev, db);
+	INFO_INT_CLKOUT(dev, db);
+	INFO_INT_TWOSTEP(dev, db);
+	INFO_WD(dev, db);
+	INFO_PTP(dev, db);
+	INFO_PPS(dev, db);
+	INFO_PTP2S(dev, db);
+	INFO_LOG(dev, db);
+	INFO_BMCR_WR(dev, db);
+	INFO_MRR_WR(dev, db);
+	INFO_CONTI(dev, db);
+	INFO_LPBK_TST(dev, db);
+}
+
+int get_dts_irqf(struct board_info *db)
+{
+	struct spi_device *spi = db->spidev;
+	int irq_type = irq_get_trigger_type(spi->irq);
+
+	if (irq_type)
+		return irq_type;
+
+	return IRQF_TRIGGER_LOW;
+}
+
+static unsigned int dm9051_init_intcr_value(struct board_info *db)
+{
+	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || get_dts_irqf(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
+}
 
 static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
 {

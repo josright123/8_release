@@ -12,7 +12,13 @@
 
 /*#define DMPLUG_PTP */ //(ptp1588)
 /*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
+/*#define DMPLUG_PTP_TWO_STEP */ //(ptp1588 two step)
 
+/* Capabilities:
+ *        hardware-transmit
+ *        hardware-receive
+ *        hardware-raw-clock
+ */
 #define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
@@ -21,17 +27,30 @@
   #ifdef PLUG_PTP_PPS
   #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
   #endif
+
+  /* "dm9051 PTP TWO STEP"
+   * Always define and/to support is recommanded
+   * (if not support, after the master send sync, NO follow up can be available to send.)
+   */
+  #define PLUG_PTP_TWO_STEP //(tested)
+  #ifdef PLUG_PTP_TWO_STEP
+  #define DMPLUG_PTP_TWO_STEP //(Two step support)
+  #endif
 #endif
 
 /* pragma
  */
 #if defined(DMPLUG_PTP) && defined(MAIN_DATA)
 //#warning "dm9051 PTP"
-#pragma message("dm9051 PTP")
+#pragma message("dm9051 H/W PTP")
 #endif
 #if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
 //#warning "dm9051 PPS"
-#pragma message("dm9051 PPS")
+#pragma message("dm9051 H/W PPS")
+#endif
+#if defined(DMPLUG_PTP_TWO_STEP) && defined(MAIN_DATA)
+//#warning "dm9051 PTP TWO STEP"
+#pragma message("dm9051 H/W PTP TWO STEP")
 #endif
 
 //#ifdef DMPLUG_PTP .. #endif
@@ -139,6 +158,11 @@ enum ptp_sync_type {
 //	//#endif
 //} ptp_board_info_t;
 
+struct ptp_header *get_ptp_header(struct sk_buff *skb);
+u8 get_ptp_message_type005(struct ptp_header *ptp_hdr);
+int is_ptp_sync_packet(u8 msgtype);
+int is_ptp_delayreq_packet(u8 msgtype);
+
 /* ethtool_ops
  */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
@@ -203,8 +227,6 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 /* ptp */
 #if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1)*/
 /* re-direct ptpc */
-#undef INFO_PTP
-
 #undef PTP_VER
 #undef PTP_NEW
 #undef PTP_INIT_RCR
@@ -214,8 +236,6 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #undef PTP_NETDEV_IOCTL
 #undef PTP_STATUS_BITS
 #undef PTP_AT_RATE
-
-#define INFO_PTP(dev, db)	USER_CONFIG(dev, db, "dm9051 PTP")
 
 #define PTP_VER(b)		ptp_ver(b)
 #define PTP_NEW(d) 				ptp_new(d)
@@ -247,11 +267,18 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #define DMPLUG_TX_EMIT_TS(b,s)	dm9051_ptp_txreq_hwtstamp(b,s)
 #endif
 
-/* ptp clkout */
+/* ptp, clkout, 2step */
+#if defined(DMPLUG_PTP)
+#undef INFO_PTP
+#define INFO_PTP(dev, db)					USER_CONFIG(dev, db, "dm9051 H/W PTP")
+#endif
 #if defined(DMPLUG_PPS_CLKOUT)
 #undef INFO_PPS
-
-#define INFO_PPS(dev, db)					USER_CONFIG(dev, db, "dm9051 PPS")
+#define INFO_PPS(dev, db)					USER_CONFIG(dev, db, "dm9051 H/W PPS")
+#endif
+#if defined(DMPLUG_PTP_TWO_STEP)
+#undef INFO_PTP2S
+#define INFO_PTP2S(dev, db)					USER_CONFIG(dev, db, "dm9051 H/W PTP TWO STEP")
 #endif
 
 #endif //_DM9051_PTPC_H_

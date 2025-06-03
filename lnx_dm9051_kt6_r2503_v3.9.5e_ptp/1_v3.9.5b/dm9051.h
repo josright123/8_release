@@ -494,6 +494,7 @@ struct board_info
 #define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051 BD")
 #define INFO_PTP(dev, db)
 #define INFO_PPS(dev, db)
+#define INFO_PTP2S(dev, db)
 #define INFO_LOG(dev, db)
 #define INFO_BMCR_WR(dev, db)
 #define INFO_MRR_WR(dev, db)
@@ -532,23 +533,24 @@ static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *
 		netif_info(db, drv, db->ndev, "%s\n", str);
 }
 
-static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
-{
-	INFO_CPU_BITS(dev, db);
-	INFO_CPU_MIS_CONF(dev, db);
+//static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
+//{
+//	INFO_CPU_BITS(dev, db);
+//	INFO_CPU_MIS_CONF(dev, db);
 
-	INFO_INT(dev, db);
-	INFO_INT_CLKOUT(dev, db);
-	INFO_INT_TWOSTEP(dev, db);
-	INFO_WD(dev, db);
-	INFO_PTP(dev, db);
-	INFO_PPS(dev, db);
-	INFO_LOG(dev, db);
-	INFO_BMCR_WR(dev, db);
-	INFO_MRR_WR(dev, db);
-	INFO_CONTI(dev, db);
-	INFO_LPBK_TST(dev, db);
-}
+//	INFO_INT(dev, db);
+//	INFO_INT_CLKOUT(dev, db);
+//	INFO_INT_TWOSTEP(dev, db);
+//	INFO_WD(dev, db);
+//	INFO_PTP(dev, db);
+//	INFO_PPS(dev, db);
+//	INFO_PTP2S(dev, db);
+//	INFO_LOG(dev, db);
+//	INFO_BMCR_WR(dev, db);
+//	INFO_MRR_WR(dev, db);
+//	INFO_CONTI(dev, db);
+//	INFO_LPBK_TST(dev, db);
+//}
 
 #if 1
 /* raw fake encrypt */

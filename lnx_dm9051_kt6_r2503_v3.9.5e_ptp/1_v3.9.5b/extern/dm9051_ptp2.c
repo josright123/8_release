@@ -504,6 +504,40 @@ void on_core_init_ptp_rate(struct board_info *db)
 	}
 }
 
+void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
+{
+	ptp_board_info_t *pbi = &db->pbi;
+	struct ptp_header *ptp_hdr;
+
+	db->tcr_wr = TCR_TXREQ; // TCR register value
+
+	ptp_hdr = get_ptp_header(skb);
+	if (ptp_hdr) {
+		//db->ptp_step = dm9051_ptp_step(db, skb);
+		//if (db->ptp_step) {
+			u8 message_type = get_ptp_message_type005(ptp_hdr); //for tx send
+			//if (dm9051_ptp_frame(db, skb)) {
+				//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+				if (is_ptp_sync_packet(message_type)) {
+					pbi->ptp_step = (u8)(ptp_hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
+					if (pbi->ptp_step == 2) {
+					#if defined(DMPLUG_PTP_TWO_STEP)
+						db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
+					#else
+						#warning "dm9051 NOT Add H/W PTP TWO STEP.."
+					#endif
+					} else {
+						db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
+					}
+				} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
+					db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
+				//}
+			//}
+			//return message_type;
+		//}
+	}
+}
+
 void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
 //	if ((is_ptp_sync_packet(message_type) &&
