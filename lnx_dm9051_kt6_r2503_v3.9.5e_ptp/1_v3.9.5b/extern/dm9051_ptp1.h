@@ -19,7 +19,7 @@
  *        hardware-receive
  *        hardware-raw-clock
  */
-//#define PLUG_PTP_1588
+#define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
 
@@ -38,6 +38,14 @@
   #endif
 #endif
 
+/*Capabilities:
+ *        software-transmit
+ *        software-receive
+ *        software-system-clock
+ *PTP Hardware Clock: none
+ *Hardware Transmit Timestamp Modes: none
+ *Hardware Receive Filter Modes: none
+ */
 #define PLUG_PTP_1588_SW
 #ifdef PLUG_PTP_1588_SW
 #define DMPLUG_PTP_SW //(ptp 1588 S/W)
