@@ -38,26 +38,9 @@ const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration
 #define DM9051_INTR_BACKUP // #ifdef DM9051_INTR_BACKUP .. #endif //instead more backup.
 #define DM9051_NORM_BACKUP_TX // 
 
-/*
- * log: 
+/* log: Put here after all included header files
+ *      So conditional USER_CONFIG strings could be exactly correct 
  */
-//static void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
-//{
-//	INFO_CPU_BITS(dev, db);
-//	INFO_CPU_MIS_CONF(dev, db);
-
-//	INFO_INT(dev, db);
-//	INFO_INT_CLKOUT(dev, db);
-//	INFO_INT_TWOSTEP(dev, db);
-//	INFO_WD(dev, db);
-//	INFO_PTP(dev, db);
-//	INFO_PPS(dev, db);
-//	INFO_LOG(dev, db);
-//	INFO_BMCR_WR(dev, db);
-//	INFO_MRR_WR(dev, db);
-//	INFO_CONTI(dev, db);
-//	INFO_LPBK_TST(dev, db);
-//}
 static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
 {
 	INFO_CPU_BITS(dev, db);
@@ -70,6 +53,7 @@ static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *d
 	INFO_PTP(dev, db);
 	INFO_PPS(dev, db);
 	INFO_PTP2S(dev, db);
+	INFO_PTP_SW_2S(dev, db);
 	INFO_LOG(dev, db);
 	INFO_BMCR_WR(dev, db);
 	INFO_MRR_WR(dev, db);
@@ -2018,13 +2002,19 @@ static netdev_tx_t dm9051_start_xmit(struct sk_buff *skb, struct net_device *nde
 {
 	struct board_info *db = to_dm9051_board(ndev);
 
-	skb_queue_tail(&db->txq, skb);
+	#if defined(DMPLUG_PTP_SW)
+	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) {
+		skb_tx_timestamp(skb); // Add SW_TSTAMP
+	}
+	#endif
+
+	skb_queue_tail(&db->txq, skb); // Add skb to send queue
 	if (skb_queue_len(&db->txq) > DM9051_TX_QUE_HI_WATER)
 		netif_stop_queue(ndev); /* enforce limit queue size */
 
 	#if 0
-	//show_ptp_type(skb);	//Show PTP message type
-	skb_tx_timestamp(skb); //Spenser - Report software Timestamp v.s. - Report HW Timestamp
+//	//show_ptp_type(skb);	//Show PTP message type
+//	skb_tx_timestamp(skb); //Spenser - Report software Timestamp v.s. - Report HW Timestamp
 	#endif
 
 	schedule_work(&db->tx_work);

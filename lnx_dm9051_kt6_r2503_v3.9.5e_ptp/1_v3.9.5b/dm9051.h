@@ -495,6 +495,7 @@ struct board_info
 #define INFO_PTP(dev, db)
 #define INFO_PPS(dev, db)
 #define INFO_PTP2S(dev, db)
+#define INFO_PTP_SW_2S(dev, db)
 #define INFO_LOG(dev, db)
 #define INFO_BMCR_WR(dev, db)
 #define INFO_MRR_WR(dev, db)

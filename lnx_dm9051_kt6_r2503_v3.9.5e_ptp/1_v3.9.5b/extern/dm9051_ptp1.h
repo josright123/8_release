@@ -19,7 +19,7 @@
  *        hardware-receive
  *        hardware-raw-clock
  */
-#define PLUG_PTP_1588
+//#define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
 
@@ -38,6 +38,11 @@
   #endif
 #endif
 
+#define PLUG_PTP_1588_SW
+#ifdef PLUG_PTP_1588_SW
+#define DMPLUG_PTP_SW //(ptp 1588 S/W)
+#endif
+
 /* pragma
  */
 #if defined(DMPLUG_PTP) && defined(MAIN_DATA)
@@ -51,6 +56,10 @@
 #if defined(DMPLUG_PTP_TWO_STEP) && defined(MAIN_DATA)
 //#warning "dm9051 PTP TWO STEP"
 #pragma message("dm9051 H/W PTP TWO STEP")
+#endif
+
+#if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
+#pragma message("dm9051 S/W PTP (TWO STEP)")
 #endif
 
 //#ifdef DMPLUG_PTP .. #endif
@@ -163,17 +172,6 @@ u8 get_ptp_message_type005(struct ptp_header *ptp_hdr);
 int is_ptp_sync_packet(u8 msgtype);
 int is_ptp_delayreq_packet(u8 msgtype);
 
-/* ethtool_ops
- */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
-int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info); //kt612
-#else
-int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info); //kt66
-#endif
-/* netdev_ops
- */
-int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
-
 /* macro fakes
  */
 #if 1
@@ -219,12 +217,74 @@ void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #endif
 
+/* netdev_ops
+ */
+int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
+
+/* ethtool_ops
+ */
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
+//int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info); //kt612
+//#else
+//int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info); //kt66
+//#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
+static inline int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
+#else
+static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
+#endif
+{
+	struct board_info *db = netdev_priv(net_dev);
+	ptp_board_info_t *pbi = &db->pbi;
+	
+//Spenser - get phc_index	
+	//info->phc_index = -1;
+	info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
+
+	info->so_timestamping = 0;
+#if 1
+#if defined(DMPLUG_PTP_SW)
+		/* .software ts */
+	info->so_timestamping |= 
+		SOF_TIMESTAMPING_TX_SOFTWARE |
+		SOF_TIMESTAMPING_RX_SOFTWARE |
+		SOF_TIMESTAMPING_SOFTWARE;
+#endif
+#endif
+#if defined(DMPLUG_PTP)
+	info->so_timestamping |= 
+		SOF_TIMESTAMPING_TX_HARDWARE |
+		SOF_TIMESTAMPING_RX_HARDWARE |
+		SOF_TIMESTAMPING_RAW_HARDWARE;
+#endif
+
+#if defined(DMPLUG_PTP)
+	info->tx_types =
+		BIT(HWTSTAMP_TX_ONESTEP_SYNC) |
+		BIT(HWTSTAMP_TX_OFF) |
+		BIT(HWTSTAMP_TX_ON);
+#endif
+
+#if defined(DMPLUG_PTP)
+	info->rx_filters =
+		BIT(HWTSTAMP_FILTER_NONE) |
+		BIT(HWTSTAMP_FILTER_ALL);
+#endif
+	return 0;
+}
+
 /* functions re-construct
  */
 /* CO1, */
 /*#define CO1*/ //(Coerce)
 
 /* ptp */
+#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+#undef PTP_ETHTOOL_INFO
+#define PTP_ETHTOOL_INFO(s)		s = dm9051_ts_info,
+#endif
+
 #if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1)*/
 /* re-direct ptpc */
 #undef PTP_VER
@@ -232,7 +292,6 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #undef PTP_INIT_RCR
 #undef PTP_INIT
 #undef PTP_END
-#undef PTP_ETHTOOL_INFO
 #undef PTP_NETDEV_IOCTL
 #undef PTP_STATUS_BITS
 #undef PTP_AT_RATE
@@ -242,7 +301,6 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #define PTP_INIT_RCR(d) 		ptp_init_rcr(d)
 #define PTP_INIT(d) 			ptp_init(d)
 #define PTP_END(d) 				ptp_end(d)
-#define PTP_ETHTOOL_INFO(s)		s = dm9051_ts_info,
 #define PTP_STATUS_BITS(b)			ptp_status_bits(db)
 #define PTP_NETDEV_IOCTL(s)	s = dm9051_ptp_netdev_ioctl,
 #define PTP_AT_RATE(b)	on_core_init_ptp_rate(b)
@@ -279,6 +337,11 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 #if defined(DMPLUG_PTP_TWO_STEP)
 #undef INFO_PTP2S
 #define INFO_PTP2S(dev, db)					USER_CONFIG(dev, db, "dm9051 H/W PTP TWO STEP")
+#endif
+
+#if defined(DMPLUG_PTP_SW)
+#undef INFO_PTP_SW_2S
+#define INFO_PTP_SW_2S(dev, db)				USER_CONFIG(dev, db, "dm9051 S/W PTP (TWO STEP)")
 #endif
 
 #endif //_DM9051_PTPC_H_

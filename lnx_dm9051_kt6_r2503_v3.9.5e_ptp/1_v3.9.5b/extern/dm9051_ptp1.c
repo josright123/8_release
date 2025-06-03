@@ -375,44 +375,45 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 
 /* ethtool_ops
  * tell timestamp info and types */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
-int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
-#else
-int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
-#endif
-{
-	struct board_info *db = netdev_priv(net_dev);
-	ptp_board_info_t *pbi = &db->pbi;
-	
-//Spenser - get phc_index	
-	//info->phc_index = -1;
-	info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
 
-	info->so_timestamping =
-#if 1
-#if 0
-		/* .software ts */
-		SOF_TIMESTAMPING_TX_SOFTWARE |
-		SOF_TIMESTAMPING_RX_SOFTWARE |
-		SOF_TIMESTAMPING_SOFTWARE |
-#endif
-#endif
-		SOF_TIMESTAMPING_TX_HARDWARE |
-		SOF_TIMESTAMPING_RX_HARDWARE |
-		SOF_TIMESTAMPING_RAW_HARDWARE;
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
+//int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
+//#else
+//int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
+//#endif
+//{
+//	struct board_info *db = netdev_priv(net_dev);
+//	ptp_board_info_t *pbi = &db->pbi;
+//	
+////Spenser - get phc_index	
+//	//info->phc_index = -1;
+//	info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
 
-	info->tx_types =
-		BIT(HWTSTAMP_TX_ONESTEP_SYNC) |
-		BIT(HWTSTAMP_TX_OFF) |
-		BIT(HWTSTAMP_TX_ON);
+//	info->so_timestamping =
+//#if 1
+//#if 0
+//		/* .software ts */
+//		SOF_TIMESTAMPING_TX_SOFTWARE |
+//		SOF_TIMESTAMPING_RX_SOFTWARE |
+//		SOF_TIMESTAMPING_SOFTWARE |
+//#endif
+//#endif
+//		SOF_TIMESTAMPING_TX_HARDWARE |
+//		SOF_TIMESTAMPING_RX_HARDWARE |
+//		SOF_TIMESTAMPING_RAW_HARDWARE;
 
-	info->rx_filters =
-		BIT(HWTSTAMP_FILTER_NONE) |
-		BIT(HWTSTAMP_FILTER_ALL);
+//	info->tx_types =
+//		BIT(HWTSTAMP_TX_ONESTEP_SYNC) |
+//		BIT(HWTSTAMP_TX_OFF) |
+//		BIT(HWTSTAMP_TX_ON);
+
+//	info->rx_filters =
+//		BIT(HWTSTAMP_FILTER_NONE) |
+//		BIT(HWTSTAMP_FILTER_ALL);
 
 
-	return 0;
-}
+//	return 0;
+//}
 
 /* netdev_ops 
  * tell support ptp */

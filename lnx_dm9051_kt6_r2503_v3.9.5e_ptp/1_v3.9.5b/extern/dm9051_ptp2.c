@@ -612,6 +612,9 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 				 * doing Tx timestamping, check if Rx timestamping is configured.
 				 */
 				u64 ns = rx_extract_ts(pbi->rxTSbyte);
+				/* Use skb_hwtstamps(skb) get 'skb_shared_hwtstamps' and then copy to ->hwtstamp
+				 * We can also use skb_complete_rx_timestamp() to make the same result.
+				 */
 				do {
 					struct skb_shared_hwtstamps *shhwtstamps =
 						skb_hwtstamps(skb); //for pass T2 the HW rx tstamp
