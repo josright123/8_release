@@ -504,6 +504,31 @@ void on_core_init_ptp_rate(struct board_info *db)
 	}
 }
 
+//SKBTX_SW_TSTAMP
+void dm9051_ptp_tx_swtstamp(struct sk_buff *skb)
+{\
+	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) {
+		skb_tx_timestamp(skb); // Add SW_TSTAMP
+	}
+}
+
+// SKBTX_HW_TSTAMP = 1 << 0,
+// SKBTX_SW_TSTAMP = 1 << 1,
+// SKBTX_IN_PROGRESS = 1 << 2,
+// ...
+// SKBTX_SCHED_TSTAMP = 1 << 6,
+void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
+{
+	db->pbi.ptp_skp_hw_tstamp = 0;
+	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
+		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
+		db->pbi.ptp_skp_hw_tstamp = 1;
+		//return 1;
+	}
+	//return 0;
+}
+
+//SKBTX_HW_TSTAMP
 void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
@@ -538,6 +563,7 @@ void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 	}
 }
 
+//SKBTX_HW_TSTAMP
 void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
 //	if ((is_ptp_sync_packet(message_type) &&
@@ -659,15 +685,6 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 	}}
 	//}
 	return 0;
-}
-
-void dm9051_ptp_tx_swtstamp(struct sk_buff *skb)
-{
-	#if defined(DMPLUG_PTP_SW)
-	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) {
-		skb_tx_timestamp(skb); // Add SW_TSTAMP
-	}
-	#endif
 }
 
 static void dm9051_ptp_register(struct board_info *db)

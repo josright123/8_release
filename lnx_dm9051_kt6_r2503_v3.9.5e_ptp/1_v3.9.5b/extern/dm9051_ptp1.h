@@ -205,7 +205,7 @@ int is_ptp_delayreq_packet(u8 msgtype);
 #define SHOW_ptp_rx_packet_monitor(b,s)
 #define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
 
-#define DMPLUG_PTP_TX_IN_PROGRESS(s)	0
+#define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	//0
 #define DMPLUG_PTP_TX_PRE(b,s)
 #define DMPLUG_TX_EMIT_TS(b,s)
 
@@ -316,7 +316,7 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 #undef DMPLUG_PTP_TX_PRE
 #undef DMPLUG_TX_EMIT_TS
 
-#define DMPLUG_PTP_TX_IN_PROGRESS(s)	dm9051_ptp_tx_in_progress(s)
+#define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	dm9051_ptp_tx_in_progress(b,s)
 #define DMPLUG_PTP_TX_PRE(b,s)	dm9051_ptp_txreq(b,s)
 #define DMPLUG_TX_EMIT_TS(b,s)	dm9051_ptp_txreq_hwtstamp(b,s)
 #endif
@@ -334,7 +334,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rxc_from_master(struct board_info *db);
 
-int dm9051_ptp_tx_in_progress(struct sk_buff *skb);
+void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 

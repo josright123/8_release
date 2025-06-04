@@ -128,20 +128,6 @@ u8 get_ptp_message_type005(struct ptp_header *ptp_hdr) {
 	return ptp_hdr->tsmt & 0x0f;
 }
 
-// SKBTX_HW_TSTAMP = 1 << 0,
-// SKBTX_SW_TSTAMP = 1 << 1,
-// SKBTX_IN_PROGRESS = 1 << 2,
-// ...
-// SKBTX_SCHED_TSTAMP = 1 << 6,
-int dm9051_ptp_tx_in_progress(struct sk_buff *skb)
-{
-	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
-		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
-		return 1;
-	}
-	return 0;
-}
-
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;

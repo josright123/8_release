@@ -336,6 +336,7 @@ struct dm9051_rxhdr
 typedef struct ptp_board_info {
 	//#ifdef DMPLUG_PTP
 	int						hw_master_role; //0: software master mode 1: hardware master mode
+	int						ptp_skp_hw_tstamp; //0: skb software tstamp 1: skb hardware tstamp
 	int						ptp_enable;
 
 	struct board_info		*db;
