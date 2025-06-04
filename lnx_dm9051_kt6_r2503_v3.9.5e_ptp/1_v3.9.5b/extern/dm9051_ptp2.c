@@ -535,6 +535,7 @@ void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 	struct ptp_header *ptp_hdr;
 
 	db->tcr_wr = TCR_TXREQ; // TCR register value
+	db->pbi.ptp_chip_push_tstamp = 0;
 
 	ptp_hdr = get_ptp_header(skb);
 	if (ptp_hdr) {
@@ -548,6 +549,7 @@ void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 					if (pbi->ptp_step == 2) {
 					#if defined(DMPLUG_PTP_TWO_STEP)
 						db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
+						db->pbi.ptp_chip_push_tstamp = 1;
 					#else
 						#warning "dm9051 NOT Add H/W PTP TWO STEP.."
 					#endif
@@ -569,6 +571,8 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 //	if ((is_ptp_sync_packet(message_type) &&
 //		db->ptp_step == 2) ||
 //		is_ptp_delayreq_packet(message_type)) { //_15888_,
+	
+//.	if (db->pbi.ptp_chip_push_tstamp) //tobe
 	if (db->tcr_wr & TCR_TS_EN) {
 		int ret;
 
@@ -581,6 +585,13 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 
 		dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 	}
+	if (db->pbi.ptp_skp_hw_tstamp) { //.(flags & SKBTX_IN_PROGRESS)
+		static int flags_count = 0; //to debug show
+		flags_count++;
+		netif_crit(db, hw, db->ndev, "Yes, %05d dm9051_nsr_poll\n", flags_count);
+		netif_info(db, hw, db->ndev, "Yes, %05d skb_tstamp_tx\n", flags_count);
+	}
+
 //	}
 }
 

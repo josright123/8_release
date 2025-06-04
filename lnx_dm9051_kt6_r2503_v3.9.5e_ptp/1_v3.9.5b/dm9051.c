@@ -1661,18 +1661,18 @@ struct sk_buff *dm9051_tx_data_len(struct board_info *db, struct sk_buff *skb)
 
 int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 {
-	int ret; //, in_progress;
-	static int flags_count = 0; //to debug show
+	int ret;
+	//int in_progress; 
 	//unsigned char flags = skb_shinfo(skb)->tx_flags; //to debug show
+	//in_progress = ...
+	//if (in_progress)
+	//	flags = skb_shinfo(skb)->tx_flags;
 
 #if defined(STICK_SKB_CHG_NOTE)
 	skb = TX_PAD(db, skb); //db->data_len = skb->len; db->pad = ..
 
 	/* 6.0 tx ptpc */
-	//in_progress = 
 	DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
-	//if (in_progress)
-	//	flags = skb_shinfo(skb)->tx_flags;
 
 	/* 6 tx ptpc */
 	DMPLUG_PTP_TX_PRE(db, skb);
@@ -1681,11 +1681,6 @@ int TX_SENDC(struct board_info *db, struct sk_buff *skb)
 
 	/* 6.1 tx ptpc */
 	DMPLUG_TX_EMIT_TS(db, skb);
-	if (db->pbi.ptp_skp_hw_tstamp) { //.(flags & SKBTX_IN_PROGRESS)
-		flags_count++;
-		netif_crit(db, hw, db->ndev, "Yes, %05d dm9051_nsr_poll\n", flags_count);
-		netif_info(db, hw, db->ndev, "Yes, %05d skb_tstamp_tx\n", flags_count);
-	}
 
 	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb. 
 #endif
