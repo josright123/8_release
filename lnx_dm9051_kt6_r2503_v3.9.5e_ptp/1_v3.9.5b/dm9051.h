@@ -167,7 +167,7 @@
 #define RSR_FOE			BIT(0)
 #define	RSR_ERR_BITS		(RSR_RF | RSR_LCS | RSR_RWTO | RSR_PLE | \
 				 RSR_AE | RSR_CE | RSR_FOE)
-//#define	RSR_ERR_BITS		(RSR_RF | RSR_LCS | RSR_RWTO |
+//#define RSR_ERR_BITS		(RSR_RF | RSR_LCS | RSR_RWTO |
 //				 RSR_AE | RSR_CE | RSR_FOE) /* | RSR_PLE */
 //0x0A
 #define FCR_TXPEN		BIT(5)
@@ -212,7 +212,7 @@
 /* 0x5E */
 #define MBNDRY_BYTE		BIT(7)
 #define MBNDRY_WORD		0
-#define BOUND_CONF_BIT	MBNDRY_BYTE
+#define BOUND_CONF_BIT		MBNDRY_BYTE
 //0xFE
 #define ISR_MBS			BIT(7)
 #define ISR_LNKCHG		BIT(5)
@@ -456,7 +456,7 @@ struct board_info {
 //#if (defined(__x86_64__) || defined(__aarch64__))
 //#endif //__x86_64__ || __aarch64__
 
-//#define INFO_CPU_BITS(dev, db)				// mandetory un-define and coerced
+//#define INFO_CPU_BITS(dev, db)			// mandetory un-define and coerced
 //#define INFO_CPU_MIS_CONF(dev, db)			// will re-define conditionally
 #if (defined(__x86_64__) || defined(__aarch64__))
 #define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch64__")
@@ -797,7 +797,7 @@ int dm9051_int_clkout(struct board_info *db);
 #undef PAD_LEN
 #define PAD_LEN(len)						(len & 1) ? len + 1 : len
 #undef TX_PAD
-#define TX_PAD(b,s)							dm9051_pad_txreq(b,s) //wd
+#define TX_PAD(b,s)						dm9051_pad_txreq(b,s) //wd
 struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb);
 #endif
 
