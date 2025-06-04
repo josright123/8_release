@@ -28,6 +28,15 @@
 #include "extern.h"
 #include "dm9051_ptp1.h" /* 0.1 ptpc */
 
+#ifdef DMPLUG_PTP_SW
+void dm9051_ptp_tx_swtstamp(struct sk_buff *skb) //SKBTX_SW_TSTAMP
+{
+	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) {
+		skb_tx_timestamp(skb); // Add SW_TSTAMP
+	}
+}
+#endif
+
 #ifdef DMPLUG_PTP
 int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm)
 {
@@ -504,14 +513,6 @@ void on_core_init_ptp_rate(struct board_info *db)
 	}
 }
 
-//SKBTX_SW_TSTAMP
-void dm9051_ptp_tx_swtstamp(struct sk_buff *skb)
-{\
-	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) {
-		skb_tx_timestamp(skb); // Add SW_TSTAMP
-	}
-}
-
 // SKBTX_HW_TSTAMP = 1 << 0,
 // SKBTX_SW_TSTAMP = 1 << 1,
 // SKBTX_IN_PROGRESS = 1 << 2,
@@ -519,6 +520,10 @@ void dm9051_ptp_tx_swtstamp(struct sk_buff *skb)
 // SKBTX_SCHED_TSTAMP = 1 << 6,
 void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
 {
+	ptp_board_info_t *pbi = &db->pbi;
+	if (!pbi->tstamp_config.tx_type)
+		return;
+
 	db->pbi.ptp_skp_hw_tstamp = 0;
 	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
 		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
@@ -533,6 +538,9 @@ void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
 	struct ptp_header *ptp_hdr;
+
+	if (!pbi->tstamp_config.tx_type)
+		return;
 
 	db->tcr_wr = TCR_TXREQ; // TCR register value
 	db->pbi.ptp_chip_push_tstamp = 0;
@@ -568,6 +576,10 @@ void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 //SKBTX_HW_TSTAMP
 void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
+	ptp_board_info_t *pbi = &db->pbi;
+	if (!pbi->tstamp_config.tx_type)
+		return;
+
 //	if ((is_ptp_sync_packet(message_type) &&
 //		db->ptp_step == 2) ||
 //		is_ptp_delayreq_packet(message_type)) { //_15888_,
@@ -630,9 +642,12 @@ static u64 rx_extract_ts(u8 *rxTSbyte)
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
+	
+	if (!pbi->tstamp_config.rx_filter)
+		return;
 
 #if 0 //[wait further test..]
-		if (is_ptp_rxts_enable(db)) //if T1/T4, // Is it inserted Timestamp?
+		if (is_ptp_rxts_enable(db)) //if T1/T4, // Is it inserted Timestamp? //[wait further test..]
 #endif
 		{
 			//So when NOT T1/T4, we can skip tell tstamp (just an empty (virtual) one)

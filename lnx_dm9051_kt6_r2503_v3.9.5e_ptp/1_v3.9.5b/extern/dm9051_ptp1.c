@@ -31,7 +31,6 @@
 #include "extern.h"
 #include "dm9051_ptp1.h" /* 0.1 ptpc */
 
-#ifdef DMPLUG_PTP
 #define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
 
 #ifdef DMCONF_DIV_HLPR_32
@@ -63,6 +62,237 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
 }
 #endif
 
+/* ethtool_ops
+ * tell timestamp info and types */
+
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
+//int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
+//#else
+//int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
+//#endif
+//{
+//	struct board_info *db = netdev_priv(net_dev);
+//	ptp_board_info_t *pbi = &db->pbi;
+//	
+////Spenser - get phc_index	
+//	//info->phc_index = -1;
+//	info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
+
+//	info->so_timestamping =
+//#if 1
+//#if 0
+//		/* .software ts */
+//		SOF_TIMESTAMPING_TX_SOFTWARE |
+//		SOF_TIMESTAMPING_RX_SOFTWARE |
+//		SOF_TIMESTAMPING_SOFTWARE |
+//#endif
+//#endif
+//		SOF_TIMESTAMPING_TX_HARDWARE |
+//		SOF_TIMESTAMPING_RX_HARDWARE |
+//		SOF_TIMESTAMPING_RAW_HARDWARE;
+
+//	info->tx_types =
+//		BIT(HWTSTAMP_TX_ONESTEP_SYNC) |
+//		BIT(HWTSTAMP_TX_OFF) |
+//		BIT(HWTSTAMP_TX_ON);
+
+//	info->rx_filters =
+//		BIT(HWTSTAMP_FILTER_NONE) |
+//		BIT(HWTSTAMP_FILTER_ALL);
+
+
+//	return 0;
+//}
+
+#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+static int lan_ptp_get_ts_ioctl(struct net_device *netdev, struct ifreq *ifr)
+{
+	struct board_info *db = netdev_priv(netdev);
+	ptp_board_info_t *pbi = &db->pbi;
+	struct hwtstamp_config *config = &pbi->tstamp_config;
+        
+	/* copy from db _tstamp_config, to user */
+	return copy_to_user(ifr->ifr_data, config, sizeof(*config)) ?
+		-EFAULT : 0;
+}
+
+static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd)
+{
+	struct board_info *db = netdev_priv(netdev);
+	ptp_board_info_t *pbi = &db->pbi;
+	struct hwtstamp_config config;
+//	int ret = 0;
+
+	if (!ifr) {
+		netif_err(db, hw, db->ndev,
+			  "SIOCSHWTSTAMP, ifr == NULL\n");
+		return -EINVAL;
+	}
+
+	if (copy_from_user(&config, ifr->ifr_data, sizeof(config)))
+		return -EFAULT;
+
+	if (config.flags) {
+		netif_warn(db, hw, db->ndev,
+			   "ignoring _hwtstamp_config.flags == 0x%08X, expected 0\n",
+			   config.flags);
+	}
+
+	switch (config.tx_type) {
+		case HWTSTAMP_TX_OFF:
+			//dev_info(&adb->spidev->dev, "IOCtl - Now db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
+			netif_info(db, hw, db->ndev, "IOCtl - Now db->ptp_on %d, NOTE: Stop tx sync !\n", pbi->ptp_on);
+			//lan743x_ptp_set_sync_ts_insert(adapter, false);
+			break;
+		case HWTSTAMP_TX_ONESTEP_SYNC:
+	//.		db->ptp_onestep = true;
+			pbi->ptp_on = 1;
+			//dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", adb->ptp_on);
+			netif_info(db, hw, db->ndev, "IOCtl: Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", pbi->ptp_on);
+			//gem_ptp_set_one_step_sync(bp, 1);
+			//lan743x_ptp_set_sync_ts_insert(adapter, true);
+			break;
+		case HWTSTAMP_TX_ON:
+	//.		db->ptp_onestep = false;
+			pbi->ptp_on = 1;
+			netif_info(db, hw, db->ndev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", pbi->ptp_on);
+			//gem_ptp_set_one_step_sync(bp, 0);
+			//lan743x_ptp_set_sync_ts_insert(adapter, false);
+			break;
+		case HWTSTAMP_TX_ONESTEP_P2P:
+			//ret = -ERANGE;
+			netif_warn(db, hw, db->ndev, "IOCtl - Now db->ptp_on %d, Error Range!\n", pbi->ptp_on);
+			return -ERANGE;
+			//break;
+		default:
+			netif_warn(db, hw, db->ndev,
+				   "  tx_type = %d, UNKNOWN\n", config.tx_type);
+			return -EINVAL;
+			//ret = -EINVAL;
+			//break;
+	}
+
+	switch (config.rx_filter) {
+		case HWTSTAMP_FILTER_NONE:
+			break;
+		case HWTSTAMP_FILTER_PTP_V1_L4_SYNC:
+			break;
+		case HWTSTAMP_FILTER_PTP_V1_L4_DELAY_REQ:
+			break;
+		case HWTSTAMP_FILTER_PTP_V2_EVENT:
+		case HWTSTAMP_FILTER_PTP_V2_L2_EVENT:
+		case HWTSTAMP_FILTER_PTP_V2_L4_EVENT:
+		case HWTSTAMP_FILTER_PTP_V2_SYNC:
+		case HWTSTAMP_FILTER_PTP_V2_L2_SYNC:
+		case HWTSTAMP_FILTER_PTP_V2_L4_SYNC:
+		case HWTSTAMP_FILTER_PTP_V2_DELAY_REQ:
+		case HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ:
+		case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
+			//dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_PTP_V2_EVENT\n"); //~ db->ptp_on = 1;
+			netif_info(db, hw, db->ndev, "config->rx_filter: Master.Slave.Has, to be HWTSTAMP_FILTER_PTP_V2_EVENT\n");
+			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
+			break;
+		case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
+		case HWTSTAMP_FILTER_ALL:
+			//db->ptp_on = 1;
+			netif_info(db, hw, db->ndev, "config->rx_filter - to be, HWTSTAMP_FILTER_ALL\n");
+			config.rx_filter = HWTSTAMP_FILTER_ALL;
+			break;
+		default:
+			netif_warn(db, hw, db->ndev,
+					   "  rx_filter = %d, UNKNOWN\n", config.rx_filter);
+			config.rx_filter = HWTSTAMP_FILTER_NONE;
+			return -ERANGE;
+	}
+
+//	switch (config.tx_type) {
+//	case HWTSTAMP_TX_OFF:
+//		for (index = 0; index < LAN743X_MAX_TX_CHANNELS;
+//			index++)
+//			lan743x_tx_set_timestamping_mode(&adapter->tx[index],
+//							 false, false);
+//		lan743x_ptp_set_sync_ts_insert(adapter, false);
+//		break;
+//	case HWTSTAMP_TX_ON:
+//		for (index = 0; index < LAN743X_MAX_TX_CHANNELS;
+//			index++)
+//			lan743x_tx_set_timestamping_mode(&adapter->tx[index],
+//							 true, false);
+//		lan743x_ptp_set_sync_ts_insert(adapter, false);
+//		break;
+//	case HWTSTAMP_TX_ONESTEP_SYNC:
+//		for (index = 0; index < LAN743X_MAX_TX_CHANNELS;
+//			index++)
+//			lan743x_tx_set_timestamping_mode(&adapter->tx[index],
+//							 true, true);
+
+//		lan743x_ptp_set_sync_ts_insert(adapter, true);
+//		break;
+//	case HWTSTAMP_TX_ONESTEP_P2P:
+//		ret = -ERANGE;
+//		break;
+//	default:
+//		netif_warn(adapter, drv, adapter->netdev,
+//			   "  tx_type = %d, UNKNOWN\n", config.tx_type);
+//		ret = -EINVAL;
+//		break;
+//	}
+
+//	if (!ret) {
+		/* copy to db _tstamp_config */
+		memcpy(&pbi->tstamp_config, &config, sizeof(pbi->tstamp_config));
+		
+	printk(".ndo_eth_ioctl/SIOCSHWTSTAMP, pbi->tstamp_config = flag %d, tx_typ %d, rx_fltr %d\n",
+		pbi->tstamp_config.flags,
+		pbi->tstamp_config.tx_type,
+		pbi->tstamp_config.rx_filter);
+
+		/* copy to user */
+		return copy_to_user(ifr->ifr_data, &config, sizeof(config)) ?
+			-EFAULT : 0;
+//	}
+//	return ret;
+}
+
+/* netdev_ops 
+ * tell support ptp */
+int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
+{
+	//struct board_info *db = to_dm9051_board(ndev);
+    //struct hwtstamp_config config;
+	if (!netif_running(ndev))
+		return -EINVAL;
+
+	switch(cmd) {
+		case SIOCGHWTSTAMP:
+			//printk("Process SIOCGHWTSTAMP\n");
+			//db->ptp_on = 1;
+			//return dm9051_ptp_get_ts_config(ndev, rq);
+			return lan_ptp_get_ts_ioctl(ndev, rq);
+		case SIOCSHWTSTAMP:
+			//printk("Process SIOCSHWTSTAMP\n");
+			//db->ptp_on = 1;
+			//return dm9051_ptp_set_ts_config(ndev, rq);
+			return lan743x_ptp_ioctl(ndev, rq, cmd);
+		case SIOCBONDINFOQUERY:
+			printk("dm9051_netdev_ioctl SIOCBONDINFOQUERY = cmd 0x%X. NOT support\n", cmd);
+			return -EOPNOTSUPP;
+		default:
+			//break;
+			printk("dm9051_netdev_ioctl phy_mii_ioctl, cmd = 0x%X\n", cmd);
+			return phy_mii_ioctl(ndev->phydev, rq, cmd); //'rq' is ifr
+	}
+}
+#endif
+
+#ifdef DMPLUG_PTP_SW
+void ptp_ver_software(struct board_info *db)
+{
+	dev_info(&db->spidev->dev, "DMPLUG PTP Software Version\n");
+}
+#endif
+
+#ifdef DMPLUG_PTP
 int is_ptp_sync_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_SYNC) ? 1 : 0;
@@ -213,228 +443,6 @@ void dm9051_ptp_rxc_from_master(struct board_info *db)
 	} while(0);
 }
 
-static int lan_ptp_get_ts_ioctl(struct net_device *netdev, struct ifreq *ifr)
-{
-	struct board_info *db = netdev_priv(netdev);
-	ptp_board_info_t *pbi = &db->pbi;
-	struct hwtstamp_config *config = &pbi->tstamp_config;
-        
-	/* copy from db tstamp_config, to user */
-	return copy_to_user(ifr->ifr_data, config, sizeof(*config)) ?
-		-EFAULT : 0;
-}
-
-static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd)
-{
-	struct board_info *db = netdev_priv(netdev);
-	ptp_board_info_t *pbi = &db->pbi;
-	struct hwtstamp_config config;
-	int ret = 0;
-
-	if (!ifr) {
-		netif_err(db, hw, db->ndev,
-			  "SIOCSHWTSTAMP, ifr == NULL\n");
-		return -EINVAL;
-	}
-
-	if (copy_from_user(&config, ifr->ifr_data, sizeof(config)))
-		return -EFAULT;
-
-	if (config.flags) {
-		netif_warn(db, hw, db->ndev,
-			   "ignoring hwtstamp_config.flags == 0x%08X, expected 0\n",
-			   config.flags);
-	}
-
-	switch (config.tx_type) {
-		case HWTSTAMP_TX_OFF:
-			//dev_info(&adb->spidev->dev, "IOCtl - Now db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
-			netif_info(db, hw, db->ndev, "IOCtl - Now db->ptp_on %d, NOTE: Stop tx sync !\n", pbi->ptp_on);
-			//lan743x_ptp_set_sync_ts_insert(adapter, false);
-			break;
-		case HWTSTAMP_TX_ONESTEP_SYNC:
-	//.		db->ptp_onestep = true;
-			pbi->ptp_on = 1;
-			//dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", adb->ptp_on);
-			netif_info(db, hw, db->ndev, "IOCtl: Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", pbi->ptp_on);
-			//gem_ptp_set_one_step_sync(bp, 1);
-			//lan743x_ptp_set_sync_ts_insert(adapter, true);
-			break;
-		case HWTSTAMP_TX_ON:
-	//.		db->ptp_onestep = false;
-			pbi->ptp_on = 1;
-			netif_info(db, hw, db->ndev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", pbi->ptp_on);
-			//gem_ptp_set_one_step_sync(bp, 0);
-			//lan743x_ptp_set_sync_ts_insert(adapter, false);
-			break;
-		case HWTSTAMP_TX_ONESTEP_P2P:
-			//ret = -ERANGE;
-			netif_warn(db, hw, db->ndev, "IOCtl - Now db->ptp_on %d, Error Range!\n", pbi->ptp_on);
-			return -ERANGE;
-			//break;
-		default:
-			netif_warn(db, hw, db->ndev,
-				   "  tx_type = %d, UNKNOWN\n", config.tx_type);
-			return -EINVAL;
-			//ret = -EINVAL;
-			//break;
-	}
-
-	switch (config.rx_filter) {
-		case HWTSTAMP_FILTER_NONE:
-			break;
-		case HWTSTAMP_FILTER_PTP_V1_L4_SYNC:
-			break;
-		case HWTSTAMP_FILTER_PTP_V1_L4_DELAY_REQ:
-			break;
-		case HWTSTAMP_FILTER_PTP_V2_EVENT:
-		case HWTSTAMP_FILTER_PTP_V2_L2_EVENT:
-		case HWTSTAMP_FILTER_PTP_V2_L4_EVENT:
-		case HWTSTAMP_FILTER_PTP_V2_SYNC:
-		case HWTSTAMP_FILTER_PTP_V2_L2_SYNC:
-		case HWTSTAMP_FILTER_PTP_V2_L4_SYNC:
-		case HWTSTAMP_FILTER_PTP_V2_DELAY_REQ:
-		case HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ:
-		case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
-			//dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_PTP_V2_EVENT\n"); //~ db->ptp_on = 1;
-			netif_info(db, hw, db->ndev, "config->rx_filter: Master.Slave.Has, to be HWTSTAMP_FILTER_PTP_V2_EVENT\n");
-			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
-			break;
-		case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
-		case HWTSTAMP_FILTER_ALL:
-			//db->ptp_on = 1;
-			netif_info(db, hw, db->ndev, "config->rx_filter - to be, HWTSTAMP_FILTER_ALL\n");
-			config.rx_filter = HWTSTAMP_FILTER_ALL;
-			break;
-		default:
-			netif_warn(db, hw, db->ndev,
-					   "  rx_filter = %d, UNKNOWN\n", config.rx_filter);
-			config.rx_filter = HWTSTAMP_FILTER_NONE;
-			return -ERANGE;
-	}
-
-//	switch (config.tx_type) {
-//	case HWTSTAMP_TX_OFF:
-//		for (index = 0; index < LAN743X_MAX_TX_CHANNELS;
-//			index++)
-//			lan743x_tx_set_timestamping_mode(&adapter->tx[index],
-//							 false, false);
-//		lan743x_ptp_set_sync_ts_insert(adapter, false);
-//		break;
-//	case HWTSTAMP_TX_ON:
-//		for (index = 0; index < LAN743X_MAX_TX_CHANNELS;
-//			index++)
-//			lan743x_tx_set_timestamping_mode(&adapter->tx[index],
-//							 true, false);
-//		lan743x_ptp_set_sync_ts_insert(adapter, false);
-//		break;
-//	case HWTSTAMP_TX_ONESTEP_SYNC:
-//		for (index = 0; index < LAN743X_MAX_TX_CHANNELS;
-//			index++)
-//			lan743x_tx_set_timestamping_mode(&adapter->tx[index],
-//							 true, true);
-
-//		lan743x_ptp_set_sync_ts_insert(adapter, true);
-//		break;
-//	case HWTSTAMP_TX_ONESTEP_P2P:
-//		ret = -ERANGE;
-//		break;
-//	default:
-//		netif_warn(adapter, drv, adapter->netdev,
-//			   "  tx_type = %d, UNKNOWN\n", config.tx_type);
-//		ret = -EINVAL;
-//		break;
-//	}
-
-	if (!ret) {
-		/* copy to db tstamp_config */
-		memcpy(&pbi->tstamp_config, &config,
-		       sizeof(pbi->tstamp_config));
-
-		/* copy to user */
-		return copy_to_user(ifr->ifr_data, &config,
-			sizeof(config)) ? -EFAULT : 0;
-	}
-
-	return ret;
-}
-
-/* ethtool_ops
- * tell timestamp info and types */
-
-//#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
-//int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
-//#else
-//int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
-//#endif
-//{
-//	struct board_info *db = netdev_priv(net_dev);
-//	ptp_board_info_t *pbi = &db->pbi;
-//	
-////Spenser - get phc_index	
-//	//info->phc_index = -1;
-//	info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
-
-//	info->so_timestamping =
-//#if 1
-//#if 0
-//		/* .software ts */
-//		SOF_TIMESTAMPING_TX_SOFTWARE |
-//		SOF_TIMESTAMPING_RX_SOFTWARE |
-//		SOF_TIMESTAMPING_SOFTWARE |
-//#endif
-//#endif
-//		SOF_TIMESTAMPING_TX_HARDWARE |
-//		SOF_TIMESTAMPING_RX_HARDWARE |
-//		SOF_TIMESTAMPING_RAW_HARDWARE;
-
-//	info->tx_types =
-//		BIT(HWTSTAMP_TX_ONESTEP_SYNC) |
-//		BIT(HWTSTAMP_TX_OFF) |
-//		BIT(HWTSTAMP_TX_ON);
-
-//	info->rx_filters =
-//		BIT(HWTSTAMP_FILTER_NONE) |
-//		BIT(HWTSTAMP_FILTER_ALL);
-
-
-//	return 0;
-//}
-
-/* netdev_ops 
- * tell support ptp */
-int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
-{
-	//struct board_info *db = to_dm9051_board(ndev);
-    //struct hwtstamp_config config;
-	if (!netif_running(ndev))
-		return -EINVAL;
-
-	switch(cmd) {
-		case SIOCGHWTSTAMP:
-			//printk("Process SIOCGHWTSTAMP\n");
-			//db->ptp_on = 1;
-			//return dm9051_ptp_get_ts_config(ndev, rq);
-			return lan_ptp_get_ts_ioctl(ndev, rq);
-		case SIOCSHWTSTAMP:
-			//printk("Process SIOCSHWTSTAMP\n");
-			//db->ptp_on = 1;
-			//return dm9051_ptp_set_ts_config(ndev, rq);
-			return lan743x_ptp_ioctl(ndev, rq, cmd);
-		case SIOCBONDINFOQUERY:
-			printk("dm9051_netdev_ioctl SIOCBONDINFOQUERY = cmd 0x%X. NOT support\n", cmd);
-			return -EOPNOTSUPP;
-		default:
-			//printk("dm9051_netdev_ioctl cmd = 0x%X\n", cmd);
-			//db->ptp_on = 0;
-			//return -EOPNOTSUPP;
-			break;
-	}
-
-	printk("dm9051_netdev_ioctl phy_mii_ioctl, cmd = 0x%X\n", cmd);
-	return phy_mii_ioctl(ndev->phydev, rq, cmd); //'rq' is ifr
-}
-
 /* APIs */
 void ptp_ver(struct board_info *db) {
 	ptp_board_info_t *pbi = &db->pbi;
@@ -443,11 +451,6 @@ void ptp_ver(struct board_info *db) {
 		dev_info(&db->spidev->dev, "DMPLUG PTP HW Version\n");
 		dev_info(&db->spidev->dev, "Enable PTP HW must COERCE to disable checksum_offload\n");
 	}
-}
-
-void ptp_ver_software(struct board_info *db)
-{
-	dev_info(&db->spidev->dev, "DMPLUG PTP Software Version\n");
 }
 
 int ptp_new(struct board_info *db) {

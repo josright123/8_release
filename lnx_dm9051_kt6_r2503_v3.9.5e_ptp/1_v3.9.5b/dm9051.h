@@ -433,19 +433,6 @@ struct board_info
 
 	/* 1 ptpc */
 	struct ptp_board_info pbi; //=struct ptp_board_info pbi;
-//	//#ifdef DMPLUG_PTP
-//	struct ptp_clock_info 	ptp_caps;
-//	int						ptp_enable;
-//	int						ptp_on; //_15888_
-//	struct ptp_clock        *ptp_clock;
-//	u8						ptp_step; //dividual
-//	u8						_ptp_rsrv; //ptp_packet; //dividual
-
-//	struct hwtstamp_config	tstamp_config;
-//	s64						pre_rate;
-//	u8              		rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
-//	//#endif
-	
 };
 
 //#if (defined(__x86_64__) || defined(__aarch64__))
