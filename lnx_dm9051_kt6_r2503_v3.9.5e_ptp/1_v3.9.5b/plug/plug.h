@@ -21,7 +21,7 @@
 #define BUS_SETUP(db) bus_setup(struct board_info *db)
 #undef BUS_OPS
 #define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
-	
+
 //implement in plug/
 int bus_setup(struct board_info *db);
 void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);

@@ -23,10 +23,11 @@
 #include "dm9051.h"
 
 /*
- * Conti: 
+ * Conti:
  */
 #ifdef DMPLUG_CONTI
-void tx_continue_ver(struct board_info *db) {
+void tx_continue_ver(struct board_info *db)
+{
 	dev_info(&db->spidev->dev, "DMPLUG CONTI Version\n");
 }
 
@@ -52,10 +53,9 @@ static unsigned int get_tx_free(struct board_info *db)
 	unsigned int rb;
 
 	ret = regmap_read(db->regmap_dm, DM9051_TXFSSR, &rb); // quick direct
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		netif_err(db, drv, db->ndev, "%s: error %d read reg %02x\n",
-				  __func__, ret, DM9051_TXFSSR);
+			  __func__, ret, DM9051_TXFSSR);
 		return 0; // size now 'zero'
 	}
 
@@ -63,11 +63,10 @@ static unsigned int get_tx_free(struct board_info *db)
 }
 
 static unsigned int tx_free_poll_timeout(struct board_info *db, unsigned int tx_tot,
-										 u32 sleep_us, u64 timeout_us)
+		u32 sleep_us, u64 timeout_us)
 {
 	unsigned int tx_free;
-	for (;;)
-	{
+	for (;;) {
 		tx_free = get_tx_free(db);
 		if (tx_free >= tx_tot)
 			return tx_tot;
@@ -118,7 +117,7 @@ static int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb, u64 tx_timeo
 			break;
 
 		ret = dm9051_write_mem_cache(db, skb->data, tx_xxbst); //'tx_xxbst'
-	} while(0);
+	} while (0);
 
 	return ret;
 }
@@ -133,7 +132,7 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeou
 			break;
 
 		ret = dm9051_req_tx(db);
-	} while(0);
+	} while (0);
 
 	if (!ret) {
 		struct net_device *ndev = db->ndev;

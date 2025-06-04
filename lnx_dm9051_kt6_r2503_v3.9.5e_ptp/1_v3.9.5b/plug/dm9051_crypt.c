@@ -3,24 +3,24 @@
  * Copyright (c) 2025 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
- 
+
 /*
  * User notice:
- *   To add encryption function, 
- *   Add 
+ *   To add encryption function,
+ *   Add
  * 	#define PLUG_CUSTOMIZE_CRYP
  *      in dm9051_plug.h
  *   And add this file to project
- *   And modify Makefile to insert this file 
+ *   And modify Makefile to insert this file
  *   into the project build.
- * 
+ *
  * In Makefile
  * Change
  *   dm9051a-objs := dm9051.o dm9051_plug.o
  * to
  *   dm9051a-objs := dm9051.o dm9051_plug.o dm9051_crypt.o
  */
- 
+
 #include <linux/etherdevice.h>
 #include <linux/ethtool.h>
 #include <linux/interrupt.h>
@@ -42,7 +42,7 @@
 #warning "DMPLUG: dm9051 plug-in encrypt bus work"
 
 /*
- * Encrypt Protection Driver version: 
+ * Encrypt Protection Driver version:
  */
 
 #define	FORCE_BUS_ENCPT_OFF		0
@@ -95,15 +95,14 @@ int bus_setup(struct board_info *db)
 static void bus_work(u8 bus_word, u8 *buff, unsigned int crlen)
 {
 	unsigned int j;
-	for (j = 0; j < crlen; j++)
-	{
+	for (j = 0; j < crlen; j++) {
 		buff[j] ^= bus_word;
 	}
 }
 
 void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
 {
-	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db->rctl.bus_word,buff,crlen));
+	DM9051_BUS_WORK(ENCPT_MODE && db->rctl.bus_word, bus_work(db->rctl.bus_word, buff, crlen));
 }
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, Crypt plug in");

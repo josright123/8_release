@@ -3,17 +3,17 @@
  * Copyright (c) 2025 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
- 
+
 /*
  * User notice:
- *   To add loop test function, 
- *   Add 
+ *   To add loop test function,
+ *   Add
  * 	#define DMPLUG_LPBK_TST
  *      in dm9051.h
  *   And add this file to project
- *   And modify Makefile to insert this file 
+ *   And modify Makefile to insert this file
  *   into the project build.
- * 
+ *
  * In Makefile
  * Change
  *   dm9051a-objs := dm9051.o
@@ -49,7 +49,7 @@
 extern const struct plat_cnf_info *plat_cnf;
 
 /*
- * mac loopback test: 
+ * mac loopback test:
  */
 
 //static int dm9051_single_tx(struct board_info *db, u8 *p);
@@ -85,31 +85,31 @@ static void dm9051_phyread_bmsr_loop(struct board_info *db, unsigned int reg, un
 		while (amdix_bmsr_change(db, val))
 			;
 
-		//while (!amdix_bmsr_change(db)) {		
+		//while (!amdix_bmsr_change(db)) {
 		//}
 		if (db->bmsr & BIT(2)) {
 			netif_warn(db, link, db->ndev, "<fund_phylib. rd.bmsr %04x [lpa] %04x> DONE...\n",
-						db->bmsr, db->lpa);
+				   db->bmsr, db->lpa);
 			break;
 		}
 
 		msleep(1);
 		if (i++ > 1000) {
 			netif_warn(db, link, db->ndev, "<fund_phylib. rd.bmsr %04x [lpa] %04x> TimeOut...\n",
-						db->bmsr, db->lpa);
+				   db->bmsr, db->lpa);
 			break;
 		}
 	}
 
-	//return ret;	
+	//return ret;
 }
 void dump_data_001(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051_dump_data1
 {
 	int i, j, rowsize = 32;
 	int splen; //index of start row
-	int rlen; //remain/row length 
+	int rlen; //remain/row length
 	char line[120];
-	
+
 	//[rlen = packet_len > 16 ? 16 : packet_len;]
 
 	netif_info(db, pktdata, db->ndev, "%s\n", db->bc.head);
@@ -123,7 +123,7 @@ void dump_data_001(struct board_info *db, u8 *packet_data, int packet_len) //.dm
 		for (j = 0; j < rlen; j++) {
 			if (!(j % 8)) splen += sprintf(line + splen, " ");
 			if (!(j % 16)) splen += sprintf(line + splen, " ");
-			splen += sprintf(line + splen, " %02x", packet_data[i+j]);
+			splen += sprintf(line + splen, " %02x", packet_data[i + j]);
 		}
 		netif_info(db, pktdata, db->ndev, "%s\n", line);
 	}
@@ -164,7 +164,7 @@ int dump_regs(struct board_info *db)
 		for (j = 0; j < row_count; j++) {
 			if (!(j % 8)) splen += sprintf(line + splen, " ");
 
-			if (mark[i+j]) {
+			if (mark[i + j]) {
 				ret = dm9051_get_reg(db, i + j, &val);
 				if (ret < 0)
 					break;
@@ -187,13 +187,12 @@ int dm9051_single_rx(struct board_info *db)
 	int ret, rxlen, padlen;
 	unsigned int rxbyte;
 	u8 buf[4 + 128];
-	
+
 	ret = dm9051_read_mem_rxb(db, DM_SPI_MRCMDX, &rxbyte, 2);
 	if (ret)
 		return ret;
 
-	if (rx_break(db, rxbyte, ndev->features))
-	{
+	if (rx_break(db, rxbyte, ndev->features)) {
 		if (trap_rxb(db, &rxbyte)) {
 			DMPLUG_LOG_RXPTR("rxb last", db);
 			//dm9051_all_restart(db);
@@ -226,7 +225,7 @@ int dm9051_single_rx(struct board_info *db)
 	rxlen = le16_to_cpu(db->rxhdr.rxlen);
 	padlen = PAD_LEN(rxlen);
 	//padlen = (plat_cnf->skb_wb_mode && (rxlen & 1)) ? rxlen + 1 : rxlen;
-	
+
 	db->bc.nRxcF++;
 	printk("\n");
 #ifdef DMPLUG_PTP
@@ -237,20 +236,20 @@ int dm9051_single_rx(struct board_info *db)
 		printk("recv packet %d, rx %d bytes\n", db->bc.nRxcF, rxlen);
 
 	ret = dm9051_read_mem_cache(db, DM_SPI_MRCMD, buf, padlen);
-	if (ret)
-	{
+	if (ret) {
 		return ret;
 	}
 
 	//SHOW_ptp_rx_packet_monitor(db, skb);
 #ifdef DMPLUG_PTP
 	if (pbi->ptp_enable) {
-	if (is_ptp_rxts_enable(db)) {	// Inserted Timestamp
-		sprintf(db->bc.head, "dump rx-tstamp %d", 8);
-		dump_data_001(db, pbi->rxTSbyte, 8);
-	}}
+		if (is_ptp_rxts_enable(db)) {	// Inserted Timestamp
+			sprintf(db->bc.head, "dump rx-tstamp %d", 8);
+			dump_data_001(db, pbi->rxTSbyte, 8);
+		}
+	}
 #endif
-	
+
 	sprintf(db->bc.head, "dump rx-len %d", rxlen);
 	dump_data_001(db, buf, rxlen);
 	return 0;
@@ -275,19 +274,19 @@ int test_loop_back(struct board_info *db)
 #if 1
 	//ret = dm9051_set_reg(db, DM9051_NCR, 0x0A);
 	ret = dm9051_set_reg(db, DM9051_NCR, 0x02);
-	
+
 	//ret = dm9051_set_reg(db, DM9051_NCR, 0x04);
 	if (ret)
 		return ret;
 #endif
 	dm9051_phyread_bmsr_loop(db, MII_BMSR, &val);
 	netif_warn(db, link, db->ndev, "<dm9051_phyread_bmsr_loop rd.bmsr %04x [lpa] %04x> End...\n",
-				db->bmsr, db->lpa);
+		   db->bmsr, db->lpa);
 
 	msleep(1);
 	SHOW_BMSR(db);
 	SHOW_BMSR(db);
-	
+
 	//[rx enable, etc.]
 	//tail of _upstart
 	ret = dm9051_all_start_intr(db);
@@ -298,8 +297,8 @@ int test_loop_back(struct board_info *db)
 	ret = dm9051_subconcl_and_rerxctrl(db);
 	if (ret)
 		return ret;
-	
-printk("Rdy\n");
+
+	printk("Rdy\n");
 	dump_regs(db);
 
 	//SENDC
@@ -327,7 +326,7 @@ printk("Rdy\n");
 
 //	dump_regs(db);
 #endif
-	
+
 	//SENDC
 #if 0
 //for (b = 1; b <= 256; b++) {
@@ -362,35 +361,35 @@ printk("Rdy\n");
 
 //	dump_regs(db);
 #endif
-	
+
 #if 1
-for (b = 1; b <= 256; b++) {
-	buf[b-1] = (u8) b;
-}
+	for (b = 1; b <= 256; b++) {
+		buf[b - 1] = (u8) b;
+	}
 
-for (i = 0; i < 2; i++) {
-	db->pad = 0;
-	db->data_len = data_len[i]; //66;
-	db->tcr_wr = TCR_TXREQ; //pre-defined
-	printk("Send_bytes %u\n", db->data_len);
-	ret = dm9051_single_tx(db, buf);
-	if (ret)
-		return ret;
+	for (i = 0; i < 2; i++) {
+		db->pad = 0;
+		db->data_len = data_len[i]; //66;
+		db->tcr_wr = TCR_TXREQ; //pre-defined
+		printk("Send_bytes %u\n", db->data_len);
+		ret = dm9051_single_tx(db, buf);
+		if (ret)
+			return ret;
 
-	ret = dm9051_req_tx(db);
-	if (ret)
-		return ret;
+		ret = dm9051_req_tx(db);
+		if (ret)
+			return ret;
 
-	ret = dm9051_nsr_poll(db);
-	if (ret)
-		return ret;
+		ret = dm9051_nsr_poll(db);
+		if (ret)
+			return ret;
 
-	dump_regs(db);
-}
+		dump_regs(db);
+	}
 #endif
-	
+
 	db->bc.nRxcF = 0;
-	while(1) {
+	while (1) {
 		int sRxcF = db->bc.nRxcF;
 		ret = dm9051_single_rx(db);
 		if (ret)
@@ -403,7 +402,7 @@ for (i = 0; i < 2; i++) {
 	printk("Total rx %d packets\n", db->bc.nRxcF);
 	printk("\n");
 	db->bc.nRxcF = 0;
-	
+
 //	//printk("_single_rx(db).1\n");
 //	ret = _dm9051_single_rx(db);
 //	if (ret)
@@ -422,7 +421,7 @@ for (i = 0; i < 2; i++) {
 }
 
 /*
- * mac loopback test: 
+ * mac loopback test:
  */
 int test_loop_test(struct board_info *db)
 {
@@ -434,7 +433,7 @@ int test_loop_test(struct board_info *db)
 		u8 save = db->rctl.rcr_all;
 		ret = test_loop_back(db);
 		db->rctl.rcr_all = save;
-	} while(0);
+	} while (0);
 
 	return ret;
 }
