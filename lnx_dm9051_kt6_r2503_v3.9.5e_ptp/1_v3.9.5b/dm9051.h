@@ -28,15 +28,15 @@
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT39)
 
-  //#define PLUG_INT_CLKOUT
-  #ifdef PLUG_INT_CLKOUT
-  #define INT_CLKOUT //(INT39_CLKOUT)
-  #endif
+//#define PLUG_INT_CLKOUT
+#ifdef PLUG_INT_CLKOUT
+#define INT_CLKOUT //(INT39_CLKOUT)
+#endif
 
-  //#define PLUG_INT_2STEP
-  #ifdef PLUG_INT_2STEP
-  #define INT_TWO_STEP //(INT39_TWO_STEP)
-  #endif
+//#define PLUG_INT_2STEP
+#ifdef PLUG_INT_2STEP
+#define INT_TWO_STEP //(INT39_TWO_STEP)
+#endif
 #endif
 
 //#define PLUG_ENABLE_WD
@@ -143,12 +143,12 @@
 #define NSR_WAKEST             BIT(5)
 #define NSR_TX2END             BIT(3)
 #define NSR_TX1END             BIT(2)
- //0x02
+//0x02
 #define TCR_TS_EN               BIT(7)  //_15888_
 #define TCR_DIS_JABBER_TIMER	BIT(6)  //for Jabber Packet support 
 #define TCR_TXREQ		BIT(0)
 #define TCR_TS_EMIT		TCR_DIS_JABBER_TIMER
- //0x05 
+//0x05
 #define RCR_DIS_WATCHDOG_TIMER	BIT(6)   //for Jabber Packet support 
 #define RCR_DIS_LONG		BIT(5)
 #define RCR_DIS_CRC		BIT(4)
@@ -156,7 +156,7 @@
 #define RCR_PRMSC		BIT(1)
 #define RCR_RXEN		BIT(0)
 #define RCR_RX_DISABLE		(RCR_DIS_LONG | RCR_DIS_CRC)
- //0x06 
+//0x06
 #define RSR_RF			BIT(7)
 #define RSR_MF			BIT(6)
 #define RSR_LCS			BIT(5)
@@ -167,44 +167,44 @@
 #define RSR_FOE			BIT(0)
 #define	RSR_ERR_BITS		(RSR_RF | RSR_LCS | RSR_RWTO | RSR_PLE | \
 				 RSR_AE | RSR_CE | RSR_FOE)
-//#define	RSR_ERR_BITS		(RSR_RF | RSR_LCS | RSR_RWTO | 
+//#define	RSR_ERR_BITS		(RSR_RF | RSR_LCS | RSR_RWTO |
 //				 RSR_AE | RSR_CE | RSR_FOE) /* | RSR_PLE */
- //0x0A 
+//0x0A
 #define FCR_TXPEN		BIT(5)
 #define FCR_BKPA		BIT(4)
 #define FCR_BKPM		BIT(3)
 #define FCR_FLCE		BIT(0)
 #define FCR_RXTX_BITS		(FCR_TXPEN | FCR_BKPA | FCR_BKPM | FCR_FLCE)
- //0x0B 
+//0x0B
 #define EPCR_WEP		BIT(4)
 #define EPCR_EPOS		BIT(3)
 #define EPCR_ERPRR		BIT(2)
 #define EPCR_ERPRW		BIT(1)
 #define EPCR_ERRE		BIT(0)
- //0x1E 
+//0x1E
 #define GPCR_GEP_CNTL		BIT(0)
- //0x1F 
+//0x1F
 #define GPR_PHY_OFF		BIT(0)
- //0x30 
+//0x30
 #define	ATCR_AUTO_TX		BIT(7)
 #define	ATCR_TX_MODE2		BIT(4)
- //0x39 
+//0x39
 #define INTCR_POL_LOW		(1 << 0)
 #define INTCR_POL_HIGH		(0 << 0)
- //0x3D 
- //Pause Packet Control Register - default = 1 
+//0x3D
+//Pause Packet Control Register - default = 1
 #define PPCR_PAUSE_COUNT	0x08
 #define PPCR_PAUSE_ADVCOUNT	0x0F
 #define PPCR_PAUSE_UNLIMIT	0x00
- //0x54
+//0x54
 #define IPCOCR_CLKOUT		BIT(7)
 #define IPCOCR_DUTY_LEN		1
- //0x55 
+//0x55
 #define MPCR_RSTTX		BIT(1)
 #define MPCR_RSTRX		BIT(0)
- //0x57 
- //LEDMode Control Register - LEDMode1 
- //Value 0x81  bit[7] = 1, bit[2] = 0, bit[10] = 01b 
+//0x57
+//LEDMode Control Register - LEDMode1
+//Value 0x81  bit[7] = 1, bit[2] = 0, bit[10] = 01b
 #define LMCR_NEWMOD		BIT(7)
 #define LMCR_TYPED1		BIT(1)
 #define LMCR_TYPED0		BIT(0)
@@ -213,7 +213,7 @@
 #define MBNDRY_BYTE		BIT(7)
 #define MBNDRY_WORD		0
 #define BOUND_CONF_BIT	MBNDRY_BYTE
- //0xFE 
+//0xFE
 #define ISR_MBS			BIT(7)
 #define ISR_LNKCHG		BIT(5)
 #define ISR_ROOS		BIT(3)
@@ -223,7 +223,7 @@
 #define ISR_CLR_INT		(ISR_LNKCHG | ISR_ROOS | ISR_ROS | \
 				 ISR_PTS | ISR_PRS)
 #define ISR_STOP_MRCMD		(ISR_MBS)
- //0xFF 
+//0xFF
 #define IMR_PAR			BIT(7)
 #define IMR_LNKCHGI		BIT(5)
 #define IMR_PTM			BIT(1)
@@ -247,7 +247,7 @@
 /* Helper functions */
 static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 {
-        return netdev_priv(ndev);
+	return netdev_priv(ndev);
 }
 
 /* Feature control flags */
@@ -281,8 +281,7 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev)
 #define TX_THREAD0		2 // in rx loop0
 #define TX_THREAD		3 // in rx loop
 
-struct rx_ctl_mach
-{
+struct rx_ctl_mach {
 	u32 status_err_counter;
 	u32 large_err_counter;
 	u32 rx_err_counter;
@@ -292,9 +291,9 @@ struct rx_ctl_mach
 	u16 evaluate_rxb_counter;
 	int nRxcF;
 	u16 ndelayF; /* only for poll.o */
-	
+
 	char head[HEAD_LOG_BUFSIZE];
-	
+
 	u16 mode;
 };
 
@@ -307,8 +306,7 @@ struct rx_ctl_mach
  * The settings needs to control the receive filtering
  * such as the multicast hash-filter and the receive register settings
  */
-struct dm9051_rxctrl
-{
+struct dm9051_rxctrl {
 	u16 hash_table[4];
 	u8 rcr_all;
 	u8 bus_word;
@@ -326,8 +324,7 @@ struct dm9051_rxctrl
  * Both Rx header and CRC data are for check purpose and finally
  * are dropped by this driver
  */
-struct dm9051_rxhdr
-{
+struct dm9051_rxhdr {
 	u8 headbyte;
 	u8 status;
 	__le16 rxlen;
@@ -335,10 +332,10 @@ struct dm9051_rxhdr
 
 typedef struct ptp_board_info {
 	//#ifdef DMPLUG_PTP
-	
+
 //	int						ptp_master_last_tx_flags; //BIT(0): SKBTX_HW_TSTAMP, BIT(1): SKBTX_SW_TSTAMP
 //	.ptp_master_last_tx_flags = (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) ? SKBTX_SW_TSTAMP : SKBTX_HW_TSTAMP;
-	
+
 	int						ptp_skp_hw_tstamp; //0: skb software tstamp 1: skb hardware tstamp
 	int						ptp_chip_push_tstamp; //0: no push tstamp 1: push tstamp
 	int						ptp_enable;
@@ -378,8 +375,7 @@ typedef struct ptp_board_info {
  * @imr_all: to store operating imr value for register DM9051_IMR
  * @lcr_all: to store operating rcr value for register DM9051_LMCR
  */
-struct board_info
-{
+struct board_info {
 	u32 msg_enable;
 	struct spi_device *spidev;
 	struct net_device *ndev;
@@ -391,15 +387,15 @@ struct board_info
 	struct work_struct rxctrl_work;
 	struct work_struct tx_work;
 
-	#if defined(DMPLUG_INT)
-	#ifdef INT_TWO_STEP
+#if defined(DMPLUG_INT)
+#ifdef INT_TWO_STEP
 	struct delayed_work irq_servicep;
-	#endif
-	#endif
+#endif
+#endif
 
-	#ifndef DMPLUG_INT
+#ifndef DMPLUG_INT
 	struct delayed_work irq_workp;
-	#endif
+#endif
 
 	struct ethtool_pauseparam pause;
 	struct mutex spi_lockm;
@@ -615,9 +611,9 @@ int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb);
 int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); //to used in the plug section
 int dm9051_phyread(void *context, unsigned int reg, unsigned int *val);
 int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff,
-			size_t len);
+		    size_t len);
 int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
-			size_t len);
+		     size_t len);
 int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);
 
 int dm9051_ncr_poll(struct board_info *db);
@@ -631,9 +627,9 @@ int dm9051_all_start_intr(struct board_info *db);
 int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 int dm9051_read_mem_rxb(struct board_info *db, unsigned int reg, void *buff,
-						size_t len);
+			size_t len);
 int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *buff,
-								 size_t crlen);
+			  size_t crlen);
 
 /* operation functions */
 int dm9051_req_tx(struct board_info *db);
@@ -650,10 +646,10 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 /* Param structures
  */
 struct param_config {
-        int force_monitor_rxb;
-        int force_monitor_rxc;
-        int force_monitor_tx_timeout;
-        u64 tx_timeout_us;
+	int force_monitor_rxb;
+	int force_monitor_rxc;
+	int force_monitor_tx_timeout;
+	u64 tx_timeout_us;
 };
 
 /* Driver configuration structure
@@ -667,8 +663,7 @@ struct plat_cnf_info {
 	char *test_info;
 	//int skb_wb_mode;
 	int checksuming;
-	struct align_config
-	{
+	struct align_config {
 		char *burst_mode_info;
 		int burst_mode;
 		u32 tx_blk;
@@ -705,7 +700,8 @@ const struct plat_cnf_info plat_align_mode = {
 	.align = {
 		.burst_mode_info = "Alignment",
 		.burst_mode = BURST_MODE_ALIGN,
-		.tx_blk = 32, .rx_blk = 64},
+		.tx_blk = 32, .rx_blk = 64
+	},
 };
 
 const struct plat_cnf_info plat_burst_mode = {
@@ -715,7 +711,8 @@ const struct plat_cnf_info plat_burst_mode = {
 	.align = {
 		.burst_mode_info = "Burst",
 		.burst_mode = BURST_MODE_FULL,
-		.tx_blk = 0, .rx_blk = 0},
+		.tx_blk = 0, .rx_blk = 0
+	},
 };
 
 const struct plat_cnf_info plat_misc_mode = {
@@ -725,7 +722,8 @@ const struct plat_cnf_info plat_misc_mode = {
 	.align = {
 		.burst_mode_info = "Burst",
 		.burst_mode = BURST_MODE_FULL,
-		.tx_blk = 0, .rx_blk = 0},
+		.tx_blk = 0, .rx_blk = 0
+	},
 };
 #endif //MAIN_DATA
 

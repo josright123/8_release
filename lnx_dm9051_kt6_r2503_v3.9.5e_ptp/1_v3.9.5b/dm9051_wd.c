@@ -3,14 +3,14 @@
  * Copyright (c) 2025 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
- 
+
 /*
  * User notice:
- *   To add log function, 
+ *   To add log function,
  *   And add this file to project
- *   And modify Makefile to insert this file 
+ *   And modify Makefile to insert this file
  *   into the project build.
- * 
+ *
  * In Makefile
  * Change
  *   dm9051a-objs := dm9051.o
@@ -36,7 +36,7 @@
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
- 
+
 //#define SECOND_MAIN //(sec)
 #include "dm9051.h"
 /*#include extern/extern.h */ //(extern/)
@@ -51,7 +51,7 @@
 
 #ifdef DM9051_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
-{	
+{
 	struct sk_buff *skb2;
 
 	skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
