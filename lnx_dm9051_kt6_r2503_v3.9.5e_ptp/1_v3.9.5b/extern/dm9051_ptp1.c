@@ -260,6 +260,10 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 {
 	//struct board_info *db = to_dm9051_board(ndev);
     //struct hwtstamp_config config;
+	struct board_info *db = netdev_priv(ndev);
+	ptp_board_info_t *pbi = &db->pbi;
+	int ret;
+	
 	if (!netif_running(ndev))
 		return -EINVAL;
 
@@ -268,12 +272,22 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 			//printk("Process SIOCGHWTSTAMP\n");
 			//db->ptp_on = 1;
 			//return dm9051_ptp_get_ts_config(ndev, rq);
-			return lan_ptp_get_ts_ioctl(ndev, rq);
+			ret = lan_ptp_get_ts_ioctl(ndev, rq);
+			printk("_get_ts_ioctl/SIOCGHWTSTAMP = flag %d, tx_typ %d, rx_fltr %d\n",
+				pbi->tstamp_config.flags,
+				pbi->tstamp_config.tx_type,
+				pbi->tstamp_config.rx_filter);
+			return ret;
 		case SIOCSHWTSTAMP:
 			//printk("Process SIOCSHWTSTAMP\n");
 			//db->ptp_on = 1;
 			//return dm9051_ptp_set_ts_config(ndev, rq);
-			return lan743x_ptp_ioctl(ndev, rq, cmd);
+			ret = lan743x_ptp_ioctl(ndev, rq, cmd);
+			printk("_ptp_set_ts_ioctl/SIOCGHWTSTAMP = flag %d, tx_typ %d, rx_fltr %d\n",
+				pbi->tstamp_config.flags,
+				pbi->tstamp_config.tx_type,
+				pbi->tstamp_config.rx_filter);
+			return ret;
 		case SIOCBONDINFOQUERY:
 			printk("dm9051_netdev_ioctl SIOCBONDINFOQUERY = cmd 0x%X. NOT support\n", cmd);
 			return -EOPNOTSUPP;

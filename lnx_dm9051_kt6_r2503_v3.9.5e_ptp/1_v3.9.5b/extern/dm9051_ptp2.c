@@ -521,8 +521,11 @@ void on_core_init_ptp_rate(struct board_info *db)
 void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
-	if (!pbi->tstamp_config.tx_type)
-		return;
+
+if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
+	return;
+//	if (!pbi->tstamp_config.tx_type)
+//		return;
 
 	db->pbi.ptp_skp_hw_tstamp = 0;
 	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
@@ -539,8 +542,10 @@ void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 	ptp_board_info_t *pbi = &db->pbi;
 	struct ptp_header *ptp_hdr;
 
-	if (!pbi->tstamp_config.tx_type)
-		return;
+if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
+	return;
+//	if (!pbi->tstamp_config.tx_type)
+//		return;
 
 	db->tcr_wr = TCR_TXREQ; // TCR register value
 	db->pbi.ptp_chip_push_tstamp = 0;
@@ -577,8 +582,10 @@ void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
-	if (!pbi->tstamp_config.tx_type)
-		return;
+if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
+	return;
+//	if (!pbi->tstamp_config.tx_type)
+//		return;
 
 //	if ((is_ptp_sync_packet(message_type) &&
 //		db->ptp_step == 2) ||
@@ -642,9 +649,13 @@ static u64 rx_extract_ts(u8 *rxTSbyte)
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
-	
-	if (!pbi->tstamp_config.rx_filter)
+
+#if 0
+/* Even S/W TSTAMP, do shhwtstamps->hwtstamp = ns_to_ktime(ns); (H/W TSTAMP) will be not hurt !!
+ */
+	if (!pbi->tstamp_config.rx_filter) //[wait further test..]
 		return;
+#endif
 
 #if 0 //[wait further test..]
 		if (is_ptp_rxts_enable(db)) //if T1/T4, // Is it inserted Timestamp? //[wait further test..]
