@@ -34,13 +34,13 @@ int thread_servicep_re_enterII = 0;
 #ifdef INT_TWO_STEP
 void PROBE_INT2_DLY_SETUP(struct board_info *db)
 {
-	
+
 	INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_servicep);
 }
 
 void dm9051_rx_irq_servicep(struct work_struct *work) //optional: INT: TWO_STEP SRVEICE
 {
-	#define INT_ZERO 0
+#define INT_ZERO 0
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct board_info *db = container_of(dwork, struct board_info, irq_servicep);
 
@@ -58,8 +58,7 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw) //optional: INT: TWO_STE
 		if (!thread_servicep_re_enterII)
 			netif_notice(db, intr, db->ndev, "INT: TWO_STEP [%s] first-enter %d\n", __func__, thread_servicep_re_enterII++);
 		schedule_delayed_work(&db->irq_servicep, 0); //dm9051_rx_int2-plat(voidirq, pw);
-	}
-	else {
+	} else {
 		if (thread_servicep_re_enterII <= 9)
 			netif_err(db, intr, db->ndev, "INT: TWO_STEP   [%s] re-enter %d\n", __func__, thread_servicep_re_enterII++);
 	}
@@ -74,8 +73,8 @@ int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler)
 	netif_warn(db, intr, db->ndev, "request_irq(INT TWO_STEP)\n");
 	thread_servicep_re_enterII = 0; //used in 'dm9051_rx_int2_delay'
 	ret = request_threaded_irq(spi->irq, NULL, handler,
-								get_dts_irqf(db) | IRQF_ONESHOT,
-								db->ndev->name, db);
+				   get_dts_irqf(db) | IRQF_ONESHOT,
+				   db->ndev->name, db);
 	//ret = request_irq(ndev->irq, handdler,
 	//							get_dts_irqf(db) | IRQF_ONESHOT,
 	//							ndev->name, db);

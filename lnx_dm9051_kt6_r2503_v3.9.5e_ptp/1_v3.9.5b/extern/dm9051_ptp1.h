@@ -23,19 +23,19 @@
 #ifdef PLUG_PTP_1588
 #define DMPLUG_PTP //(ptp 1588)
 
-  #define PLUG_PTP_PPS
-  #ifdef PLUG_PTP_PPS
-  #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
-  #endif
+#define PLUG_PTP_PPS
+#ifdef PLUG_PTP_PPS
+#define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
+#endif
 
-  /* "dm9051 PTP TWO STEP"
-   * Always define and/to support is recommanded
-   * (if not support, after the master send sync, NO follow up can be available to send.)
-   */
-  #define PLUG_PTP_TWO_STEP //(tested)
-  #ifdef PLUG_PTP_TWO_STEP
-  #define DMPLUG_PTP_TWO_STEP //(Two step support)
-  #endif
+/* "dm9051 PTP TWO STEP"
+ * Always define and/to support is recommanded
+ * (if not support, after the master send sync, NO follow up can be available to send.)
+ */
+#define PLUG_PTP_TWO_STEP //(tested)
+#ifdef PLUG_PTP_TWO_STEP
+#define DMPLUG_PTP_TWO_STEP //(Two step support)
+#endif
 #endif
 
 /*Capabilities:
@@ -73,7 +73,7 @@
 //#ifdef DMPLUG_PTP .. #endif
 
 /*
- * ptp 1588: 
+ * ptp 1588:
  */
 #define DM9051_1588_ST_GPIO 0x60
 #define DM9051_1588_CLK_CTRL 0x61
@@ -155,9 +155,9 @@
 
 /* PTP message type classification */
 enum ptp_sync_type {
-    //PTP_NOT_PTP = 0,      /* Not a PTP packet or no timestamp involved */
-    PTP_ONE_STEP = 1,     /* One-step sync message */
-    PTP_TWO_STEP = 2,     /* Two-step sync message */
+	//PTP_NOT_PTP = 0,      /* Not a PTP packet or no timestamp involved */
+	PTP_ONE_STEP = 1,     /* One-step sync message */
+	PTP_TWO_STEP = 2,     /* Two-step sync message */
 };
 
 //typedef struct ptp_board_info {
@@ -217,23 +217,23 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
 {
 	struct board_info *db = netdev_priv(net_dev);
 	ptp_board_info_t *pbi = &db->pbi;
-	
-//Spenser - get phc_index	
+
+//Spenser - get phc_index
 	//info->phc_index = -1;
 	info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
 
 	info->so_timestamping = 0;
 #if 1
 #if defined(DMPLUG_PTP_SW)
-		/* .software ts */
-	info->so_timestamping |= 
+	/* .software ts */
+	info->so_timestamping |=
 		SOF_TIMESTAMPING_TX_SOFTWARE |
 		SOF_TIMESTAMPING_RX_SOFTWARE |
 		SOF_TIMESTAMPING_SOFTWARE;
 #endif
 #endif
 #if defined(DMPLUG_PTP)
-	info->so_timestamping |= 
+	info->so_timestamping |=
 		SOF_TIMESTAMPING_TX_HARDWARE |
 		SOF_TIMESTAMPING_RX_HARDWARE |
 		SOF_TIMESTAMPING_RAW_HARDWARE;

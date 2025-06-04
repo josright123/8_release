@@ -130,5 +130,5 @@ void dm9051_log_phy(struct board_info *db); //static int show_log_phy(char *head
 void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
 void show_rxb(struct board_info *db, unsigned int rxbyte);
 #endif
- 
+
 #endif //_DM9051_EXTERN_H_

@@ -3,14 +3,14 @@
  * Copyright (c) 2025 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
- 
+
 /*
  * User notice:
- *   To add log function, 
+ *   To add log function,
  *   And add this file to project
- *   And modify Makefile to insert this file 
+ *   And modify Makefile to insert this file
  *   into the project build.
- * 
+ *
  * In Makefile
  * Change
  *   dm9051a-objs := dm9051.o dm9051_plug.o
@@ -36,7 +36,7 @@
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
- 
+
 //#define SECOND_MAIN //(sec)
 #include "../dm9051.h"
 /*#include extern/extern.h */ //(extern/)
@@ -94,7 +94,7 @@ void show_log(struct board_info *db) //.SHOW_LOG_REFER_BEGIN
 }
 
 /*
- * Driver logs: 
+ * Driver logs:
  */
 static void SHOW_DRIVER(struct device *dev)
 {
@@ -102,22 +102,22 @@ static void SHOW_DRIVER(struct device *dev)
 	printk("\n");
 #if defined(__x86_64__) || defined(__aarch64__)
 	// 64-bit code
-	#ifdef CONFIG_64BIT
+#ifdef CONFIG_64BIT
 	// 64-bit specific code
 	dev_warn(dev, "Davicom: %s (64 bit)", driver_info.release_version);
-	#else
+#else
 	// 32-bit specific code
 	dev_crit(dev, "Davicom: %s (64 bit, warn: but kernel config has no CONFIG_64BIT?)", driver_info.release_version);
-	#endif
+#endif
 #else
 	// 32-bit code
-	#ifdef CONFIG_64BIT
+#ifdef CONFIG_64BIT
 	// 64-bit specific code
 	dev_crit(dev, "Davicom: %s (32 bit, warn: but kernel config has CONFIG_64BIT?))", driver_info.release_version);
-	#else
+#else
 	// 32-bit specific code
 	dev_warn(dev, "Davicom: %s (32 bit)", driver_info.release_version);
-	#endif
+#endif
 #endif
 }
 
@@ -131,12 +131,12 @@ static void SHOW_DTS_SPEED(struct device *dev)
 
 static void SHOW_DTS_INT(struct device *dev)
 {
-	#if defined(DMPLUG_INT)
+#if defined(DMPLUG_INT)
 	unsigned int intdata[2];
 	of_property_read_u32_array(dev->of_node, "interrupts", &intdata[0], 2);
 	dev_info(dev, "Operation: Interrupt pin: %d\n", intdata[0]); // intpin
 	dev_info(dev, "Operation: Interrupt trig type: %d\n", intdata[1]);
-	#endif
+#endif
 }
 
 static void SHOW_CONFIG_MODE(struct device *dev)
@@ -145,25 +145,25 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 #if defined(__x86_64__) || defined(__aarch64__)
 	// 64-bit code
 	dev_info(dev, "LXR: %s, BUILD: %s __aarch64__ (64 bit)\n", utsname()->release, utsname()->release); //(compile-time)
-	
-	#ifdef CONFIG_64BIT
+
+#ifdef CONFIG_64BIT
 	// 64-bit specific code
 	dev_info(dev, "LXR: %s, BUILD: %s CONFIG_64BIT (64 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
-	#else
+#else
 	// 32-bit specific code
 	dev_err(dev, "LXR: %s, BUILD: %s CONFIG_32BIT (32 bit, warn: because config has no CONFIG_64BIT ?)\n", utsname()->release, utsname()->release);
-	#endif
+#endif
 #else
 	// 32-bit code
 	dev_info(dev, "LXR: %s, BUILD: %s __aarch32__ (32 bit)\n", utsname()->release, utsname()->release); //(compile-time)
 
-	#ifdef CONFIG_64BIT
+#ifdef CONFIG_64BIT
 	// 64-bit specific code
 	dev_err(dev, "LXR: %s, BUILD: %s (64 bit, warn: CONFIG_64BIT contrary to __aarch32__ ?)\n", utsname()->release, utsname()->release);
-	#else
+#else
 	// 32-bit specific code
 	dev_info(dev, "LXR: %s, BUILD: %s CONFIG_32BIT (32 bit)\n", utsname()->release, utsname()->release); //(compile-time): "%s\n", UTS_RELEASE);
-	#endif
+#endif
 #endif
 }
 
@@ -179,8 +179,8 @@ static void SHOW_CONFIG_MODE(struct device *dev)
 static void SHOW_ENG_OPTION_MODE(struct device *dev)
 {
 	dev_info(dev, "Check TX End: %llu, TX mode= %s mode, DRVR= %s, %s\n", param->tx_timeout_us, dmplug_tx,
-			param->force_monitor_rxb ? "monitor rxb" : "silence rxb",
-			param->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
+		 param->force_monitor_rxb ? "monitor rxb" : "silence rxb",
+		 param->force_monitor_tx_timeout ? "monitor tx_timeout" : "silence tx_ec");
 }
 
 void show_mode(struct device *dev) //.SHOW_DEVLOG_MODE
@@ -202,29 +202,29 @@ void show_xmit_thrd0(struct board_info *db)
 {
 	if (db->xmit_thrd0 <= 9) {
 		netif_warn(db, tx_queued, db->ndev, "%2d [_THrd-in] run %u Pkt %u zero-in %u, on-THrd-in %u Pkt %u\n", db->xmit_thrd0,
-			db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
+			   db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd0, db->xmit_ttc0);
 	}
 }
 void show_xmit_thrd(struct board_info *db)
 {
 	if (db->xmit_thrd <= 9) {
 		netif_warn(db, tx_queued, db->ndev, "%2d [_THrd-end] run %u Pkt %u zero-in %u, on-THrd-end %u Pkt %u\n", db->xmit_thrd,
-			db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
+			   db->xmit_in, db->xmit_tc, db->xmit_zc, db->xmit_thrd, db->xmit_ttc);
 	}
 }
 void show_xmit_in(struct board_info *db)
 {
 	if (db->xmit_in <= 9) {
 		netif_info(db, tx_queued, db->ndev, "%2d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
-			db->xmit_in, db->xmit_tc, db->xmit_zc);
+			   db->xmit_in, db->xmit_tc, db->xmit_zc);
 	}
 }
 
 void show_tcr_wr(struct board_info *db)
 {
-	if ((db->bc.mode == TX_DELAY && db->xmit_in <=9) || 
-		(db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
-		(db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
+	if ((db->bc.mode == TX_DELAY && db->xmit_in <= 9) ||
+	    (db->bc.mode == TX_THREAD  && db->xmit_thrd <= 9) ||
+	    (db->bc.mode == TX_THREAD0  && db->xmit_thrd0 <= 9)) {
 		netif_info(db, tx_queued, db->ndev, "%s. tx_send end_wr %02x\n", db->bc.head, db->tcr_wr);
 	}
 }
@@ -238,8 +238,8 @@ void show_pmode(struct device *dev) //.SHOW_PLAT_MODE
 void show_mac(struct board_info *db, u8 *addr) //.SHOW_MAC
 {
 	dev_warn(&db->spidev->dev, "Power-on chip MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
-			 addr[0], addr[1], addr[2],
-			 addr[3], addr[4], addr[5]);
+		 addr[0], addr[1], addr[2],
+		 addr[3], addr[4], addr[5]);
 }
 
 void show_rxc(struct board_info *db, int scanrr) //.SHOW_MONITOR_RXC
@@ -255,10 +255,9 @@ void show_rxc(struct board_info *db, int scanrr) //.SHOW_MONITOR_RXC
 			plat_cnf->align.tx_blk, \
 			n)
 
-	if (param->force_monitor_rxc && scanrr && db->bc.nRxcF < 25)
-	{
+	if (param->force_monitor_rxc && scanrr && db->bc.nRxcF < 25) {
 		db->bc.nRxcF += scanrr;
-		
+
 		if (plat_cnf->align.burst_mode == BURST_MODE_FULL)
 			PRINT_BURST_INFO(db->bc.nRxcF);
 		else if (plat_cnf->align.burst_mode == BURST_MODE_ALIGN)
@@ -316,7 +315,7 @@ void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051
 {
 	int i, j, rowsize = 32;
 	int splen; //index of start row
-	int rlen; //remain/row length 
+	int rlen; //remain/row length
 	char line[120];
 
 	netif_info(db, pktdata, db->ndev, "%s\n", db->bc.head);
@@ -330,7 +329,7 @@ void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051
 		for (j = 0; j < rlen; j++) {
 			if (!(j % 8)) splen += sprintf(line + splen, " ");
 			if (!(j % 16)) splen += sprintf(line + splen, " ");
-			splen += sprintf(line + splen, " %02x", packet_data[i+j]);
+			splen += sprintf(line + splen, " %02x", packet_data[i + j]);
 		}
 		netif_info(db, pktdata, db->ndev, "%s\n", line);
 	}
@@ -338,8 +337,7 @@ void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051
 
 void show_rxb(struct board_info *db, unsigned int rxbyte) //.monitor_rxb0
 {
-	if (param->force_monitor_rxb)
-	{
+	if (param->force_monitor_rxb) {
 		static int rxbz_counter = 0;
 		static unsigned int inval_rxb[TIMES_TO_RST] = {0};
 		unsigned int i;
@@ -362,12 +360,10 @@ void show_rxb(struct board_info *db, unsigned int rxbyte) //.monitor_rxb0
 		rxbz_counter++;
 
 		n += sprintf(pbff + n, "_.%s %2d]", __func__, rxbz_counter);
-		for (i = 0; i < rxbz_counter; i++)
-		{
+		for (i = 0; i < rxbz_counter; i++) {
 			if (i && !(i % 5))
 				n += sprintf(pbff + n, " ");
-			if (rxbz_counter > 5 && i < 5)
-			{
+			if (rxbz_counter > 5 && i < 5) {
 				n += sprintf(pbff + n, "  .");
 				continue;
 			}
@@ -375,8 +371,7 @@ void show_rxb(struct board_info *db, unsigned int rxbyte) //.monitor_rxb0
 		}
 		netif_crit(db, rx_status, db->ndev, "%s\n", pbff);
 
-		if (rxbz_counter >= TIMES_TO_RST)
-		{
+		if (rxbz_counter >= TIMES_TO_RST) {
 			rxbz_counter = 0;
 			memset(inval_rxb, 0, sizeof(inval_rxb));
 			netif_err(db, rx_status, db->ndev, "_[Less constrain of old SCAN_BL trap's, NOT _all_restart] only monitored.\n");

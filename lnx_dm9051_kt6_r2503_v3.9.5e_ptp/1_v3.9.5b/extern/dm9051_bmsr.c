@@ -34,26 +34,26 @@ char *get_log_addr(struct board_info *db)
 {
 	if (!db->automdix_log[0][0]) {
 		//db->automdix_log[0][0] = 1;
- //("[get log addr 0]\n");
+//("[get log addr 0]\n");
 		return &db->automdix_log[0][0]; //&db->automdix_log[0][1];
 	}
 	if (!db->automdix_log[1][0]) {
 		//db->automdix_log[1][0] = 1;
- //("[get log addr 1]\n");
+//("[get log addr 1]\n");
 		return &db->automdix_log[1][0]; //&db->automdix_log[1][1];
 	}
 	if (!db->automdix_log[2][0]) {
 		//db->automdix_log[2][0] = 1;
- //("[get log addr 2]\n");
+//("[get log addr 2]\n");
 		return &db->automdix_log[2][0]; //&db->automdix_log[2][1];
 	}
 
- //("[get log addr 2ov]\n");
+//("[get log addr 2ov]\n");
 	db->automdix_log[0][0] = db->automdix_log[1][0];
 	strcpy(&db->automdix_log[0][1], &db->automdix_log[1][1]);
 	db->automdix_log[1][0] = db->automdix_log[2][0];
 	strcpy(&db->automdix_log[1][1], &db->automdix_log[2][1]);
-	
+
 	return &db->automdix_log[2][0];
 }
 static void show_log_data(char *head, char *data, struct board_info *db)
@@ -109,7 +109,7 @@ void amdix_bmsr_change_up(struct board_info *db, unsigned int bmsr)
 		//dev_crit(dev1, "<link_phylib. on %02u to %02u>, current lpa %04x [bmsr] %04x to %04x found reach link\n", db->stop_automdix_flag,
 		//	db->n_automdix, db->lpa, bmsr, db->bmsr);
 		netif_crit(db, link, db->ndev, "<phylib BMSR> lpa %04x [bmsr] %04x\n",
-			db->lpa, db->bmsr);
+			   db->lpa, db->bmsr);
 		netif_crit(db, link, db->ndev, "[link] clear log...");
 		amdix_log_reset(db);
 	}
@@ -140,8 +140,8 @@ static int amdix_bmsr_change(struct board_info *db)
 			int ret;
 			db->mdi ^= 0x0020;
 			netif_warn(db, link, db->ndev, "??? <may up to down> %02u [lpa] %04x _dm9051_phywr[_AutoMDIX_] reg %d [val %04x]",
-					db->n_automdix, db->lpa, 20, db->mdi); 
-			
+				   db->n_automdix, db->lpa, 20, db->mdi);
+
 //			ret = dm9051_phywrite(db, 20, db->mdi);
 			if (ret)
 				netif_warn(db, link, db->ndev, "warn: phywrite reg %d [val %04x], fail\n", 20, db->mdi);
@@ -168,83 +168,82 @@ static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsig
 	db->bmsr = *val;
 
 	/* nt log */
-	#if 1
+#if 1
 	//do
 	//{
-		if (!amdix_bmsr_change(db))
-		{
-			if (!(db->bmsr & BIT(2))) {
+	if (!amdix_bmsr_change(db)) {
+		if (!(db->bmsr & BIT(2))) {
+
+			do {
+				if (db->stop_automdix_flag) {
+#if 1
+					/* lpa changeto 0x0000 */
+					if (!db->lpa) {
+						db->stop_automdix_flag = 0;
+						break;
+					}
+#endif
+					if (!(db->n_automdix % 10)) {
+						netif_warn(db, link, db->ndev, "%2u [lpa %04x]\n", db->n_automdix, db->lpa);
+						break;
+					}
+					return 0;
+				}
+				if (db->lpa) {
+					netif_warn(db, link, db->ndev, "<fund_phylib. on %02u to %02u, rd.bmsr %04x [lpa] %04x> STOPPING... amdix\n", db->stop_automdix_flag,
+						   db->n_automdix, db->bmsr, db->lpa);
+					db->stop_automdix_flag = db->n_automdix;
+					//k("(STOP avoid below possible more once toggle...)\n");
+					return 0; //break; //(STOP avoid below possible more once toggle...)
+				}
+			} while (0);
+
+			db->n_automdix++;
+			do {
+#if 1
+				char *p = get_log_addr(db);
+				db->mdi ^= 0x0020;
 
 				do {
-					if (db->stop_automdix_flag) {
-					#if 1
-						/* lpa changeto 0x0000 */
-						if (!db->lpa) {
-							db->stop_automdix_flag = 0;
-							break;
-						}
-					#endif
-						if (!(db->n_automdix %10)) {
-							netif_warn(db, link, db->ndev, "%2u [lpa %04x]\n", db->n_automdix, db->lpa);
-							break;
-						}
-						return 0;
-					}
-					if (db->lpa) {
-						netif_warn(db, link, db->ndev, "<fund_phylib. on %02u to %02u, rd.bmsr %04x [lpa] %04x> STOPPING... amdix\n", db->stop_automdix_flag,
-							db->n_automdix, db->bmsr, db->lpa);
-						db->stop_automdix_flag = db->n_automdix;
-						//k("(STOP avoid below possible more once toggle...)\n");
-						return 0; //break; //(STOP avoid below possible more once toggle...)
-					}
-				} while(0);
+					/* store list */
+					//sprintf(p, "from_phylib. %02u [lpa] %04x _mon_phywr[_AutoMDIX_] reg %d [val %04x]",
+					//		db->n_automdix, db->lpa, 20, db->mdi);
+					//snprintf(p, sizeof(automdix_log[0]), "from_phylib. %02u [lpa] %04x _mon_phywr[_AutoMDIX_] reg %d [val %04x]",
+					//		db->n_automdix, db->lpa, 20, db->mdi);
+					p[0] = db->n_automdix;
+					memset(&p[1], 0, AMDIX_LOG_BUFSIZE);
+					snprintf(&p[1], AMDIX_LOG_BUFSIZE - 1, "in_case phylib. %02u [lpa] %04x phy[AutoMDIX] reg %d [val %04x]",
+						 db->n_automdix, db->lpa, 20, db->mdi);
+				} while (0);
 
-				db->n_automdix++;
-				do {
-			#if 1
-					char *p = get_log_addr(db);
-					db->mdi ^= 0x0020;
+				/* NO write obsevation */
+				//ret = dm9051_phywrite(db, 20, db->mdi);
+				//if (ret)
+				//	return ret;
+#endif
 
-					do {
-						/* store list */
-						//sprintf(p, "from_phylib. %02u [lpa] %04x _mon_phywr[_AutoMDIX_] reg %d [val %04x]",
-						//		db->n_automdix, db->lpa, 20, db->mdi);
-						//snprintf(p, sizeof(automdix_log[0]), "from_phylib. %02u [lpa] %04x _mon_phywr[_AutoMDIX_] reg %d [val %04x]",
-						//		db->n_automdix, db->lpa, 20, db->mdi);
-						p[0] = db->n_automdix;
-						memset(&p[1], 0, AMDIX_LOG_BUFSIZE);
-						snprintf(&p[1], AMDIX_LOG_BUFSIZE-1, "in_case phylib. %02u [lpa] %04x phy[AutoMDIX] reg %d [val %04x]",
-								db->n_automdix, db->lpa, 20, db->mdi);
-					} while(0);
-
-					/* NO write obsevation */
-					//ret = dm9051_phywrite(db, 20, db->mdi);
-					//if (ret)
-					//	return ret;
-			#endif
-
-					if ((db->n_automdix % NUM_TRIGGER) <= NUM_BMSR_DOWN_SHOW) {
-						if ((db->n_automdix % NUM_TRIGGER) == 1) //only first.
-							printk("\n"); //printk("(re-cycle)(first).mdix\n");
+				if ((db->n_automdix % NUM_TRIGGER) <= NUM_BMSR_DOWN_SHOW) {
+					if ((db->n_automdix % NUM_TRIGGER) == 1) //only first.
+						printk("\n"); //printk("(re-cycle)(first).mdix\n");
 //						show_log_data("bmsr down", p);
-					}
+				}
 
-			#if 1
-					/* phy reset insteaded */
-					if (!(db->n_automdix % NUM_TRIGGER)) {
-						netif_warn(db, link, db->ndev, "( bmsr down per %d).phy reset insteaded: %u\n", NUM_TRIGGER, db->n_automdix);
-						ret = dm9051_phy_reset(db);
-						if (ret)
-							return ret;
-					}
-			#endif
-				} while(0);
-			}
+#if 1
+				/* phy reset insteaded */
+				if (!(db->n_automdix % NUM_TRIGGER)) {
+					netif_warn(db, link, db->ndev, "( bmsr down per %d).phy reset insteaded: %u\n", NUM_TRIGGER, db->n_automdix);
+					ret = dm9051_phy_reset(db);
+					if (ret)
+						return ret;
+				}
+#endif
+			} while (0);
 		}
+	}
 	//} while (0);
-	#endif
+#endif
 
-	return ret;	
+	return ret;
 }
 
 int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val)
@@ -252,7 +251,7 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 	if (reg == MII_BMSR)
 		return dm9051_phyread_bmsr_wr(db, MII_BMSR, val);
 
-	return dm9051_phyread(db, reg, val);		
+	return dm9051_phyread(db, reg, val);
 }
 
 // dm9051_phyread.EXTEND
@@ -280,7 +279,7 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 //				//static unsigned int n_automdix = 0;
 //				//static unsigned int mdi = 0x0830;
 //				db->n_automdix++;
-//				
+//
 //				if (db->_stop_automdix_flag) {
 //#if 1
 //					k("[lpa %04x]\n", db->lpa);
@@ -291,7 +290,7 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 //				//ret = dm9051_phyread(db, 5, &vval);
 //				//if (ret)
 //				//	return ret;
-//				
+//
 //				if (db->lpa) {
 //					k("<fund_phylib. on %02u to %02u, _mdio_read.bmsr[lpa] %04x> STOPPING... automdix\n", db->_stop_automdix_flag,
 //						db->n_automdix, db->lpa);
@@ -310,7 +309,7 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 //						if (db->n_automdix == TOGG_INTVL) //only first.
 //							k("\n");
 //					}
-//					if (db->n_automdix <= TOGG_TOT_SHOW 
+//					if (db->n_automdix <= TOGG_TOT_SHOW
 //						&& !(db->bmsr & BIT(6))) k("_mdio_read.bmsr.BIT6= 0, !MF_Preamble, phyaddr %d [BMSR] %04x\n", DM9051_PHY_ADDR, db->bmsr);
 
 //					ret = dm9051_phywrite(db, 20, db->mdi);
