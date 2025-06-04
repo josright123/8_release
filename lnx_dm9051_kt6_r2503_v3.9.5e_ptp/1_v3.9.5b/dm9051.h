@@ -335,7 +335,10 @@ struct dm9051_rxhdr
 
 typedef struct ptp_board_info {
 	//#ifdef DMPLUG_PTP
-	int						ptp_master_last_tx_flags; //BIT(0): SKBTX_HW_TSTAMP, BIT(1): SKBTX_SW_TSTAMP
+	
+//	int						ptp_master_last_tx_flags; //BIT(0): SKBTX_HW_TSTAMP, BIT(1): SKBTX_SW_TSTAMP
+//	.ptp_master_last_tx_flags = (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) ? SKBTX_SW_TSTAMP : SKBTX_HW_TSTAMP;
+	
 	int						ptp_skp_hw_tstamp; //0: skb software tstamp 1: skb hardware tstamp
 	int						ptp_chip_push_tstamp; //0: no push tstamp 1: push tstamp
 	int						ptp_enable;

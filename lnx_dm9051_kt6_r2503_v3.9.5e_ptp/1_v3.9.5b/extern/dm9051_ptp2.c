@@ -520,12 +520,26 @@ void on_core_init_ptp_rate(struct board_info *db)
 // SKBTX_SCHED_TSTAMP = 1 << 6,
 void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
 {
+#if 0
 	ptp_board_info_t *pbi = &db->pbi;
+	/* Use: enum hwtstamp_tx_types
+	 */
+	/* When S/W TSTAMP, from ever (H/W TSTAMP) and (S/W TSTAMP) not clear this 'tx_type', then do , will hurt !!!
+	 */
+	if (pbi->tstamp_config.tx_type &
+		(HWTSTAMP_TX_ON | HWTSTAMP_TX_ONESTEP_SYNC))
+	{
+		.................... //can do
+	}
 
-if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
-	return;
-//	if (!pbi->tstamp_config.tx_type)
-//		return;
+	//	if (!pbi->tstamp_config.tx_type)
+	//		return;
+#endif
+
+	/* Use: skb->tx_flags, is better~
+	 */
+	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
+		return;
 
 	db->pbi.ptp_skp_hw_tstamp = 0;
 	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
@@ -542,10 +556,13 @@ void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 	ptp_board_info_t *pbi = &db->pbi;
 	struct ptp_header *ptp_hdr;
 
-if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
-	return;
-//	if (!pbi->tstamp_config.tx_type)
-//		return;
+	//	if (!pbi->tstamp_config.tx_type)
+	//		return;
+
+	/* Use: skb->tx_flags, is better~
+	 */
+	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
+		return;
 
 	db->tcr_wr = TCR_TXREQ; // TCR register value
 	db->pbi.ptp_chip_push_tstamp = 0;
@@ -581,11 +598,14 @@ if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
 //SKBTX_HW_TSTAMP
 void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
-	ptp_board_info_t *pbi = &db->pbi;
-if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
-	return;
-//	if (!pbi->tstamp_config.tx_type)
-//		return;
+	//ptp_board_info_t *pbi = &db->pbi;
+	//	if (!pbi->tstamp_config.tx_type)
+	//		return;
+
+	/* Use: skb->tx_flags, is better~
+	 */
+	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
+		return;
 
 //	if ((is_ptp_sync_packet(message_type) &&
 //		db->ptp_step == 2) ||
@@ -650,6 +670,17 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
 
+#if 0
+	/* Use: enum hwtstamp_rx_filters 
+	 */
+	/* Even S/W TSTAMP, on (H/W TSTAMP) do , will be not hurt !!
+	 */
+	if (pbi->tstamp_config.rx_filter &
+		(HWTSTAMP_FILTER_PTP_V2_EVENT | HWTSTAMP_FILTER_ALL))
+	{
+		.................... //can do
+	}
+#endif
 #if 0
 /* Even S/W TSTAMP, do shhwtstamps->hwtstamp = ns_to_ktime(ns); (H/W TSTAMP) will be not hurt !!
  */

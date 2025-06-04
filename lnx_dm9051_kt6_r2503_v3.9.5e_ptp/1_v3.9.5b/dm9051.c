@@ -1998,7 +1998,6 @@ static netdev_tx_t dm9051_start_xmit(struct sk_buff *skb, struct net_device *nde
 {
 	struct board_info *db = to_dm9051_board(ndev);
 
-	db->pbi.ptp_master_last_tx_flags = (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) ? SKBTX_SW_TSTAMP : SKBTX_HW_TSTAMP;
 	DMPLUG_PTP_TX_TIMESTAMPING_SW(skb);
 
 	skb_queue_tail(&db->txq, skb); // Add skb to send queue

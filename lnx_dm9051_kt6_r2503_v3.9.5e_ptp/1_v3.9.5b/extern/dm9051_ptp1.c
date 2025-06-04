@@ -242,7 +242,7 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 		/* copy to db _tstamp_config */
 		memcpy(&pbi->tstamp_config, &config, sizeof(pbi->tstamp_config));
 		
-	printk(".ndo_eth_ioctl/SIOCSHWTSTAMP, pbi->tstamp_config = flag %d, tx_typ %d, rx_fltr %d\n",
+	netif_info(db, hw, db->ndev, "lan743x_ptp_ioctl = flag %d, tx_typ %d, rx_fltr %d\n",
 		pbi->tstamp_config.flags,
 		pbi->tstamp_config.tx_type,
 		pbi->tstamp_config.rx_filter);
@@ -283,7 +283,7 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 			//db->ptp_on = 1;
 			//return dm9051_ptp_set_ts_config(ndev, rq);
 			ret = lan743x_ptp_ioctl(ndev, rq, cmd);
-			printk("_ptp_set_ts_ioctl/SIOCGHWTSTAMP = flag %d, tx_typ %d, rx_fltr %d\n",
+			printk("_ptp_set_ts_ioctl/SIOCSHWTSTAMP = flag %d, tx_typ %d, rx_fltr %d\n",
 				pbi->tstamp_config.flags,
 				pbi->tstamp_config.tx_type,
 				pbi->tstamp_config.rx_filter);
