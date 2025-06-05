@@ -519,27 +519,28 @@ void on_core_init_ptp_rate(struct board_info *db)
 // SKBTX_SCHED_TSTAMP = 1 << 6,
 void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
 {
+	db->pbi.ptp_skp_hw_tstamp = 0;
+	
 #if 0
-	ptp_board_info_t *pbi = &db->pbi;
 	/* Use: enum hwtstamp_tx_types
 	 */
+
 	/* When S/W TSTAMP, from ever (H/W TSTAMP) and (S/W TSTAMP) not clear this 'tx_type', then do , will hurt !!!
 	 */
-	if (pbi->tstamp_config.tx_type &
+	if (db->pbi.tstamp_config.tx_type &
 	    (HWTSTAMP_TX_ON | HWTSTAMP_TX_ONESTEP_SYNC)) {
 		.................... //can do
 	}
 
-	//	if (!pbi->tstamp_config.tx_type)
+	//	if (!db->pbi.tstamp_config.tx_type)
 	//		return;
 #endif
-
+	
 	/* Use: skb->tx_flags, is better~
 	 */
 	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
 		return;
 
-	db->pbi.ptp_skp_hw_tstamp = 0;
 	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
 		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
 		db->pbi.ptp_skp_hw_tstamp = 1;
@@ -551,46 +552,48 @@ void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
 //SKBTX_HW_TSTAMP
 void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 {
-	ptp_board_info_t *pbi = &db->pbi;
-	struct ptp_header *ptp_hdr;
-
-	//	if (!pbi->tstamp_config.tx_type)
-	//		return;
-
-	/* Use: skb->tx_flags, is better~
-	 */
-	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
-		return;
-
 	db->tcr_wr = TCR_TXREQ; // TCR register value
 	db->pbi.ptp_chip_push_tstamp = 0;
 
-	ptp_hdr = get_ptp_header(skb);
-	if (ptp_hdr) {
-		//db->ptp_step = dm9051_ptp_step(db, skb);
-		//if (db->ptp_step) {
-		u8 message_type = get_ptp_message_type005(ptp_hdr); //for tx send
-		//if (dm9051_ptp_frame(db, skb)) {
-		//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-		if (is_ptp_sync_packet(message_type)) {
-			pbi->ptp_step = (u8)(ptp_hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
-			if (pbi->ptp_step == 2) {
-#if defined(DMPLUG_PTP_TWO_STEP)
-				db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
-				db->pbi.ptp_chip_push_tstamp = 1;
-#else
-#warning "dm9051 NOT Add H/W PTP TWO STEP.."
-#endif
-			} else {
-				db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
-			}
-		} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
-			db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
-		//}
-		//}
-		//return message_type;
-		//}
-	}
+	do {
+		ptp_board_info_t *pbi = &db->pbi;
+		struct ptp_header *ptp_hdr;
+
+		//	if (!pbi->tstamp_config.tx_type)
+		//		return;
+
+		/* Use: skb->tx_flags, is better~
+		 */
+		if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
+			return;
+
+		ptp_hdr = get_ptp_header(skb);
+		if (ptp_hdr) {
+			//db->ptp_step = dm9051_ptp_step(db, skb);
+			//if (db->ptp_step) {
+			u8 message_type = get_ptp_message_type005(ptp_hdr); //for tx send
+			//if (dm9051_ptp_frame(db, skb)) {
+			//if (likely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+			if (is_ptp_sync_packet(message_type)) {
+				pbi->ptp_step = (u8)(ptp_hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
+				if (pbi->ptp_step == 2) {
+	#if defined(DMPLUG_PTP_TWO_STEP)
+					db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
+					db->pbi.ptp_chip_push_tstamp = 1;
+	#else
+	#warning "dm9051 NOT Add H/W PTP TWO STEP.."
+	#endif
+				} else {
+					db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
+				}
+			} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
+				db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
+			//}
+			//}
+			//return message_type;
+			//}
+		}
+	} while(0);
 }
 
 //SKBTX_HW_TSTAMP
