@@ -24,7 +24,7 @@
 
 /* Macro for already known platforms
  */
-//#define PLUG_ENABLE_INT
+#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT39)
 
@@ -66,16 +66,9 @@
 
 /* Extended support header files
  */
-/*#include extern/dm9051_ptp1.h */ //(extern/)
-/*#include extern/extern.h */ //(extern/)
 /*#include plug/plug.h */ //(plug/)
-
-/* Extended using header files
- */
-//#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
-////#include "extern/extern.h"
-//#include "plug/plug.h"
-////#include "plug/dm9051_plug.h" /* '_INT_TWO_STEP' definition insided */
+/*#include extern/extern.h */ //(extern/)
+/*#include extern/dm9051_ptp1.h */ //(extern/)
 
 /* Device identification
  */
@@ -212,7 +205,6 @@
 /* 0x5E */
 #define MBNDRY_BYTE		BIT(7)
 #define MBNDRY_WORD		0
-#define BOUND_CONF_BIT		MBNDRY_BYTE
 //0xFE
 #define ISR_MBS			BIT(7)
 #define ISR_LNKCHG		BIT(5)
@@ -243,12 +235,6 @@
 #define SCAN_BH(dw)		((dw & GENMASK(15, 8)) >> 8)
 #define	DM_RXHDR_SIZE		sizeof(struct dm9051_rxhdr)
 #define TIMES_TO_RST		10
-
-/* Helper functions */
-static inline struct board_info *to_dm9051_board(struct net_device *ndev)
-{
-	return netdev_priv(ndev);
-}
 
 /* Feature control flags */
 #define FORCE_SILENCE_RXB               0
@@ -434,9 +420,6 @@ struct board_info {
 	struct ptp_board_info pbi; //=struct ptp_board_info pbi;
 };
 
-//#if (defined(__x86_64__) || defined(__aarch64__))
-//#endif //__x86_64__ || __aarch64__
-
 #if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
 #ifdef CONFIG_64BIT // 64-bit specific code
 #pragma message("dm9051 @ __aarch64__")
@@ -453,11 +436,6 @@ struct board_info {
 #endif
 #endif //__x86_64__ || __aarch64__
 
-//#if (defined(__x86_64__) || defined(__aarch64__))
-//#endif //__x86_64__ || __aarch64__
-
-//#define INFO_CPU_BITS(dev, db)			// mandetory un-define and coerced
-//#define INFO_CPU_MIS_CONF(dev, db)			// will re-define conditionally
 #if (defined(__x86_64__) || defined(__aarch64__))
 #define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051: __aarch64__")
 #ifdef CONFIG_64BIT
@@ -476,8 +454,7 @@ struct board_info {
 
 /* macro fakes
  */
-
-//info INFO_FAK1
+//info INFO_FAK0
 #define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051: POL")
 #define INFO_INT_CLKOUT(dev, db)
 #define INFO_INT_TWOSTEP(dev, db)
@@ -493,14 +470,11 @@ struct board_info {
 #define INFO_CONTI(dev, db)
 #define INFO_LPBK_TST(dev, db)
 
-//#define INFO_FAK0
-
+//#define INFO_FAK1
 #if defined(DMPLUG_INT)
 #undef INFO_INT
 #define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051: INT")
 #endif
-
-//#define INFO messages
 
 #if defined(INT_CLKOUT)
 #undef INFO_INT_CLKOUT
@@ -517,6 +491,12 @@ struct board_info {
 #define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051: WD")
 #endif
 
+/* Helper functions */
+static inline struct board_info *to_dm9051_board(struct net_device *ndev)
+{
+	return netdev_priv(ndev);
+}
+
 static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
 {
 	if (dev)
@@ -524,85 +504,6 @@ static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *
 	else if (db)
 		netif_info(db, drv, db->ndev, "%s\n", str);
 }
-
-//static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
-//{
-//	INFO_CPU_BITS(dev, db);
-//	INFO_CPU_MIS_CONF(dev, db);
-
-//	INFO_INT(dev, db);
-//	INFO_INT_CLKOUT(dev, db);
-//	INFO_INT_TWOSTEP(dev, db);
-//	INFO_WD(dev, db);
-//	INFO_PTP(dev, db);
-//	INFO_PPS(dev, db);
-//	INFO_PTP2S(dev, db);
-//	INFO_LOG(dev, db);
-//	INFO_BMCR_WR(dev, db);
-//	INFO_MRR_WR(dev, db);
-//	INFO_BUSWORK(dev, db);
-//	INFO_CONTI(dev, db);
-//	INFO_LPBK_TST(dev, db);
-//}
-
-#if 1
-/* raw fake encrypt */
-#define BUS_SETUP(db)	0		//empty(NoError)
-#define BUS_OPS(db, buff, crlen)	//empty
-/* raw fake loop_test */
-#define dmplug_loop_test(b)	0
-#endif
-
-#if 1
-//[fake]
-#define SHOW_DEVLOG_REFER_BEGIN(d, b)
-#define SHOW_LOG_REFER_BEGIN(b)
-#define SHOW_DEVLOG_MODE(d)
-#define SHOW_DEVLOG_XMIT_THRD0(b)
-#define SHOW_DEVLOG_XMIT_THRD(b)
-#define SHOW_DEVLOG_XMIT_IN(b)
-#define SHOW_DEVLOG_TCR_WR(b)
-
-#define SHOW_PLAT_MODE(d)
-#define SHOW_MAC(b, a)
-#define SHOW_MONITOR_RXC(b, n)
-
-#define DMPLUG_LOG_RXPTR(h,b) //#define dm9051_headlog_regs(h, b, r1, r2)
-#define DMPLUG_LOG_PHY(b) //#define dm9051_phyread_headlog(h, b, r)	(void)0
-
-#define dm9051_dump_data1(b, p, l)
-#define monitor_rxb0(b, rb)
-#endif
-
-/* raw fake main */
-/* fake int */
-#define FREE_IRQ(b)					//empty
-#define CANCEL_DLY_IRQ2(b)			//empty
-#define DM9051_PROBE_DLYSETUP(b)	//empty
-
-/* fake clkout */
-#define INT_SET_CLKOUT(db)	0		//empty(NoError)
-
-/* fake int */
-#define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
-#define dm9051_int2_irq(d,h)	VOID_REQUEST_FUNCTION
-
-/* poll fake */
-#define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
-#define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
-
-/* fake raw rx mode */
-#define SET_RCR(b)				dm9051_set_rcr(b)
-#define PAD_LEN(len)			len
-
-/* fake raw tx mode */
-#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
-#define TX_SEND(b,s)			dm9051_tx_send(b,s)
-
-/* raw(fake) bmsr_wr */
-#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
-#define LINKCHG_UPSTART(b) dm9051_all_upfcr(b)
-
 
 int get_dts_irqf(struct board_info *db);
 //static void USER_CONFIG(struct device *dev, struct board_info *db, char *str); //implement in dm9051.c
@@ -745,14 +646,39 @@ enum dm_req_support {
 /* MCO, re-direct, Verification */
 #define MCO //(MainCoerce)
 
+/* fake int */
+#define FREE_IRQ(b)					//empty
+#define CANCEL_DLY_IRQ2(b)			//empty
+#define DM9051_PROBE_DLYSETUP(b)	//empty
+
+/* fake int */
+#define dm9051_int2_supp()		NOT_REQUEST_SUPPORTTED
+#define dm9051_int2_irq(d,h)	VOID_REQUEST_FUNCTION
+
+/* poll fake */
+#define dm9051_poll_supp()		NOT_REQUEST_SUPPORTTED
+#define dm9051_poll_sch(d)		VOID_REQUEST_FUNCTION
+
+/* fake clkout */
+#define INT_SET_CLKOUT(db)	0		//empty(NoError)
+
+/* fake raw rx mode */
+#define BOUND_CONF_BIT			MBNDRY_BYTE
+#define SET_RCR(b)				dm9051_set_rcr(b)
+#define PAD_LEN(len)			len
+
+/* fake raw tx mode */
+#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
+#define TX_SEND(b,s)			dm9051_tx_send(b,s)
+
 #if defined(MCO) && defined(DMPLUG_INT)
 #undef FREE_IRQ
 #define FREE_IRQ(db) dm9051_thread_irq_free(db->ndev) //dm9051_free_irqworks(db);
 #if defined(INT_TWO_STEP)
-#undef DM9051_PROBE_DLYSETUP
-#define DM9051_PROBE_DLYSETUP(b) PROBE_INT2_DLY_SETUP(b)
 #undef CANCEL_DLY_IRQ2
 #define CANCEL_DLY_IRQ2(db) cancel_delayed_work_sync(&db->irq_servicep) //of dm9051_thread_irq_free(ndev)
+#undef DM9051_PROBE_DLYSETUP
+#define DM9051_PROBE_DLYSETUP(b) PROBE_INT2_DLY_SETUP(b)
 #endif
 #endif
 
@@ -831,5 +757,37 @@ struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb);
 
 /* ptp sw */
 #define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)
+
+/* plug/ macro fakes
+ */
+
+/* raw fake encrypt */
+#define BUS_SETUP(db)	0		//empty(NoError)
+#define BUS_OPS(db, buff, crlen)	//empty
+/* raw fake loop_test */
+#define dmplug_loop_test(b)	0
+
+//[fake]
+#define SHOW_DEVLOG_REFER_BEGIN(d, b)
+#define SHOW_LOG_REFER_BEGIN(b)
+#define SHOW_DEVLOG_MODE(d)
+#define SHOW_DEVLOG_XMIT_THRD0(b)
+#define SHOW_DEVLOG_XMIT_THRD(b)
+#define SHOW_DEVLOG_XMIT_IN(b)
+#define SHOW_DEVLOG_TCR_WR(b)
+
+#define SHOW_PLAT_MODE(d)
+#define SHOW_MAC(b, a)
+#define SHOW_MONITOR_RXC(b, n)
+
+#define DMPLUG_LOG_RXPTR(h,b) //#define dm9051_headlog_regs(h, b, r1, r2)
+#define DMPLUG_LOG_PHY(b) //#define dm9051_phyread_headlog(h, b, r)	(void)0
+
+#define dm9051_dump_data1(b, p, l)
+#define monitor_rxb0(b, rb)
+
+/* raw(fake) bmsr_wr */
+#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
+#define LINKCHG_UPSTART(b) dm9051_all_upfcr(b)
 
 #endif /* _DM9051_H_ */
