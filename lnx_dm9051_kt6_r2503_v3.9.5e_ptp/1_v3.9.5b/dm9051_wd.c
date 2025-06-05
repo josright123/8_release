@@ -37,7 +37,7 @@
 #include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
 
-//#define SECOND_MAIN //(sec)
+// #define SECOND_MAIN //(sec)
 #include "dm9051.h"
 /*#include extern/extern.h */ //(extern/)
 #include "extern/extern.h"
@@ -46,35 +46,38 @@
 /* Tx 'wb' do skb protect */
 #define DM9051_SKB_PROTECT
 
-//#ifdef DMPLUG_WD
-//#endif
+// #ifdef DMPLUG_WD
+// #endif
 
 #ifdef DM9051_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 {
-	struct sk_buff *skb2;
+    struct sk_buff *skb2;
 
-	skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
-	if (skb2) {
-		dev_kfree_skb(skb);
-		return skb2;
-	}
+    skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
+    if (skb2)
+    {
+        dev_kfree_skb(skb);
+        return skb2;
+    }
 
-	//.netif_warn(db, tx_queued, db->ndev, "[WB_SUPPORT] warn on len %d, skb_copy_expand get memory leak!\n", skb->len);
-	return skb;
+    //.netif_warn(db, tx_queued, db->ndev, "[WB_SUPPORT] warn on len %d, skb_copy_expand get memory leak!\n", skb->len);
+    return skb;
 }
 #endif
 
 /* particulars, wb mode*/
 struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
 {
-	db->data_len = skb->len;
-	db->pad = (skb->len & 1) ? 1 : 0; //db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
+    db->data_len = skb->len;
+
+    db->pad = (skb->len & 1) ? 1 : 0; // db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
+
 #ifdef DM9051_SKB_PROTECT
-	if (db->pad)
-		skb = EXPAND_SKB(skb, db->pad);
+    if (db->pad)
+        skb = EXPAND_SKB(skb, db->pad);
 #endif
-	return skb;
+    return skb;
 }
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, wd-function");
