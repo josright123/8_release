@@ -1637,51 +1637,54 @@ struct sk_buff *dm9051_tx_data_len(struct board_info *db, struct sk_buff *skb)
 	return skb;
 }
 
-int TX_SENDC(struct board_info *db, struct sk_buff *skb)
+/* In case conti- only simple tx_mode2_conti_tcr() and dev_kfree_skb()
+ * In case wd- pad and len and/or expend skb plus dm9051_tx_send() and dev_kfree_skb() to expended skb
+ * In case bd- less operate only dm9051_tx_send() and dev_kfree_skb()
+ */
+static int dm9051_single_tx_skb(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
-	//int in_progress;
-	//unsigned char flags = skb_shinfo(skb)->tx_flags; //to debug show
-	//in_progress = ...
-	//if (in_progress)
-	//	flags = skb_shinfo(skb)->tx_flags;
-
 #if defined(STICK_SKB_CHG_NOTE)
 	skb = TX_PAD(db, skb); //db->data_len = skb->len; db->pad = ..
-
-	/* 6.0 tx ptpc */
-	DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
-
-	/* 6 tx ptpc */
-	DMPLUG_PTP_TX_PRE(db, skb);
-
-	ret = TX_SEND(db, skb);
-
-	/* 6.1 tx ptpc */
-	DMPLUG_TX_EMIT_TS(db, skb);
-
-	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb.
 #endif
-
-	SHOW_DEVLOG_TCR_WR(db);
+	/* what you send skb,
+	 * free this skb
+	 */
+	ret = TX_SEND(db, skb);
+	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb.
 	return ret;
 }
+
+//static int TX_SENDC(struct board_info *db, struct sk_buff *skb)
+//{
+//	int ret;
+//	ret = TX_SEND(db, skb);
+//	return ret;
+//}
 
 int dm9051_loop_tx(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
 	int ntx = 0;
+	int ret;
 
 	while (!skb_queue_empty(&db->txq)) {
 		struct sk_buff *skb = skb_dequeue(&db->txq);
 		if (skb) {
-			if (TX_SENDC(db, skb)) {
+			/* 6 tx ptpc */
+			DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
+			DMPLUG_PTP_TX_PRE(db, skb);
+			ret = dm9051_single_tx_skb(db, skb);
+			if (ret) {
 				db->bc.tx_err_counter++;
 				if (netif_queue_stopped(ndev) &&
 				    (skb_queue_len(&db->txq) < DM9051_TX_QUE_LO_WATER))
 					netif_wake_queue(ndev);
 				return ntx;
 			}
+			/* 6.1 tx ptpc */
+			DMPLUG_TX_EMIT_TS(db, skb);
+			SHOW_DEVLOG_TCR_WR(db);
 			ntx++;
 		}
 
