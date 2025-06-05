@@ -45,10 +45,10 @@
 #endif
 
 #if defined(DMPLUG_INT) && defined(MAIN_DATA)
-#pragma message("dm9051 INT")
+#pragma message("dm9051: INT")
 #endif
 #if !defined(DMPLUG_INT) && defined(MAIN_DATA)
-#pragma message("dm9051 POL")
+#pragma message("dm9051: POL")
 #endif
 #if defined(INT_CLKOUT) && defined(MAIN_DATA)
 #warning "INT: INT_CLKOUT"
@@ -58,10 +58,10 @@
 #endif
 
 #if defined(DMPLUG_WD) && defined(MAIN_DATA)
-#pragma message("dm9051 WD")
+#pragma message("dm9051: WD")
 #endif
 #if !defined(DMPLUG_WD) && defined(MAIN_DATA)
-#pragma message("dm9051 BD")
+#pragma message("dm9051: BD")
 #endif
 
 /* Extended support header files
@@ -146,7 +146,7 @@
 //0x02
 #define TCR_TS_EN               BIT(7)  //_15888_
 #define TCR_DIS_JABBER_TIMER	BIT(6)  //for Jabber Packet support 
-#define TCR_TXREQ		BIT(0)
+#define TCR_TXREQ				BIT(0)
 #define TCR_TS_EMIT		TCR_DIS_JABBER_TIMER
 //0x05
 #define RCR_DIS_WATCHDOG_TIMER	BIT(6)   //for Jabber Packet support 
@@ -459,16 +459,16 @@ struct board_info {
 //#define INFO_CPU_BITS(dev, db)			// mandetory un-define and coerced
 //#define INFO_CPU_MIS_CONF(dev, db)			// will re-define conditionally
 #if (defined(__x86_64__) || defined(__aarch64__))
-#define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch64__")
+#define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051: __aarch64__")
 #ifdef CONFIG_64BIT
 #define INFO_CPU_MIS_CONF(dev, db)			// silence conditionally
 #else // config !64-bit specific code
-#define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051 CONFIG_32BIT (kconfig) ?!")
+#define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051: CONFIG_32BIT (kconfig) ?!")
 #endif
 #elif (!defined(__x86_64__) && !defined(__aarch64__))
-#define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051 __aarch32__")
+#define INFO_CPU_BITS(dev, db)				USER_CONFIG(dev, db, "dm9051: __aarch32__")
 #ifdef CONFIG_64BIT // config 64-bit specific code
-#define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051 CONFIG_64BIT(kconfig) ?!")
+#define INFO_CPU_MIS_CONF(dev, db)			USER_CONFIG(dev, db, "dm9051: CONFIG_64BIT(kconfig) ?!")
 #else
 #define INFO_CPU_MIS_CONF(dev, db)			// silence conditionally
 #endif
@@ -478,10 +478,10 @@ struct board_info {
  */
 
 //info INFO_FAK1
-#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 POL")
+#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051: POL")
 #define INFO_INT_CLKOUT(dev, db)
 #define INFO_INT_TWOSTEP(dev, db)
-#define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051 BD")
+#define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051: BD")
 #define INFO_PTP(dev, db)
 #define INFO_PPS(dev, db)
 #define INFO_PTP2S(dev, db)
@@ -489,6 +489,7 @@ struct board_info {
 #define INFO_LOG(dev, db)
 #define INFO_BMCR_WR(dev, db)
 #define INFO_MRR_WR(dev, db)
+#define INFO_BUSWORK(dev, db)
 #define INFO_CONTI(dev, db)
 #define INFO_LPBK_TST(dev, db)
 
@@ -496,7 +497,7 @@ struct board_info {
 
 #if defined(DMPLUG_INT)
 #undef INFO_INT
-#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051 INT")
+#define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051: INT")
 #endif
 
 //#define INFO messages
@@ -513,7 +514,7 @@ struct board_info {
 
 #if defined(DMPLUG_WD)
 #undef INFO_WD
-#define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051 WD")
+#define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051: WD")
 #endif
 
 static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
@@ -539,6 +540,7 @@ static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *
 //	INFO_LOG(dev, db);
 //	INFO_BMCR_WR(dev, db);
 //	INFO_MRR_WR(dev, db);
+//	INFO_BUSWORK(dev, db);
 //	INFO_CONTI(dev, db);
 //	INFO_LPBK_TST(dev, db);
 //}

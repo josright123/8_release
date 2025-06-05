@@ -57,6 +57,7 @@ static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *d
 	INFO_LOG(dev, db);
 	INFO_BMCR_WR(dev, db);
 	INFO_MRR_WR(dev, db);
+	INFO_BUSWORK(dev, db);
 	INFO_CONTI(dev, db);
 	INFO_LPBK_TST(dev, db);
 }

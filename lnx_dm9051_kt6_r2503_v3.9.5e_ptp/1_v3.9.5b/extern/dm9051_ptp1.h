@@ -29,12 +29,12 @@
 #endif
 
 /* "dm9051 PTP TWO STEP"
- * Always define and/to support is recommanded
+ * Always essential (Mandartory recommanded)
  * (if not support, after the master send sync, NO follow up can be available to send.)
  */
-#define PLUG_PTP_TWO_STEP //(tested)
+#define PLUG_PTP_TWO_STEP //(always essential)
 #ifdef PLUG_PTP_TWO_STEP
-#define DMPLUG_PTP_TWO_STEP //(Two step support)
+#define DMPLUG_PTP_TWO_STEP //(always essential)(HW Two step support)
 #endif
 #endif
 
@@ -55,19 +55,19 @@
  */
 #if defined(DMPLUG_PTP) && defined(MAIN_DATA)
 //#warning "dm9051 PTP"
-#pragma message("dm9051 H/W PTP")
+#pragma message("dm9051: H/W PTP")
 #endif
 #if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
 //#warning "dm9051 PPS"
-#pragma message("dm9051 H/W PPS")
+#pragma message("dm9051: H/W PPS")
 #endif
 #if defined(DMPLUG_PTP_TWO_STEP) && defined(MAIN_DATA)
 //#warning "dm9051 PTP TWO STEP"
-#pragma message("dm9051 H/W PTP TWO STEP")
+#pragma message("dm9051: H/W PTP TWO STEP")
 #endif
 
 #if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
-#pragma message("dm9051 S/W PTP (TWO STEP)")
+#pragma message("dm9051: S/W PTP (TWO STEP)")
 #endif
 
 //#ifdef DMPLUG_PTP .. #endif
@@ -341,20 +341,20 @@ void dm9051_ptp_tx_swtstamp(struct sk_buff *skb);
 /* ptp, clkout, 2step */
 #if defined(DMPLUG_PTP)
 #undef INFO_PTP
-#define INFO_PTP(dev, db)					USER_CONFIG(dev, db, "dm9051 H/W PTP")
+#define INFO_PTP(dev, db)					USER_CONFIG(dev, db, "dm9051: H/W PTP")
 #endif
 #if defined(DMPLUG_PPS_CLKOUT)
 #undef INFO_PPS
-#define INFO_PPS(dev, db)					USER_CONFIG(dev, db, "dm9051 H/W PPS")
+#define INFO_PPS(dev, db)					USER_CONFIG(dev, db, "dm9051: H/W PPS")
 #endif
 #if defined(DMPLUG_PTP_TWO_STEP)
 #undef INFO_PTP2S
-#define INFO_PTP2S(dev, db)					USER_CONFIG(dev, db, "dm9051 H/W PTP TWO STEP")
+#define INFO_PTP2S(dev, db)					USER_CONFIG(dev, db, "dm9051: H/W PTP TWO STEP")
 #endif
 
 #if defined(DMPLUG_PTP_SW)
 #undef INFO_PTP_SW_2S
-#define INFO_PTP_SW_2S(dev, db)				USER_CONFIG(dev, db, "dm9051 S/W PTP (TWO STEP)")
+#define INFO_PTP_SW_2S(dev, db)				USER_CONFIG(dev, db, "dm9051: S/W PTP (TWO STEP)")
 #endif
 
 #endif //_DM9051_PTPC_H_
