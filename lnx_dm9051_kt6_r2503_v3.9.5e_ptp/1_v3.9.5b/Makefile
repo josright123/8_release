@@ -11,28 +11,17 @@
 
 #(call from kernel build system)
 obj-m	:=	dm9051a.o
+
+dm9051a-objs := dm9051.o dm9051_poll.o
+
 #dm9051a-objs := dm9051.o dm9051_open.o ((dm9051_conti.o)) (dm9051_ptpd.o) (dm9051_crypt.o)
 #dm9051a-objs := dm9051.o dm9051_open.o dm9051_ptpd.o
 #dm9051a-objs := dm9051.o
-
 #dm9051a-objs := dm9051.o 
 #dm9051a-objs := dm9051_ptpd.o
 #dm9051a-objs := dm9051_poll.o
 #dm9051a-objs := dm9051.o dm9051_poll.o plug/dm9051_log.o dm9051_ptp1.o dm9051_ptp2.o
 #dm9051a-objs := plug/dm9051_log.o
-dm9051a-objs := dm9051.o dm9051_poll.o dm9051_wd.o extern/dm9051_log.o extern/dm9051_ptp1.o extern/dm9051_ptp2.o plug/dm9051_lpbk_test.o
-#dm9051a-objs := dm9051.o _in_devel/dm9051_ptp1.o _in_devel/dm9051_ptp2.o
-#dm9051a-objs := + _in_devel/dm9051_ptp1.o _in_devel/dm9051_ptp2.o
-
-#dm9051a-objs := dm9051.o
-#dm9051a-objs := dm9051.o dm9051_int2.o
-#dm9051a-objs := dm9051.o dm9051_ptpd.o dm9051_bmsr.o dm9051_poll.o dm9051_int2.o plug/dm9051_log.o
-#dm9051a-objs := dm9051.o dm9051_ptpd.o dm9051_poll.o dm9051_int2.o dm9051_bmsr.o
-
-# dm9051_open.o
-# dm9051_ptpd.o
-# dm9051_conti.o
-#
 #dm9051a-objs := _dm9051_monitor.o
 #dm9051a-objs := dm9051.o dm9051_proc.o dm9051_adv.o
 #else

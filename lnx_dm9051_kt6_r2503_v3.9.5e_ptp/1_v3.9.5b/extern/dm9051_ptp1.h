@@ -175,30 +175,30 @@ int is_ptp_delayreq_packet(u8 msgtype);
 #if 1
 //struct board_info;
 
-#define PTP_VER(b)
-#define PTP_VER_SOFTWARE(b)
+//#define PTP_VER(b)
+//#define PTP_VER_SOFTWARE(b)
 
-#define PTP_NEW(d)				0
-#define PTP_INIT_RCR(d)
-#define PTP_INIT(d)
-#define PTP_END(d)
-#define PTP_ETHTOOL_INFO(s)
-#define PTP_STATUS_BITS(b)			RSR_ERR_BITS
-#define PTP_NETDEV_IOCTL(s)
-#define PTP_AT_RATE(b)
+//#define PTP_NEW(d)				0
+//#define PTP_INIT_RCR(d)
+//#define PTP_INIT(d)
+//#define PTP_END(d)
+//#define PTP_ETHTOOL_INFO(s)
+//#define PTP_STATUS_BITS(b)			RSR_ERR_BITS
+//#define PTP_NETDEV_IOCTL(s)
+//#define PTP_AT_RATE(b)
 
 /* ptp2 */
-#define DMPLUG_RX_TS_MEM(b)		0
-#define DMPLUG_RX_HW_TS_SKB(b,s)
-#define SHOW_ptp_rx_packet_monitor(b,s)
-#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
+//#define DMPLUG_RX_TS_MEM(b)		0
+//#define DMPLUG_RX_HW_TS_SKB(b,s)
+//#define SHOW_ptp_rx_packet_monitor(b,s)
+//#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
 
-#define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	//0
-#define DMPLUG_PTP_TX_PRE(b,s)
-#define DMPLUG_TX_EMIT_TS(b,s)
+//#define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	//0
+//#define DMPLUG_PTP_TX_PRE(b,s)
+//#define DMPLUG_TX_EMIT_TS(b,s)
 
 /* ptp sw */
-#define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)
+//#define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)
 #endif
 
 //#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)

@@ -28,9 +28,9 @@
 #define MAIN_DATA
 //#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 #include "dm9051.h"
-#include "extern/extern.h"
-#include "plug/plug.h"
-#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
+//#include "extern/extern.h"
+//#include "plug/plug.h"
+//#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
 
