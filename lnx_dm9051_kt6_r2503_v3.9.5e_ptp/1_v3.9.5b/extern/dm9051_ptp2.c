@@ -25,7 +25,7 @@
 //#include "dm9051_ptpd.h"
 #include "../dm9051.h"
 /*#include extern/extern.h */ //(extern/)
-#include "extern.h"
+//#include "extern.h"
 #include "dm9051_ptp1.h" /* 0.1 ptpc */
 
 #ifdef DMPLUG_PTP_SW

@@ -44,6 +44,47 @@
 #define DMPLUG_WD //(wd mode)
 #endif
 
+/*#include extern/dm9051_ptp1.h */ //(extern/)
+/*#define DMPLUG_PTP */ //(ptp1588)
+/*#define DMPLUG_PPS_CLKOUT */ //(ptp1588 pps)
+/*#define DMPLUG_PTP_TWO_STEP */ //(ptp1588 two step)
+
+/* Capabilities:
+ *        hardware-transmit
+ *        hardware-receive
+ *        hardware-raw-clock
+ */
+#define PLUG_PTP_1588
+#ifdef PLUG_PTP_1588
+#define DMPLUG_PTP //(ptp 1588)
+
+#define PLUG_PTP_PPS
+#ifdef PLUG_PTP_PPS
+#define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
+#endif
+
+/* "dm9051 PTP HW TWO STEP", Always essential (Mandartory recommanded) */
+#define PLUG_PTP_TWO_STEP //(always essential)(if not support, master NO follow up send)
+#ifdef PLUG_PTP_TWO_STEP
+#define DMPLUG_PTP_TWO_STEP //(HW Two step)
+#endif
+#endif //(ptp 1588)
+
+/*Capabilities:
+ *        software-transmit
+ *        software-receive
+ *        software-system-clock
+ *PTP Hardware Clock: none
+ *Hardware Transmit Timestamp Modes: none
+ *Hardware Receive Filter Modes: none
+ */
+#define PLUG_PTP_1588_SW
+#ifdef PLUG_PTP_1588_SW
+#define DMPLUG_PTP_SW //(ptp 1588 S/W)
+#endif //(ptp 1588 S/W)
+
+/* pragma
+ */
 #if defined(DMPLUG_INT) && defined(MAIN_DATA)
 #pragma message("dm9051: INT")
 #endif
@@ -64,11 +105,30 @@
 #pragma message("dm9051: BD")
 #endif
 
+/* pragma, Extended support header files
+ */
+
+#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
+//#warning "dm9051 PTP"
+#pragma message("dm9051: H/W PTP")
+#endif
+#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
+//#warning "dm9051 PPS"
+#pragma message("dm9051: H/W PPS")
+#endif
+#if defined(DMPLUG_PTP_TWO_STEP) && defined(MAIN_DATA)
+//#warning "dm9051 PTP TWO STEP"
+#pragma message("dm9051: H/W PTP TWO STEP")
+#endif
+
+#if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
+#pragma message("dm9051: S/W PTP (TWO STEP)")
+#endif
+
 /* Extended support header files
  */
 /*#include plug/plug.h */ //(plug/)
 /*#include extern/extern.h */ //(extern/)
-/*#include extern/dm9051_ptp1.h */ //(extern/)
 
 /* Device identification
  */
@@ -470,7 +530,7 @@ struct board_info {
 #define INFO_CONTI(dev, db)
 #define INFO_LPBK_TST(dev, db)
 
-//#define INFO_FAK1
+/* main */
 #if defined(DMPLUG_INT)
 #undef INFO_INT
 #define INFO_INT(dev, db)					USER_CONFIG(dev, db, "dm9051: INT")
@@ -489,6 +549,25 @@ struct board_info {
 #if defined(DMPLUG_WD)
 #undef INFO_WD
 #define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051: WD")
+#endif
+
+/* ptp, clkout, 2step */
+#if defined(DMPLUG_PTP)
+#undef INFO_PTP
+#define INFO_PTP(dev, db)					USER_CONFIG(dev, db, "dm9051: H/W PTP")
+#endif
+#if defined(DMPLUG_PPS_CLKOUT)
+#undef INFO_PPS
+#define INFO_PPS(dev, db)					USER_CONFIG(dev, db, "dm9051: H/W PPS")
+#endif
+#if defined(DMPLUG_PTP_TWO_STEP)
+#undef INFO_PTP2S
+#define INFO_PTP2S(dev, db)					USER_CONFIG(dev, db, "dm9051: H/W PTP TWO STEP")
+#endif
+
+#if defined(DMPLUG_PTP_SW)
+#undef INFO_PTP_SW_2S
+#define INFO_PTP_SW_2S(dev, db)				USER_CONFIG(dev, db, "dm9051: S/W PTP (TWO STEP)")
 #endif
 
 /* Helper functions */
@@ -729,7 +808,8 @@ int dm9051_int_clkout(struct board_info *db);
 struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb);
 #endif
 
-/* extern/ macro fakes
+/* ptp/ macro fakes
+ * extern/ macro fakes
  */
 //struct board_info;
 
@@ -789,5 +869,136 @@ struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb);
 /* raw(fake) bmsr_wr */
 #define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
 #define LINKCHG_UPSTART(b) dm9051_all_upfcr(b)
+
+
+/* #define CO1 //(functions re-construct)
+ */
+
+/* ptp sw */
+#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+#undef PTP_ETHTOOL_INFO
+#define PTP_ETHTOOL_INFO(s)		s = dm9051_ts_info,
+#undef PTP_NETDEV_IOCTL
+#define PTP_NETDEV_IOCTL(s)		s = dm9051_ptp_netdev_ioctl,
+#endif
+
+/* ethtool_ops
+ * netdev_ops
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
+static inline int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
+#else
+static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
+#endif
+{
+	struct board_info *db = netdev_priv(net_dev);
+	ptp_board_info_t *pbi = &db->pbi;
+
+//Spenser - get phc_index
+	//info->phc_index = -1;
+	info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
+
+	info->so_timestamping = 0;
+#if 1
+#if defined(DMPLUG_PTP_SW)
+	/* .software ts */
+	info->so_timestamping |=
+		SOF_TIMESTAMPING_TX_SOFTWARE |
+		SOF_TIMESTAMPING_RX_SOFTWARE |
+		SOF_TIMESTAMPING_SOFTWARE;
+#endif
+#endif
+#if defined(DMPLUG_PTP)
+	info->so_timestamping |=
+		SOF_TIMESTAMPING_TX_HARDWARE |
+		SOF_TIMESTAMPING_RX_HARDWARE |
+		SOF_TIMESTAMPING_RAW_HARDWARE;
+#endif
+
+#if defined(DMPLUG_PTP)
+	info->tx_types =
+		BIT(HWTSTAMP_TX_ONESTEP_SYNC) |
+		BIT(HWTSTAMP_TX_OFF) |
+		BIT(HWTSTAMP_TX_ON);
+#endif
+
+#if defined(DMPLUG_PTP)
+	info->rx_filters =
+		BIT(HWTSTAMP_FILTER_NONE) |
+		BIT(HWTSTAMP_FILTER_ALL);
+#endif
+	return 0;
+}
+
+int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
+
+/* ptp sw */
+#if defined(DMPLUG_PTP_SW)
+/* re-direct ptp sw */
+#undef PTP_VER_SOFTWARE
+#define PTP_VER_SOFTWARE(b)	ptp_ver_software(b)
+
+#undef DMPLUG_PTP_TX_TIMESTAMPING_SW
+#define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)	dm9051_ptp_tx_swtstamp(s)
+#endif
+
+/* ptp */
+#if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1) (re-direct ptpc) */
+#undef PTP_VER
+#undef PTP_NEW
+#undef PTP_INIT_RCR
+#undef PTP_INIT
+#undef PTP_END
+#undef PTP_STATUS_BITS
+#undef PTP_AT_RATE
+
+#define PTP_VER(b)				ptp_ver(b)
+#define PTP_NEW(d) 				ptp_new(d)
+#define PTP_INIT_RCR(d) 		ptp_init_rcr(d)
+#define PTP_INIT(d) 			ptp_init(d)
+#define PTP_END(d) 				ptp_end(d)
+#define PTP_STATUS_BITS(b)		ptp_status_bits(db)
+#define PTP_AT_RATE(b)			on_core_init_ptp_rate(b)
+
+#undef DMPLUG_RX_TS_MEM
+#undef DMPLUG_RX_HW_TS_SKB
+#undef SHOW_ptp_rx_packet_monitor
+#undef DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER
+
+#define DMPLUG_RX_TS_MEM(b)				dm9051_read_ptp_tstamp_mem(b)
+#define DMPLUG_RX_HW_TS_SKB(b,s) 		dm9051_ptp_rx_hwtstamp(b,s)
+#define SHOW_ptp_rx_packet_monitor(b,s) dm9051_ptp_rx_packet_monitor(b,s)
+#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b) \
+		dm9051_ptp_rxc_from_master(b)
+
+#undef DMPLUG_PTP_TX_IN_PROGRESS
+#undef DMPLUG_PTP_TX_PRE
+#undef DMPLUG_TX_EMIT_TS
+
+#define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	dm9051_ptp_tx_in_progress(b,s)
+#define DMPLUG_PTP_TX_PRE(b,s)			dm9051_ptp_txreq(b,s)
+#define DMPLUG_TX_EMIT_TS(b,s)			dm9051_ptp_txreq_hwtstamp(b,s)
+#endif
+
+void ptp_ver_software(struct board_info *db);
+void dm9051_ptp_tx_swtstamp(struct sk_buff *skb);
+
+void ptp_ver(struct board_info *db);
+int ptp_new(struct board_info *db);
+void ptp_init_rcr(struct board_info *db);
+void ptp_init(struct board_info *db);
+void ptp_end(struct board_info *db);
+u8 ptp_status_bits(struct board_info *db);
+void on_core_init_ptp_rate(struct board_info *db);
+
+
+int dm9051_read_ptp_tstamp_mem(struct board_info *db);
+void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_rxc_from_master(struct board_info *db);
+
+void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 
 #endif /* _DM9051_H_ */
