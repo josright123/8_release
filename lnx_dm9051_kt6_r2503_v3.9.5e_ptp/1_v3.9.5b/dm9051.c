@@ -1611,11 +1611,11 @@ int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 }
 #endif
 
-static int dm9051_single_tx1(struct board_info *db, struct sk_buff *skb)
-{
-	int ret = dm9051_tx_send(db, skb);
-	return ret;
-}
+//static int dm9051_single_tx1(struct board_info *db, struct sk_buff *skb)
+//{
+//	int ret = dm9051_tx_send(db, skb);
+//	return ret;
+//}
 
 int dm9051_loop_tx(struct board_info *db)
 {

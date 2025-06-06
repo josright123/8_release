@@ -141,7 +141,7 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeou
 }
 
 
-int dm9051_single_tx_conti(struct board_info *db, struct sk_buff *skb)
+int dm9051_tx_send_conti(struct board_info *db, struct sk_buff *skb)
 {
 	int ret = TX_MODE2_CONTI_TCR(db, skb, param->tx_timeout_us);
 	return ret;

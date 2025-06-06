@@ -44,9 +44,7 @@
 //#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 
 /* Tx 'wb' do skb protect */
-//#define DM9051_SKB_PROTECT
-//#ifdef DM9051_SKB_PROTECT
-//#endif
+#define DM9051_SKB_PROTECT
 
 // #ifdef DMPLUG_WD
 // #endif
@@ -86,12 +84,14 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
     return skb;
 }
 
-int dm9051_single_tx_wd(struct board_info *db, struct sk_buff *skb)
+int dm9051_tx_send2(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 
+#ifdef DM9051_SKB_PROTECT
 	if (db->pad)
 		skb = EXPAND_SKB(skb);
+#endif
 
 	ret = dm9051_tx_send(db, skb);
 	return ret;
