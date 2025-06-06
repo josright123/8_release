@@ -149,7 +149,6 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeou
 int dm9051_single_tx_conti(struct board_info *db, struct sk_buff *skb)
 {
 	int ret = TX_MODE2_CONTI_TCR(db, skb, param->tx_timeout_us);
-
 	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb.
 	return ret;
 }

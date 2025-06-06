@@ -1613,10 +1613,7 @@ int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 
 static int dm9051_single_tx1(struct board_info *db, struct sk_buff *skb)
 {
-	int ret;
-
-	//dm9051_tx_len1(db);
-	ret = dm9051_tx_send(db, skb);
+	int ret = dm9051_tx_send(db, skb);
 	dev_kfree_skb(skb);
 	return ret;
 }
