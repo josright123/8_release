@@ -51,8 +51,6 @@ extern const struct plat_cnf_info *plat_cnf;
 /*
  * mac loopback test:
  */
-
-//static int dm9051_single_tx(struct board_info *db, u8 *p);
 //static int dm9051_req_tx(struct board_info *db);
 //static int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t features);
 //static int trap_rxb(struct board_info *db, unsigned int *prxbyte);
@@ -302,66 +300,7 @@ int test_loop_back(struct board_info *db)
 	dump_regs(db);
 
 	//SENDC
-#if 0
-//	printk("send_bytes 10\n"); //dm9.Monitor
-//buf[0] = 0x01;
-//buf[1] = 0x40;
-//buf[2] = 0x0a;
-//buf[3] = 0x00;
-//	db->pad = 0;
-//	db->data_len = 10;
-//	ret = dm9051_single_tx(db, buf);
-//	if (ret)
-//		return ret;
-
-//	db->tcr_wr = TCR_TXREQ; //pre-defined
-//	ret = dm9051_req_tx(db);
-//	if (ret)
-//		return ret;
-
-//	printk("poll nsr\n");
-//	ret = dm9051_nsr_poll(db);
-//	if (ret)
-//		return ret;
-
-//	dump_regs(db);
-#endif
-
 	//SENDC
-#if 0
-//for (b = 1; b <= 256; b++) {
-//	buf[b-1] = (u8) b;
-//}
-
-//	db->pad = 0;
-//	db->data_len = 128; //10; //64;
-//	printk("Send_bytes %u\n", db->data_len);
-//	dm9051_write_mem(db, DM_SPI_MWCMD, buf, db->data_len); //'!wb'
-//	if (ret)
-//		return ret;
-//	ret = dm9051_set_regs(db, DM9051_TXPLL, &db->data_len, 2);
-//	if (ret)
-//		return ret;
-////	ret = dm9051_single_tx(db, buf);
-////	if (ret)
-////		return ret;
-
-//	ret = dm9051_set_reg(db, DM9051_TCR, TCR_TXREQ); //base with TCR_TXREQ
-//	if (ret)
-//		return ret;
-////	db->tcr_wr = TCR_TXREQ; //pre-defined
-////	ret = dm9051_req_tx(db);
-////	if (ret)
-////		return ret;
-
-//	//printk("Poll nsr\n");
-//	ret = dm9051_nsr_poll(db);
-//	if (ret)
-//		return ret;
-
-//	dump_regs(db);
-#endif
-
 #if 1
 	for (b = 1; b <= 256; b++) {
 		buf[b - 1] = (u8) b;
@@ -372,7 +311,7 @@ int test_loop_back(struct board_info *db)
 		db->data_len = data_len[i]; //66;
 		db->tcr_wr = TCR_TXREQ; //pre-defined
 		printk("Send_bytes %u\n", db->data_len);
-		ret = dm9051_single_tx(db, buf);
+		ret = dm9051_mem_tx(db, buf);
 		if (ret)
 			return ret;
 

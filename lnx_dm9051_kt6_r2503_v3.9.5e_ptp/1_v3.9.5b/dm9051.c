@@ -1602,7 +1602,7 @@ void dm9051_tx_len1(struct board_info *db)
 	db->pad = 0;
 }
 
-int dm9051_single_tx(struct board_info *db, u8 *p)
+int dm9051_mem_tx(struct board_info *db, u8 *p)
 {
 	int ret = dm9051_nsr_poll(db);
 	if (ret)
@@ -1622,22 +1622,7 @@ int dm9051_req_tx(struct board_info *db)
 
 int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 {
-	/*
-	 * #define EXPEND_LEN(datlen,pd) (datlen + pd)
-	 * #define WRITE_SKB(db,p,len) dm9051_write_mem_cache(db,p,len)
-	 * if (!plat_cnf->skb_wb_mode) {
-	 *   ret = WRITE_SKB(db, skb, skb->len);
-	 *   ret = dm9051_single_tx(db, skb->len);
-	 * }
-	 * else {
-	 *   pad = ...
-	 *   skb = _EXPAND_SKB(skb, pad);
-	 *   ret = WRITE_SKB(db, skb, EXPEND_LEN(data_len, pad);
-	 *   ret = dm9051_single_tx(db, skb, data_len, pad);
-	 * }
-	 * ret = dm9051_req_tx(db);
-	 */
-	int ret = dm9051_single_tx(db, skb->data);
+	int ret = dm9051_mem_tx(db, skb->data);
 	if (ret)
 		return ret;
 

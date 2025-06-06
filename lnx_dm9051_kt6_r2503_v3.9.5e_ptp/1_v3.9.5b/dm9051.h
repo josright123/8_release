@@ -620,7 +620,7 @@ int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t featu
 int rx_head_break(struct board_info *db);
 int trap_clr(struct board_info *db);
 int trap_rxb(struct board_info *db, unsigned int *prxbyte);
-int dm9051_single_tx(struct board_info *db, u8 *p);
+int dm9051_mem_tx(struct board_info *db, u8 *p);
 int dm9051_loop_rx(struct board_info *db);
 int dm9051_loop_tx(struct board_info *db);
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
