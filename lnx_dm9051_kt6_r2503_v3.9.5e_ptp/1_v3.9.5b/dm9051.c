@@ -22,19 +22,14 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-/*#include extern/dm9051_ptp1.h */ //(extern/)
+#define MAIN_DATA
+#include "dm9051.h"
 /*#include extern/extern.h */ //(extern/)
 /*#include plug/plug.h */ //(plug/)
-#define MAIN_DATA
-//#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
-#include "dm9051.h"
-//#include "extern/extern.h"
-//#include "plug/plug.h"
-//#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
+/*#include extern/dm9051_ptp1.h */ //(extern/) //(0.1 ptpc )
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
 
-//#define STICK_SKB_CHG_NOTE
 #define DM9051_INTR_BACKUP // #ifdef DM9051_INTR_BACKUP .. #endif //instead more backup.
 #define DM9051_NORM_BACKUP_TX // 
 
@@ -1644,23 +1639,16 @@ struct sk_buff *dm9051_tx_data_len(struct board_info *db, struct sk_buff *skb)
 static int dm9051_single_tx_skb(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
-//#if defined(STICK_SKB_CHG_NOTE) .. #endif
-	skb = TX_PAD(db, skb); //db->data_len = skb->len; db->pad = .. 
 
+	skb = TX_PAD(db, skb); //db->data_len = skb->len; db->pad = .. 
 	/* what you send skb,
 	 * free this skb
 	 */
+
 	ret = TX_SEND(db, skb);
 	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb.
 	return ret;
 }
-
-//static int TX_SENDC(struct board_info *db, struct sk_buff *skb)
-//{
-//	int ret;
-//	ret = TX_SEND(db, skb);
-//	return ret;
-//}
 
 int dm9051_loop_tx(struct board_info *db)
 {

@@ -70,7 +70,8 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb)
 {
     db->data_len = skb->len;
-
+	db->pad = 0;
+	
     db->pad = (skb->len & 1) ? 1 : 0; // db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
 
 #ifdef DM9051_SKB_PROTECT
