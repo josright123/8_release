@@ -80,8 +80,8 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 
 #undef single_tx_len
 #define single_tx_len(b)
-#undef single_tx_skb
-#define single_tx_skb(b,s)		dm9051_single_tx_conti(b,s) //conti
+#undef dm9051_single_tx
+#define dm9051_single_tx(b,s)		dm9051_single_tx_conti(b,s) //conti
 int dm9051_single_tx_conti(struct board_info *db, struct sk_buff *skb);
 
 //#undef TX_SEND
