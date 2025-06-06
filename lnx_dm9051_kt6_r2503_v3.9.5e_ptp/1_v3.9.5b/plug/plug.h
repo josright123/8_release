@@ -72,14 +72,18 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 
 //[conti, overlay]
 #if defined(PCO) && defined(DMPLUG_CONTI) && defined(MAIN_DATA)
-#undef TX_PAD
-#define TX_PAD(b,s) s //~wd~bd, cause by tc-conti 
+//#undef TX_PAD
+//#define TX_PAD(b,s) s //~wd~bd, cause by tc-conti 
 
 #undef SET_RCR
 #define SET_RCR(b) TX_MOTE2_CONTI_RCR(b)
 
-#undef TX_SEND
-#define TX_SEND(b,s) TX_MODE2_CONTI_TCR(b,s, param->tx_timeout_us) /* _us is global */
+#undef single_tx_skb
+#define single_tx_skb(b,s)		dm9051_single_tx_conti(b,s) //conti
+int dm9051_single_tx_conti(struct board_info *db, struct sk_buff *skb);
+
+//#undef TX_SEND
+//#define TX_SEND(b,s) TX_MODE2_CONTI_TCR(b,s, param->tx_timeout_us) /* _us is global */
 
 //implement in plug/
 int TX_MOTE2_CONTI_RCR(struct board_info *db);

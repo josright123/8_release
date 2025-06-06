@@ -22,6 +22,8 @@
 #include <linux/ptp_clock_kernel.h>
 #include "dm9051.h"
 
+extern const struct param_config *param;
+
 /*
  * Conti:
  */
@@ -142,6 +144,16 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeou
 
 	return ret;
 }
+
+
+int dm9051_single_tx_conti(struct board_info *db, struct sk_buff *skb)
+{
+	int ret = TX_MODE2_CONTI_TCR(db, skb, param->tx_timeout_us);
+
+	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb.
+	return ret;
+}
+
 #endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, TX conti plug-in"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");

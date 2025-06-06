@@ -39,22 +39,36 @@
 
 // #define SECOND_MAIN //(sec)
 #include "dm9051.h"
-/*#include extern/extern.h */ //(extern/)
-#include "extern/extern.h"
-#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
+
+//#include "extern/extern.h"
+//#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 
 /* Tx 'wb' do skb protect */
-#define DM9051_SKB_PROTECT
+//#define DM9051_SKB_PROTECT
+//#ifdef DM9051_SKB_PROTECT
+//#endif
 
 // #ifdef DMPLUG_WD
 // #endif
 
-#ifdef DM9051_SKB_PROTECT
-static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
-{
-    struct sk_buff *skb2;
+/* particulars, wb mode*/
+//struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb)
+//{
+//    db->data_len = skb->len;
+//	db->pad = 0;
+//	
+//    db->pad = (skb->len & 1) ? 1 : 0; // db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
 
-    skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
+//#ifdef DM9051_SKB_PROTECT
+//    if (db->pad)
+//        skb = EXPAND_SKB(skb, db->pad);
+//#endif
+//    return skb;
+//}
+
+static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
+{
+    struct sk_buff *skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
     if (skb2)
     {
         dev_kfree_skb(skb);
@@ -64,21 +78,28 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
     //.netif_warn(db, tx_queued, db->ndev, "[WB_SUPPORT] warn on len %d, skb_copy_expand get memory leak!\n", skb->len);
     return skb;
 }
-#endif
 
-/* particulars, wb mode*/
-struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb)
+static int TX_WD_HIT(struct board_info *db)
 {
-    db->data_len = skb->len;
-	db->pad = 0;
-	
-    db->pad = (skb->len & 1) ? 1 : 0; // db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
+	if (skb->len & 1)
+		db->pad = 1;
+		return 1;
+	}
+	return 0;
+}
 
-#ifdef DM9051_SKB_PROTECT
-    if (db->pad)
-        skb = EXPAND_SKB(skb, db->pad);
-#endif
-    return skb;
+int dm9051_single_tx_wd(struct board_info *db, struct sk_buff *skb)
+{
+	int ret;
+
+	dm9051_tx_len_bd(db);
+
+	if (TX_WD_HIT(db))
+		skb = EXPAND_SKB(skb);
+
+	ret = dm9051_tx_send(db, skb);
+	dev_kfree_skb(skb);
+	return ret;
 }
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, wd-function");

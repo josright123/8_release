@@ -614,6 +614,7 @@ int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *buff,
 			  size_t crlen);
 
 /* operation functions */
+void dm9051_tx_len_bd(struct board_info *db);
 int dm9051_req_tx(struct board_info *db);
 int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t features);
 int rx_head_break(struct board_info *db);
@@ -747,8 +748,9 @@ enum dm_req_support {
 #define PAD_LEN(len)			len
 
 /* fake raw tx mode */
-#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
-#define TX_SEND(b,s)			dm9051_tx_send(b,s)
+#define single_tx_skb(b,s)		dm9051_single_tx_bd(b,s) //~wd, i.e. bd (byte mode)
+//#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
+//#define TX_SEND(b,s)			dm9051_tx_send(b,s)
 
 #if defined(MCO) && defined(DMPLUG_INT)
 #undef FREE_IRQ
@@ -803,9 +805,14 @@ int dm9051_int_clkout(struct board_info *db);
 #define BOUND_CONF_BIT						MBNDRY_WORD
 #undef PAD_LEN
 #define PAD_LEN(len)						(len & 1) ? len + 1 : len
-#undef TX_PAD
-#define TX_PAD(b,s)						dm9051_expand_skb_txreq(b,s) //wd
-struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb);
+
+#undef single_tx_skb
+#define single_tx_skb(b,s)					dm9051_single_tx_wd(b,s) //wd
+int dm9051_single_tx_wd(struct board_info *db, struct sk_buff *skb);
+
+//#undef TX_PAD
+//#define TX_PAD(b,s)							dm9051_expand_skb_txreq(b,s) //wd
+//struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb);
 #endif
 
 /* ptp/ macro fakes
