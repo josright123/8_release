@@ -1565,7 +1565,7 @@ int dm9051_loop_rx(struct board_info *db)
 }
 
 #if defined(DM9051_NORM_BACKUP_TX) // -#if !defined(_DMPLUG_CONTI) -#endif
-void dm9051_tx_len1(struct board_info *db)
+void dm9051_tx_len1(struct board_info *db, struct sk_buff *skb)
 {
 	db->data_len = skb->len;
 	db->pad = 0;
@@ -1618,7 +1618,7 @@ int dm9051_loop_tx(struct board_info *db)
 			/* 6 tx ptpc */
 			DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
 			DMPLUG_PTP_TX_PRE(db, skb);
-			single_tx_len(db);
+			single_tx_len(db, skb);
 			single_tx_pad_update(db);
 			ret = dm9051_single_tx(db, skb); //dm9051_single_tx_skb(db, skb);
 			if (ret) {

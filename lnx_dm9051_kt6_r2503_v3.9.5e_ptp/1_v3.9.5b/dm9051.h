@@ -614,7 +614,7 @@ int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *buff,
 			  size_t crlen);
 
 /* operation functions */
-void dm9051_tx_len1(struct board_info *db);
+void dm9051_tx_len1(struct board_info *db, struct sk_buff *skb);
 int dm9051_req_tx(struct board_info *db);
 int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t features);
 int rx_head_break(struct board_info *db);
@@ -748,7 +748,7 @@ enum dm_req_support {
 #define PAD_LEN(len)			len
 
 /* fake raw tx mode */
-#define single_tx_len(b)		dm9051_tx_len1(b)
+#define single_tx_len(b,s)		dm9051_tx_len1(b,s)
 #define single_tx_pad_update(b)
 #define dm9051_single_tx(b,s)		dm9051_tx_send(b,s) //~wd, i.e. bd (byte mode)
 //#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
