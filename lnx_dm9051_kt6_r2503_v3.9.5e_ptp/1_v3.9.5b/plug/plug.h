@@ -77,19 +77,18 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 
 #undef SET_RCR
 #define SET_RCR(b) TX_MOTE2_CONTI_RCR(b)
+int TX_MOTE2_CONTI_RCR(struct board_info *db);
 
 #undef single_tx_len
 #define single_tx_len(b)
+
 #undef dm9051_single_tx
 #define dm9051_single_tx(b,s)		dm9051_tx_send_conti(b,s) //conti
 int dm9051_tx_send_conti(struct board_info *db, struct sk_buff *skb);
 
 //#undef TX_SEND
 //#define TX_SEND(b,s) TX_MODE2_CONTI_TCR(b,s, param->tx_timeout_us) /* _us is global */
-
-//implement in plug/
-int TX_MOTE2_CONTI_RCR(struct board_info *db);
-int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
+//int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us);
 #endif
 
 //[test loopback, overlay]

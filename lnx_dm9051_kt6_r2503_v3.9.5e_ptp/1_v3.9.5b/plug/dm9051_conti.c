@@ -124,9 +124,26 @@ static int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb, u64 tx_timeo
 	return ret;
 }
 
-int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us)
+//int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeout_us)
+//{
+//	int ret = TX_OPS_CONTI(db, skb, tx_timeout_us); //skb->data, data_len); //'double_wb'
+//	if (ret == 0) {
+//		ret = dm9051_req_tx(db);
+//		if (ret == 0) {
+//			struct net_device *ndev = db->ndev;
+//			ndev->stats.tx_bytes += skb->len;
+//			ndev->stats.tx_packets++;
+//		}
+//	}
+
+//	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb.
+//	return ret;
+//}
+
+
+int dm9051_tx_send_conti(struct board_info *db, struct sk_buff *skb)
 {
-	int ret = TX_OPS_CONTI(db, skb, tx_timeout_us); //skb->data, data_len); //'double_wb'
+	int ret = TX_OPS_CONTI(db, skb, param->tx_timeout_us); //skb->data, data_len); //'double_wb'
 	if (ret == 0) {
 		ret = dm9051_req_tx(db);
 		if (ret == 0) {
@@ -137,13 +154,6 @@ int TX_MODE2_CONTI_TCR(struct board_info *db, struct sk_buff *skb, u64 tx_timeou
 	}
 
 	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb.
-	return ret;
-}
-
-
-int dm9051_tx_send_conti(struct board_info *db, struct sk_buff *skb)
-{
-	int ret = TX_MODE2_CONTI_TCR(db, skb, param->tx_timeout_us);
 	return ret;
 }
 
