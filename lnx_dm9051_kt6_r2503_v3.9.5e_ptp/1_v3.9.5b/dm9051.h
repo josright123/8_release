@@ -748,6 +748,7 @@ enum dm_req_support {
 #define PAD_LEN(len)			len
 
 /* fake raw tx mode */
+#define single_tx_len(b)		dm9051_tx_len1(b)
 #define single_tx_skb(b,s)		dm9051_single_tx1(b,s) //~wd, i.e. bd (byte mode)
 //#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
 //#define TX_SEND(b,s)			dm9051_tx_send(b,s)

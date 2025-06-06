@@ -1570,32 +1570,6 @@ int dm9051_loop_rx(struct board_info *db)
 }
 
 #if defined(DM9051_NORM_BACKUP_TX) // -#if !defined(_DMPLUG_CONTI) -#endif
-
-/* In case conti- only simple tx_mode2_conti_tcr() and dev_kfree_skb()
- * In case wd- pad and len and/or expend skb plus dm9051_tx_send() and dev_kfree_skb() to expended skb
- * In case bd- less operate only dm9051_tx_send() and dev_kfree_skb()
- */
-//static int dm9051_single_tx_skb(struct board_info *db, struct sk_buff *skb)
-//{
-//	int ret;
-
-//	skb = TX_PAD(db, skb); //db->data_len = skb->len; db->pad = .. 
-	/* what you send skb,
-	 * free this skb
-	 */
-
-//	ret = TX_SEND(db, skb);
-//	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb.
-//	return ret;
-//}
-
-//struct sk_buff *dm9051_tx_data_len(struct board_info *db, struct sk_buff *skb)
-//{
-//	db->data_len = skb->len;
-//	db->pad = 0;
-//	return skb;
-//}
-
 void dm9051_tx_len1(struct board_info *db)
 {
 	db->data_len = skb->len;
@@ -1641,7 +1615,7 @@ static int dm9051_single_tx1(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 
-	dm9051_tx_len1(db);
+	//dm9051_tx_len1(db);
 	ret = dm9051_tx_send(db, skb);
 	dev_kfree_skb(skb);
 	return ret;
@@ -1659,6 +1633,7 @@ int dm9051_loop_tx(struct board_info *db)
 			/* 6 tx ptpc */
 			DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
 			DMPLUG_PTP_TX_PRE(db, skb);
+			single_tx_len(db);
 			ret = single_tx_skb(db, skb); //dm9051_single_tx_skb(db, skb);
 			if (ret) {
 				db->bc.tx_err_counter++;
