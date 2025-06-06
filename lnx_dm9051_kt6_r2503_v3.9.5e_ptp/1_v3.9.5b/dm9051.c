@@ -1596,7 +1596,7 @@ int dm9051_loop_rx(struct board_info *db)
 //	return skb;
 //}
 
-void dm9051_tx_len_bd(struct board_info *db)
+void dm9051_tx_len1(struct board_info *db)
 {
 	db->data_len = skb->len;
 	db->pad = 0;
@@ -1622,8 +1622,6 @@ int dm9051_req_tx(struct board_info *db)
 
 int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 {
-	int ret;
-
 	/*
 	 * #define EXPEND_LEN(datlen,pd) (datlen + pd)
 	 * #define WRITE_SKB(db,p,len) dm9051_write_mem_cache(db,p,len)
@@ -1639,15 +1637,12 @@ int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 	 * }
 	 * ret = dm9051_req_tx(db);
 	 */
-	do {
-		ret = dm9051_single_tx(db, skb->data);
-		if (ret)
-			break;
+	int ret = dm9051_single_tx(db, skb->data);
+	if (ret)
+		return ret;
 
-		ret = dm9051_req_tx(db);
-	} while (0);
-
-	if (!ret) {
+	ret = dm9051_req_tx(db);
+	if (ret == 0) {
 		struct net_device *ndev = db->ndev;
 		ndev->stats.tx_bytes += db->data_len;
 		ndev->stats.tx_packets++;
@@ -1657,11 +1652,11 @@ int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 }
 #endif
 
-static int dm9051_single_tx_bd(struct board_info *db, struct sk_buff *skb)
+static int dm9051_single_tx1(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 
-	dm9051_tx_len_bd(db);
+	dm9051_tx_len1(db);
 	ret = dm9051_tx_send(db, skb);
 	dev_kfree_skb(skb);
 	return ret;

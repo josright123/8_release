@@ -92,7 +92,7 @@ int dm9051_single_tx_wd(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 
-	dm9051_tx_len_bd(db);
+	dm9051_tx_len1(db);
 
 	if (TX_WD_HIT(db))
 		skb = EXPAND_SKB(skb);
