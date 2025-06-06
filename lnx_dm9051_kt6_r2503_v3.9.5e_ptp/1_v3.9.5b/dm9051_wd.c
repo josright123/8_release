@@ -94,7 +94,6 @@ int dm9051_single_tx_wd(struct board_info *db, struct sk_buff *skb)
 		skb = EXPAND_SKB(skb);
 
 	ret = dm9051_tx_send(db, skb);
-	dev_kfree_skb(skb);
 	return ret;
 }
 

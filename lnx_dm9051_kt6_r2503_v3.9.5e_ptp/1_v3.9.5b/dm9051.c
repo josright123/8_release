@@ -1597,16 +1597,16 @@ int dm9051_req_tx(struct board_info *db)
 int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 {
 	int ret = dm9051_mem_tx(db, skb->data);
-	if (ret)
-		return ret;
-
-	ret = dm9051_req_tx(db);
 	if (ret == 0) {
-		struct net_device *ndev = db->ndev;
-		ndev->stats.tx_bytes += db->data_len;
-		ndev->stats.tx_packets++;
+		ret = dm9051_req_tx(db);
+		if (ret == 0) {
+			struct net_device *ndev = db->ndev;
+			ndev->stats.tx_bytes += db->data_len;
+			ndev->stats.tx_packets++;
+		}
 	}
 
+	dev_kfree_skb(skb);
 	return ret;
 }
 #endif
@@ -1614,7 +1614,6 @@ int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 static int dm9051_single_tx1(struct board_info *db, struct sk_buff *skb)
 {
 	int ret = dm9051_tx_send(db, skb);
-	dev_kfree_skb(skb);
 	return ret;
 }
 
