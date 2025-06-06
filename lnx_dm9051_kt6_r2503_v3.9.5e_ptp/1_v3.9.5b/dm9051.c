@@ -34,7 +34,7 @@
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
 
-#define STICK_SKB_CHG_NOTE
+//#define STICK_SKB_CHG_NOTE
 #define DM9051_INTR_BACKUP // #ifdef DM9051_INTR_BACKUP .. #endif //instead more backup.
 #define DM9051_NORM_BACKUP_TX // 
 
@@ -1644,9 +1644,9 @@ struct sk_buff *dm9051_tx_data_len(struct board_info *db, struct sk_buff *skb)
 static int dm9051_single_tx_skb(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
-#if defined(STICK_SKB_CHG_NOTE)
-	skb = TX_PAD(db, skb); //db->data_len = skb->len; db->pad = ..
-#endif
+//#if defined(STICK_SKB_CHG_NOTE) .. #endif
+	skb = TX_PAD(db, skb); //db->data_len = skb->len; db->pad = .. 
+
 	/* what you send skb,
 	 * free this skb
 	 */

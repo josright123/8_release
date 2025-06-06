@@ -67,7 +67,7 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb, unsigned int pad)
 #endif
 
 /* particulars, wb mode*/
-struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb)
+struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb)
 {
     db->data_len = skb->len;
 

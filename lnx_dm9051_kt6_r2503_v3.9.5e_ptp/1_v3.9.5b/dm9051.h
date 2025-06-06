@@ -804,8 +804,8 @@ int dm9051_int_clkout(struct board_info *db);
 #undef PAD_LEN
 #define PAD_LEN(len)						(len & 1) ? len + 1 : len
 #undef TX_PAD
-#define TX_PAD(b,s)						dm9051_pad_txreq(b,s) //wd
-struct sk_buff *dm9051_pad_txreq(struct board_info *db, struct sk_buff *skb);
+#define TX_PAD(b,s)						dm9051_expand_skb_txreq(b,s) //wd
+struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb);
 #endif
 
 /* ptp/ macro fakes
