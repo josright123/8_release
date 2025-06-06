@@ -64,11 +64,10 @@
 //    return skb;
 //}
 
-void single_tx_pad_update_wb(struct board_info *db)
+void single_tx_pad_update_wb(struct board_info *db, struct sk_buff *skb)
 {
 	if (skb->len & 1)
 		db->pad = 1;
-	}
 }
 
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
@@ -86,15 +85,12 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
 
 int dm9051_tx_send2(struct board_info *db, struct sk_buff *skb)
 {
-	int ret;
-
 #ifdef DM9051_SKB_PROTECT
 	if (db->pad)
 		skb = EXPAND_SKB(skb);
 #endif
 
-	ret = dm9051_tx_send(db, skb);
-	return ret;
+	return dm9051_tx_send(db, skb);
 }
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, wd-function");

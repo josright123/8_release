@@ -39,7 +39,7 @@
 #endif
 #endif
 
-//#define PLUG_ENABLE_WD
+#define PLUG_ENABLE_WD
 #ifdef PLUG_ENABLE_WD
 #define DMPLUG_WD //(wd mode)
 #endif
@@ -616,6 +616,7 @@ int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *buff,
 /* operation functions */
 void dm9051_tx_len1(struct board_info *db, struct sk_buff *skb);
 int dm9051_req_tx(struct board_info *db);
+int dm9051_tx_send(struct board_info *db, struct sk_buff *skb);
 int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t features);
 int rx_head_break(struct board_info *db);
 int trap_clr(struct board_info *db);
@@ -749,7 +750,7 @@ enum dm_req_support {
 
 /* fake raw tx mode */
 #define single_tx_len(b,s)		dm9051_tx_len1(b,s)
-#define single_tx_pad_update(b)
+#define single_tx_pad_update(b,s)
 #define dm9051_single_tx(b,s)		dm9051_tx_send(b,s) //~wd, i.e. bd (byte mode)
 //#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
 //#define TX_SEND(b,s)			dm9051_tx_send(b,s)
@@ -809,8 +810,8 @@ int dm9051_int_clkout(struct board_info *db);
 #define PAD_LEN(len)						(len & 1) ? len + 1 : len
 
 #undef single_tx_pad_update
-#define single_tx_pad_update(b)				single_tx_pad_update_wb(b)
-void single_tx_pad_update_wb(struct board_info *db);
+#define single_tx_pad_update(b,s)				single_tx_pad_update_wb(b,s)
+void single_tx_pad_update_wb(struct board_info *db, struct sk_buff *skb);
 
 #undef dm9051_single_tx
 #define dm9051_single_tx(b,s)					dm9051_tx_send2(b,s) //wd
