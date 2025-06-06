@@ -1634,6 +1634,7 @@ int dm9051_loop_tx(struct board_info *db)
 			DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
 			DMPLUG_PTP_TX_PRE(db, skb);
 			single_tx_len(db);
+			single_tx_pad_update(db);
 			ret = single_tx_skb(db, skb); //dm9051_single_tx_skb(db, skb);
 			if (ret) {
 				db->bc.tx_err_counter++;

@@ -749,6 +749,7 @@ enum dm_req_support {
 
 /* fake raw tx mode */
 #define single_tx_len(b)		dm9051_tx_len1(b)
+#define single_tx_pad_update(b)
 #define single_tx_skb(b,s)		dm9051_single_tx1(b,s) //~wd, i.e. bd (byte mode)
 //#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
 //#define TX_SEND(b,s)			dm9051_tx_send(b,s)
@@ -806,6 +807,10 @@ int dm9051_int_clkout(struct board_info *db);
 #define BOUND_CONF_BIT						MBNDRY_WORD
 #undef PAD_LEN
 #define PAD_LEN(len)						(len & 1) ? len + 1 : len
+
+#undef single_tx_pad_update
+#define single_tx_pad_update(b)				single_tx_pad_update_wb(b)
+void single_tx_pad_update_wb(struct board_info *db);
 
 #undef single_tx_skb
 #define single_tx_skb(b,s)					dm9051_single_tx_wd(b,s) //wd

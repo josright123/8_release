@@ -66,6 +66,13 @@
 //    return skb;
 //}
 
+void single_tx_pad_update_wb(struct board_info *db)
+{
+	if (skb->len & 1)
+		db->pad = 1;
+	}
+}
+
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
 {
     struct sk_buff *skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
@@ -79,22 +86,13 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
     return skb;
 }
 
-static int TX_WD_HIT(struct board_info *db)
-{
-	if (skb->len & 1)
-		db->pad = 1;
-		return 1;
-	}
-	return 0;
-}
-
 int dm9051_single_tx_wd(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 
 	//dm9051_tx_len1(db);
 
-	if (TX_WD_HIT(db))
+	if (db->pad)
 		skb = EXPAND_SKB(skb);
 
 	ret = dm9051_tx_send(db, skb);
