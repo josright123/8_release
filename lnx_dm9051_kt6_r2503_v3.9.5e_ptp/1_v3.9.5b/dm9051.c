@@ -1075,7 +1075,7 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 #endif
 	/*PHY_LOG*/
 	DMPLUG_LOG_PHY(db);
-	/*rx-state and BMSRs*/
+	/*rx-ctrls and BMSRs*/
 	SHOW_RX_CTRLS(db);
 	data[7] = SHOW_BMSR(db);
 	data[8] = SHOW_BMSR(db);
@@ -1086,7 +1086,7 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	SHOW_ALL_USER_CONFIG(NULL, db);
 }
 
-static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_ops dm9051_ptpd_ethtool_ops
+static const struct ethtool_ops dm9051_ethtool_ops = {
 	.get_drvinfo = dm9051_get_drvinfo,
 	.get_link_ksettings = phy_ethtool_get_link_ksettings,
 	.set_link_ksettings = phy_ethtool_set_link_ksettings,
@@ -1102,8 +1102,7 @@ static const struct ethtool_ops dm9051_ethtool_ops = { //const struct ethtool_op
 	.get_strings = dm9051_get_strings,
 	.get_sset_count = dm9051_get_sset_count,
 	.get_ethtool_stats = dm9051_get_ethtool_stats,
-	/* 4 ptpc */
-	PTP_ETHTOOL_INFO(.get_ts_info) //_15888_
+	PTP_ETHTOOL_INFO(.get_ts_info) /* 4 ptpc */ //_15888_
 };
 
 /* all reinit while rx error found
@@ -1275,8 +1274,8 @@ int dm9051_all_upstart(struct board_info *db)
 		if (ret)
 			goto dnf_end;
 
-		//ret = dm9051_all_reinit(db); //up_restart
 #if 1
+		//ret = dm9051_all_reinit(db); //up_restart
 		ret = dm9051_core_reset(db);
 		if (ret)
 			goto dnf_end;
@@ -1431,12 +1430,9 @@ int rx_head_break(struct board_info *db)
 				   db->rxhdr.headbyte);
 		}
 
-		//if (db->rxhdr.status & RSR_ERR_BITS)
-		if (db->rxhdr.status & err_bits) {
+		if (db->rxhdr.status & err_bits) { //.if (db->rxhdr.status & RSR_ERR_BITS)
 			db->bc.status_err_counter++;
-		} else
-			//if (rxlen > DM9051_PKT_MAX)
-		{
+		} else {
 			db->bc.large_err_counter++;
 		}
 
@@ -1556,7 +1552,6 @@ int dm9051_loop_rx(struct board_info *db)
 #if 1
 	/* Ending rx-loop
 	 */
-	//int ntx;
 	sprintf(db->bc.head, "_THrd");
 	db->bc.mode = TX_THREAD;
 	ntx = dm9051_loop_tx(db); /* more tx better performance */
@@ -1611,12 +1606,6 @@ int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 }
 #endif
 
-//static int dm9051_single_tx1(struct board_info *db, struct sk_buff *skb)
-//{
-//	int ret = dm9051_tx_send(db, skb);
-//	return ret;
-//}
-
 int dm9051_loop_tx(struct board_info *db)
 {
 	struct net_device *ndev = db->ndev;
@@ -1655,7 +1644,6 @@ int dm9051_loop_tx(struct board_info *db)
 
 /* threaded_irq */
 /* schedule delay works */
-
 static void dm9051_rxctl_delay(struct work_struct *work)
 {
 	struct board_info *db = container_of(work, struct board_info, rxctrl_work);
@@ -1677,7 +1665,6 @@ out_unlock:
 }
 
 /* start_xmit schedule delay works */
-
 static void dm9051_tx_delay(struct work_struct *work)
 {
 	struct board_info *db = container_of(work, struct board_info, tx_work);
@@ -1727,8 +1714,6 @@ static void dm9051_tx_delay(struct work_struct *work)
 //}
 
 /* Interrupt: Interrupt work */
-/* dm9051 rx_threaded irq */
-
 void dm9051_thread_irq(void *pw) //.(macro)_rx_tx_plat() //dm9051_rx_threaded_irq()
 {
 	struct board_info *db = pw;
@@ -1784,10 +1769,10 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 }
 #endif
 
-#if defined(DM9051_INTR_BACKUP) // -#if defined(DMPLUG_INT) -#endif
 /*
  * Interrupt:
  */
+#if defined(DM9051_INTR_BACKUP) // -#if defined(DMPLUG_INT) -#endif
 static int dm9051_req_irq(struct board_info *db, irq_handler_t handler)
 {
 	struct spi_device *spi = db->spidev;
@@ -1820,7 +1805,7 @@ static int dm9051_threaded_irq(struct board_info *db, irq_handler_t handler)
 #endif
 }
 
-#if defined(DMPLUG_INT)
+#if defined(DMPLUG_INT) //defined(DM9051_INTR_BACKUP)
 static void dm9051_thread_irq_free(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
@@ -2081,7 +2066,7 @@ static void CHKSUM_PTP_NDEV(struct board_info *db, struct net_device *ndev)
 	if (plat_cnf->checksuming)
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 
-	/* 2 ptpc */
+	/* 2 ptpc, PTP_UPDATION(db) is better! */
 	if (PTP_NEW(db))
 		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
 
