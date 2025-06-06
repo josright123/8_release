@@ -1589,7 +1589,7 @@ int dm9051_req_tx(struct board_info *db)
 	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
 }
 
-int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
+int dm9051_mode_tx1(struct board_info *db, struct sk_buff *skb)
 {
 	int ret = dm9051_mem_tx(db, skb->data);
 	if (ret == 0) {
