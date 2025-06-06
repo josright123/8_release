@@ -627,6 +627,8 @@ int dm9051_loop_tx(struct board_info *db);
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 
+void dm9051_operation_set_extend(struct board_info *db, int val);
+
 /* Param structures
  */
 struct param_config {
@@ -830,7 +832,9 @@ int dm9051_tx_send2(struct board_info *db, struct sk_buff *skb);
 #define PTP_VER(b)
 #define PTP_VER_SOFTWARE(b)
 
-#define PTP_NEW(d)				0
+#define PTP_SETUP(b)				dm9051_operation_set_extend(b,0)
+#define PTP_CHECKSUM_LIMIT(b,nd)
+//#define PTP_NEW(d)				0
 #define PTP_INIT_RCR(d)
 #define PTP_INIT(d)
 #define PTP_END(d)
@@ -959,7 +963,9 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 /* ptp */
 #if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1) (re-direct ptpc) */
 #undef PTP_VER
-#undef PTP_NEW
+#undef PTP_SETUP
+#undef PTP_CHECKSUM_LIMIT
+//#undef PTP_NEW
 #undef PTP_INIT_RCR
 #undef PTP_INIT
 #undef PTP_END
@@ -967,7 +973,9 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 #undef PTP_AT_RATE
 
 #define PTP_VER(b)				ptp_ver(b)
-#define PTP_NEW(d) 				ptp_new(d)
+#define PTP_SETUP(b)				dm9051_operation_set_extend(b,1)
+#define PTP_CHECKSUM_LIMIT(b,nd)		dm9051_checksum_limit(b,nd)
+//#define PTP_NEW(d) 				ptp_new(d)
 #define PTP_INIT_RCR(d) 		ptp_init_rcr(d)
 #define PTP_INIT(d) 			ptp_init(d)
 #define PTP_END(d) 				ptp_end(d)
@@ -998,7 +1006,8 @@ void ptp_ver_software(struct board_info *db);
 void dm9051_ptp_tx_swtstamp(struct sk_buff *skb);
 
 void ptp_ver(struct board_info *db);
-int ptp_new(struct board_info *db);
+void dm9051_checksum_limit(struct board_info *db, struct net_device *ndev);
+//int ptp_new(struct board_info *db);
 void ptp_init_rcr(struct board_info *db);
 void ptp_init(struct board_info *db);
 void ptp_end(struct board_info *db);

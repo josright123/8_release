@@ -470,13 +470,13 @@ void ptp_ver(struct board_info *db)
 	}
 }
 
-int ptp_new(struct board_info *db)
-{
-	ptp_board_info_t *pbi = &db->pbi;
+//int ptp_new(struct board_info *db)
+//{
+//	ptp_board_info_t *pbi = &db->pbi;
 
-	pbi->ptp_enable = 1; // Enable PTP - For the driver whole operations
-	return 1;
-}
+//	pbi->ptp_enable = 1; // Enable PTP - For the driver whole operations
+//	return 1;
+//}
 void ptp_init_rcr(struct board_info *db)
 {
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)

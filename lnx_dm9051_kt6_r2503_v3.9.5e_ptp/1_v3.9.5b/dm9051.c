@@ -2060,19 +2060,6 @@ static const struct net_device_ops dm9051_netdev_ops = {
 #endif
 };
 
-static void CHKSUM_PTP_NDEV(struct board_info *db, struct net_device *ndev)
-{
-	/* Set default features */
-	if (plat_cnf->checksuming)
-		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
-
-	/* 2 ptpc, PTP_UPDATION(db) is better! */
-	if (PTP_NEW(db))
-		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
-
-	ndev->hw_features |= ndev->features;
-}
-
 static void dm9051_operation_clear(struct board_info *db)
 {
 	db->bc.status_err_counter = 0;
@@ -2103,6 +2090,34 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->xmit_ttc0 = 0;
 	db->xmit_thrd = 0;
 	db->xmit_ttc = 0;
+}
+
+void dm9051_operation_set_extend(struct board_info *db, int val)
+{
+	db->pbi.ptp_enable = val;
+}
+
+void dm9051_checksum_init(struct net_device *ndev)
+{
+	if (plat_cnf->checksuming)
+		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
+}
+
+void dm9051_checksum_limit(struct board_info *db, struct net_device *ndev)
+{
+	if (pbi->ptp_enable) //(PTP_NEW(db))
+		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
+}
+
+static void dm9051_operation_set_checksum(struct board_info *db, struct net_device *ndev)
+{
+	/* Set default features */
+	dm9051_checksum_init(ndev);
+
+	/* 2.0 ptpc, PTP_UPDATION(db) is better! */
+	PTP_CHECKSUM_LIMIT(db, ndev);
+
+	ndev->hw_features |= ndev->features;
 }
 
 static int dm9051_mdio_register(struct board_info *db)
@@ -2207,7 +2222,10 @@ static int dm9051_probe(struct spi_device *spi)
 	db->spidev = spi;
 	db->ndev = ndev;
 
-	CHKSUM_PTP_NDEV(db, ndev);
+	/* 2.0 ptpc */
+	/* 2.0 ptpc, PTP_UPDATION(db) is better! */
+	PTP_SETUP(db);
+	dm9051_operation_set_checksum(db, ndev);
 
 	ndev->netdev_ops = &dm9051_netdev_ops;
 	ndev->ethtool_ops = &dm9051_ethtool_ops;
