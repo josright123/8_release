@@ -1604,6 +1604,22 @@ int dm9051_tx_send(struct board_info *db, struct sk_buff *skb)
 	dev_kfree_skb(skb);
 	return ret;
 }
+
+int dm9051_packet_send(struct board_info *db, struct sk_buff *skb)
+{
+	//int ret;
+	/* 6 tx ptpc */
+	//DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
+	//DMPLUG_PTP_TX_PRE(db, skb);
+	single_tx_len(db, skb);
+	single_tx_pad_update(db, skb);
+	return dm9051_mode_tx(db, skb); //dm9051_single_tx_skb(db, skb);
+	//if (!ret) {
+	//	DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
+	//	SHOW_DEVLOG_TCR_WR(db);
+	//}
+	//return ret;
+}
 #endif
 
 int dm9051_loop_tx(struct board_info *db)
@@ -1615,12 +1631,7 @@ int dm9051_loop_tx(struct board_info *db)
 	while (!skb_queue_empty(&db->txq)) {
 		struct sk_buff *skb = skb_dequeue(&db->txq);
 		if (skb) {
-			/* 6 tx ptpc */
-			DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
-			DMPLUG_PTP_TX_PRE(db, skb);
-			single_tx_len(db, skb);
-			single_tx_pad_update(db, skb);
-			ret = dm9051_single_tx(db, skb); //dm9051_single_tx_skb(db, skb);
+			ret = dm9051_single_tx(db, skb);
 			if (ret) {
 				db->bc.tx_err_counter++;
 				if (netif_queue_stopped(ndev) &&
@@ -1628,9 +1639,6 @@ int dm9051_loop_tx(struct board_info *db)
 					netif_wake_queue(ndev);
 				return ntx;
 			}
-			/* 6.1 tx ptpc */
-			DMPLUG_TX_EMIT_TS(db, skb);
-			SHOW_DEVLOG_TCR_WR(db);
 			ntx++;
 		}
 

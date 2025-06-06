@@ -753,7 +753,8 @@ enum dm_req_support {
 /* fake raw tx mode */
 #define single_tx_len(b,s)		dm9051_tx_len1(b,s)
 #define single_tx_pad_update(b,s)
-#define dm9051_single_tx(b,s)		dm9051_tx_send(b,s) //~wd, i.e. bd (byte mode)
+#define dm9051_mode_tx(b,s)		dm9051_tx_send(b,s) //~wd, i.e. bd (byte mode)
+#define dm9051_single_tx(b,s)		dm9051_packet_send(b,s)
 //#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
 //#define TX_SEND(b,s)			dm9051_tx_send(b,s)
 
@@ -815,8 +816,8 @@ int dm9051_int_clkout(struct board_info *db);
 #define single_tx_pad_update(b,s)				single_tx_pad_update_wb(b,s)
 void single_tx_pad_update_wb(struct board_info *db, struct sk_buff *skb);
 
-#undef dm9051_single_tx
-#define dm9051_single_tx(b,s)					dm9051_tx_send2(b,s) //wd
+#undef dm9051_mode_tx
+#define dm9051_mode_tx(b,s)					dm9051_tx_send2(b,s) //wd
 int dm9051_tx_send2(struct board_info *db, struct sk_buff *skb);
 
 //#undef TX_PAD
@@ -996,10 +997,12 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 #undef DMPLUG_PTP_TX_IN_PROGRESS
 #undef DMPLUG_PTP_TX_PRE
 #undef DMPLUG_TX_EMIT_TS
+#undef dm9051_single_tx
 
 #define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	dm9051_ptp_tx_in_progress(b,s)
 #define DMPLUG_PTP_TX_PRE(b,s)			dm9051_ptp_txreq(b,s)
 #define DMPLUG_TX_EMIT_TS(b,s)			dm9051_ptp_txreq_hwtstamp(b,s)
+#define dm9051_single_tx(b,s)		dm9051_ptp_packet_send(b,s)
 #endif
 
 void ptp_ver_software(struct board_info *db);
@@ -1023,5 +1026,6 @@ void dm9051_ptp_rxc_from_master(struct board_info *db);
 void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
+int dm9051_ptp_packet_send(struct board_info *db, struct sk_buff *skb);
 
 #endif /* _DM9051_H_ */

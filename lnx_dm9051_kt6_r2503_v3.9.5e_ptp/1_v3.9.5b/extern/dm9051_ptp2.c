@@ -635,6 +635,22 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 //	}
 }
 
+int dm9051_ptp_packet_send(struct board_info *db, struct sk_buff *skb)
+{
+	int ret;
+	/* 6 tx ptpc */
+	DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
+	DMPLUG_PTP_TX_PRE(db, skb);
+	single_tx_len(db, skb);
+	single_tx_pad_update(db, skb);
+	ret = dm9051_mode_tx(db, skb); //dm9051_single_tx_skb(db, skb);
+	if (!ret) {
+		DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
+		SHOW_DEVLOG_TCR_WR(db);
+	}
+	return ret;
+}
+
 static u64 rx_extract_ts(u8 *rxTSbyte)
 {
 	//u8 temp[12];
