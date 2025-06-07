@@ -1,0 +1,38 @@
+# Commit Message Style Guide for DM9051A PTP Driver Project
+
+## Commit Message Format
+# <type>: <short summary>
+#
+# <detailed description with bullet points>
+
+## Commit Types
+# feat: New feature
+# fix: Bug fix
+# docs: Documentation only changes
+# style: Formatting changes (no code logic changes)
+# refactor: Code restructuring (no new features or fixes)
+# chore: Miscellaneous tasks (build scripts, etc.)
+# test: Adding or updating tests
+# perf: Performance improvements
+# ci: Continuous integration/configuration changes
+
+## Style Guidelines
+# - Header: Use imperative, lowercase verb, 50-72 characters, no period
+# - Body: Use bullet points, keep lines under 72 characters
+# - Leave blank line between header and body
+# - Professional tone, avoid subjective language
+
+## Examples
+# Good: "feat: add ptp timestamp support for dm9051a driver"
+# Good: "fix: resolve spi mutex lock issue in ptp module"
+# Good: "docs: update ptp configuration guide and examples"
+
+## Code Style (C99 Standard)
+# - Functions: snake_case with verb prefix (e.g., calculate_sum)
+# - Variables: snake_case with noun prefix (e.g., user_age)
+# - Constants/Macros: UPPER_CASE (e.g., MAX_SIZE)
+# - Structs/Enums: UpperCamelCase with _t suffix (e.g., StudentInfo_t)
+# - Pointers: p or ptr prefix (e.g., pNode, ptrBuffer)
+# - Indentation: 4 spaces, no tabs
+# - Line length: max 120 characters
+# - Comments: Doxygen format for functions
