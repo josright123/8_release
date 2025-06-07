@@ -635,7 +635,7 @@ void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 //	}
 }
 
-int dm9051_ptp_packet_send(struct board_info *db, struct sk_buff *skb)
+int dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 	/* 6 tx ptpc */
@@ -643,7 +643,7 @@ int dm9051_ptp_packet_send(struct board_info *db, struct sk_buff *skb)
 	DMPLUG_PTP_TX_PRE(db, skb);
 	single_tx_len(db, skb);
 	single_tx_pad_update(db, skb);
-	ret = dm9051_mode_tx(db, skb);
+	ret = dm9051_single_tx_mode(db, skb);
 	if (!ret) {
 		DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
 		SHOW_DEVLOG_TCR_WR(db);

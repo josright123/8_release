@@ -83,14 +83,14 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
     return skb;
 }
 
-int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb)
+int single_tx_mode2(struct board_info *db, struct sk_buff *skb)
 {
 #ifdef DM9051_SKB_PROTECT
 	if (db->pad)
 		skb = EXPAND_SKB(skb);
 #endif
 
-	return dm9051_mode_tx1(db, skb);
+	return single_tx_mode(db, skb);
 }
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, wd-function");

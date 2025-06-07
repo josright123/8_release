@@ -1604,7 +1604,7 @@ int dm9051_req_tx(struct board_info *db)
 	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
 }
 
-int dm9051_mode_tx1(struct board_info *db, struct sk_buff *skb)
+int single_tx_mode(struct board_info *db, struct sk_buff *skb)
 {
 	int ret = dm9051_mem_tx(db, skb->data);
 	if (ret == 0) {
@@ -1620,7 +1620,7 @@ int dm9051_mode_tx1(struct board_info *db, struct sk_buff *skb)
 	return ret;
 }
 
-int dm9051_packet_send(struct board_info *db, struct sk_buff *skb)
+int single_tx(struct board_info *db, struct sk_buff *skb)
 {
 	//int ret;
 	/* 6 tx ptpc */
@@ -1628,7 +1628,7 @@ int dm9051_packet_send(struct board_info *db, struct sk_buff *skb)
 	//DMPLUG_PTP_TX_PRE(db, skb);
 	single_tx_len(db, skb);
 	single_tx_pad_update(db, skb);
-	return dm9051_mode_tx(db, skb);
+	return dm9051_single_tx_mode(db, skb);
 	//if (!ret) {
 	//	DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
 	//	SHOW_DEVLOG_TCR_WR(db);
