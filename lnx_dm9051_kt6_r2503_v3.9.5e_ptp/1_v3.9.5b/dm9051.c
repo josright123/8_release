@@ -1260,6 +1260,21 @@ static int dm9051_all_restart(struct board_info *db) //todo
 	return 0;
 }
 
+#if 0
+//=SUCH AS .. dm9051_handle_link_change()
+//static void FCR_UPSTART_MRR_WR(struct board_info *db)
+//{
+	if (db->phydev->link)
+		printk("LOCK_MUTEX\n");
+//		#if MI_FIX
+//		mutex_lock(&db->spi_lockm);
+//		_LINKCHG_UPSTART(db);
+//		mutex_unlock(&db->spi_lockm);
+//		#endif
+		printk("UNLOCK_MUTEX\n");
+//}
+#endif
+
 /* To re-write while link change up
  * A dm9051_mrr.c is not created for this function procedure code.
  * Put here is good to make a comparison between all_start/all_restaart/all_upsatrt
@@ -2082,13 +2097,6 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->csum_gen_val = 0; //disabling
 	db->csum_rcv_val = 0; //disabling
 
-	db->n_automdix = 0; //log-reset
-	db->stop_automdix_flag = 0;
-	db->automdix_log[0][0] = 0;
-	db->automdix_log[1][0] = 0;
-	db->automdix_log[2][0] = 0;
-	db->mdi = 0x0830;
-
 	db->tcr_wr = TCR_TXREQ; //pre-defined
 
 	db->xmit_in = 0;
@@ -2152,19 +2160,6 @@ static int dm9051_mdio_register(struct board_info *db)
 
 	return ret;
 }
-
-//static void FCR_UPSTART_MRR_WR(struct board_info *db)
-//{
-//	#if MI_FIX
-//	mutex_lock(&db->spi_lockm);
-//	#endif
-//
-//	_LINKCHG_UPSTART(db);
-
-//	#if MI_FIX
-//	mutex_unlock(&db->spi_lockm);
-//	#endif
-//}
 
 static void dm9051_handle_link_change(struct net_device *ndev)
 {
@@ -2230,8 +2225,7 @@ static int dm9051_probe(struct spi_device *spi)
 	db->spidev = spi;
 	db->ndev = ndev;
 
-	/* 2.0 ptpc */
-	/* 2.0 ptpc, PTP_UPDATION(db) is better! */
+	/* 2.0 ptpc, function name as PTP_UPDATION(db) is better! */
 	PTP_SETUP(db);
 	dm9051_operation_set_checksum(db, ndev);
 
@@ -2241,8 +2235,7 @@ static int dm9051_probe(struct spi_device *spi)
 	/* version log */
 	SHOW_DEVLOG_REFER_BEGIN(dev, db);
 
-	//[NETIF_MSG_HW is play for phylib...]
-	//db->msg_enable = 0;
+	//NETIF_MSG_HW is play for phylib... //db->msg_enable = 0;
 	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP |
 			 NETIF_MSG_RX_ERR | NETIF_MSG_TX_ERR | NETIF_MSG_TX_QUEUED | NETIF_MSG_INTR | NETIF_MSG_TX_DONE |
 			 NETIF_MSG_RX_STATUS | NETIF_MSG_PKTDATA | NETIF_MSG_HW /*| 0*/;
@@ -2274,15 +2267,15 @@ static int dm9051_probe(struct spi_device *spi)
 		return ret;
 
 	dm9051_operation_clear(db);
+	BMSR_OPERATION_CLEAR(db);
 	skb_queue_head_init(&db->txq);
 
 	ret = devm_register_netdev(dev, ndev);
 	if (ret) {
-		//phy_disconnect(db->phydev);
+		//phy_disconnect(db->phydev); phy connect in the bottom
 		return dev_err_probe(dev, ret, "device register failed");
 	}
 
-	//if (netif_running(ndev)) ..
 	SHOW_LOG_REFER_BEGIN(db);
 
 	/* 2.1 ptpc */

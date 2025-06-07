@@ -59,6 +59,9 @@
 
 /* re-direct bmsr_wr */
 #if defined(ECO) && defined(DMCONF_BMCR_WR) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+#undef BMSR_OPERATION_CLEAR
+#define BMSR_OPERATION_CLEAR(b) dm9051_bmsr_init(b)
+
 #undef PHY_READ
 #define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
 #endif

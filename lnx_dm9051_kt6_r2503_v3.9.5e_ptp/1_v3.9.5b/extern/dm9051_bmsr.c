@@ -246,6 +246,17 @@ static int dm9051_phyread_bmsr_wr(struct board_info *db, unsigned int reg, unsig
 	return ret;
 }
 
+dm9051_bmsr_init(struct board_info *db)
+{
+	db->mdi = 0x0830;
+
+	db->n_automdix = 0; //log-reset
+	db->stop_automdix_flag = 0;
+	db->automdix_log[0][0] = 0;
+	db->automdix_log[1][0] = 0;
+	db->automdix_log[2][0] = 0;
+}
+
 int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int *val)
 {
 	if (reg == MII_BMSR)

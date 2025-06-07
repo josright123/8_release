@@ -455,13 +455,9 @@ struct board_info {
 	unsigned int csum_gen_val;
 	unsigned int csum_rcv_val;
 
-	unsigned int n_automdix;
-	unsigned int stop_automdix_flag;
-	char automdix_log[3][AMDIX_LOG_BUFSIZE]; //u16 automdix_flag[3];
-
-	unsigned int tcr_wr;
 	unsigned int data_len;
 	unsigned int pad;
+	unsigned int tcr_wr;
 
 	unsigned int xmit_in; //
 	unsigned int xmit_tc; //
@@ -472,9 +468,13 @@ struct board_info {
 	unsigned int xmit_thrd;
 	unsigned int xmit_ttc; //zero count
 
+	/* bmsr_wr */
 	unsigned int bmsr;
 	unsigned int lpa;
 	unsigned int mdi; //= 0x0830;
+	unsigned int n_automdix;
+	unsigned int stop_automdix_flag;
+	char automdix_log[3][AMDIX_LOG_BUFSIZE]; //u16 automdix_flag[3];
 
 	/* 1 ptpc */
 	struct ptp_board_info pbi; //=struct ptp_board_info pbi;
@@ -886,6 +886,7 @@ int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb);
 #define monitor_rxb0(b, rb)
 
 /* raw(fake) bmsr_wr */
+#define BMSR_OPERATION_CLEAR(b)
 #define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
 #define LINKCHG_UPSTART(b) dm9051_all_upfcr(b)
 
