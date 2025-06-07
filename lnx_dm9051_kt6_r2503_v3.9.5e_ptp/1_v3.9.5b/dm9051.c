@@ -40,7 +40,6 @@ static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *d
 {
 	INFO_CPU_BITS(dev, db);
 	INFO_CPU_MIS_CONF(dev, db);
-
 	INFO_INT(dev, db);
 	INFO_INT_CLKOUT(dev, db);
 	INFO_INT_TWOSTEP(dev, db);
@@ -84,9 +83,19 @@ static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
 	return 0;
 }
 
+//netif_crit(db, hw, db->ndev, "dm9051.on.(all_upstart(link_chg))\n");
+//netif_crit(db, link, db->ndev, "So does NOT (all_start(open))");
+//netif_crit(db, link, db->ndev, "So does NOT (all_restart(err_fnd))");
 static void show_core_reset(struct board_info *db)
 {
-	netif_crit(db, hw, db->ndev, "dm9051.on.(all_start(open), all_upstart(link_chg), all_restart(err_fnd))\n");
+	netif_crit(db, hw, db->ndev, "dm9051.on.(all_start(open))\n");
+	netif_crit(db, hw, db->ndev, "dm9051.on.(all_restart(err_fnd))\n");
+}
+
+static void show_all_upfcr(struct board_info *db)
+{
+	netif_crit(db, link, db->ndev, "all_upfcr != core_reset (~DMPLUG_MRR_WR)");
+	netif_crit(db, link, db->ndev, "So does NOT (all_upstart(link_chg))");
 }
 
 static void SHOW_OPEN(struct board_info *db)
@@ -241,7 +250,6 @@ int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff,
 	int ret;
 
 	if (plat_cnf->align.burst_mode) {
-		// tx
 		ret = regmap_noinc_write(db->regmap_dm, reg, buff, len);
 	} else {
 		const u8 *p = (const u8 *)buff;
@@ -589,7 +597,6 @@ static int dm9051_phy_reset(struct board_info *db)
 	/* Jabber function disabled refer to bench test
 	 * meeting advice 20250226
 	 */
-	//printk("_phy_write: [internal] mdio phywr %d %04x for jabber disable\n", 18, 0x7000);
 	//ret = dm9051_phywrite(db, 18, 0x7000);
 	//if (ret)
 	//	return ret;
@@ -1315,8 +1322,7 @@ dnf_end:
 
 int dm9051_all_upfcr(struct board_info *db)
 {
-	netif_crit(db, link, db->ndev, "DMPLUG_MRR_WR operation not applied!\n");
-	netif_crit(db, link, db->ndev, "So does (all_start(open), all_upstart(link_chg), all_restart(err_fnd)) not applied!\n");
+	show_all_upfcr(db);
 	return dm9051_update_fcr(db);
 }
 
@@ -2121,7 +2127,7 @@ void dm9051_checksum_init(struct net_device *ndev)
 
 void dm9051_checksum_limit(struct board_info *db, struct net_device *ndev)
 {
-	if (pbi->ptp_enable) //(PTP_NEW(db))
+	if (db->pbi.ptp_enable) //(PTP_NEW(db))
 		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
 }
 
@@ -2170,7 +2176,8 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 		printk("LOCK_MUTEX\n");
 	}
 
-	phy_print_status(db->phydev);
+	netif_warn(db, link, db->ndev, "%s", db->phydev->link
+		? "Link is Up" : "Link is Down"); //phy_print_status(db->phydev);
 
 	/* only write pause settings to mac. since mac and phy are integrated
 	 * together, such as link state, speed and duplex are sync already
