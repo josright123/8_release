@@ -848,9 +848,9 @@ int single_tx_mode2(struct board_info *db, struct sk_buff *skb);
 #define SHOW_ptp_rx_packet_monitor(b,s)
 #define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
 
-#define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	//0
-#define DMPLUG_PTP_TX_PRE(b,s)
-#define DMPLUG_TX_EMIT_TS(b,s)
+//#define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	//0
+//#define DMPLUG_PTP_TX_PRE(b,s)
+//#define DMPLUG_TX_EMIT_TS(b,s)
 
 /* ptp sw */
 #define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)
@@ -993,14 +993,14 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 #define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b) \
 		dm9051_ptp_rxc_from_master(b)
 
-#undef DMPLUG_PTP_TX_IN_PROGRESS
-#undef DMPLUG_PTP_TX_PRE
-#undef DMPLUG_TX_EMIT_TS
+//#undef DMPLUG_PTP_TX_IN_PROGRESS
+//#undef DMPLUG_PTP_TX_PRE
+//#undef DMPLUG_TX_EMIT_TS
 #undef dm9051_single_tx
 
-#define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	dm9051_ptp_tx_in_progress(b,s)
-#define DMPLUG_PTP_TX_PRE(b,s)			dm9051_ptp_txreq(b,s)
-#define DMPLUG_TX_EMIT_TS(b,s)			dm9051_ptp_txreq_hwtstamp(b,s)
+//#define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	dm9051_ptp_tx_in_progress(b,s)
+//#define DMPLUG_PTP_TX_PRE(b,s)			dm9051_ptp_tcr_2wr(b,s)
+//#define DMPLUG_TX_EMIT_TS(b,s)			dm9051_ptp_txreq_hwtstamp(b,s)
 #define dm9051_single_tx(b,s)		dm9051_ptp_single_tx(b,s)
 #endif
 
@@ -1023,9 +1023,9 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rxc_from_master(struct board_info *db);
 
-void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb);
-void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb);
-void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
+//void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb);
+//void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb);
+//void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 int dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb);
 
 #endif /* _DM9051_H_ */

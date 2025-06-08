@@ -517,7 +517,7 @@ void on_core_init_ptp_rate(struct board_info *db)
 // SKBTX_IN_PROGRESS = 1 << 2,
 // ...
 // SKBTX_SCHED_TSTAMP = 1 << 6,
-void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
+static void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
 {
 	db->pbi.ptp_skp_hw_tstamp = 0;
 	
@@ -550,7 +550,7 @@ void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
 }
 
 //SKBTX_HW_TSTAMP
-void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
+static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 {
 	db->tcr_wr = TCR_TXREQ; // TCR register value
 	db->pbi.ptp_chip_push_tstamp = 0;
@@ -597,7 +597,7 @@ void dm9051_ptp_txreq(struct board_info *db, struct sk_buff *skb)
 }
 
 //SKBTX_HW_TSTAMP
-void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
+static void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
 	//ptp_board_info_t *pbi = &db->pbi;
 	//	if (!pbi->tstamp_config.tx_type)
@@ -639,13 +639,13 @@ int dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
 	/* 6 tx ptpc */
-	DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
-	DMPLUG_PTP_TX_PRE(db, skb);
+	dm9051_ptp_tx_in_progress(db, skb); //DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
+	dm9051_ptp_tcr_2wr(db, skb); //DMPLUG_PTP_TX_PRE(db, skb);
 	single_tx_len(db, skb);
 	single_tx_pad_update(db, skb);
 	ret = dm9051_single_tx_mode(db, skb);
-	if (!ret) {
-		DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
+	if (ret == 0) {
+		dm9051_ptp_txreq_hwtstamp(db, skb); //DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
 		SHOW_DEVLOG_TCR_WR(db);
 	}
 	return ret;
