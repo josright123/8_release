@@ -254,6 +254,17 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 //	return ret;
 }
 
+netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev,
+	netdev_features_t features)
+{
+	struct board_info *db = netdev_priv(ndev);
+
+	if (db->pbi.ptp_enable)
+		features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM);
+
+	return features;
+}
+
 /* netdev_ops
  * tell support ptp */
 int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
@@ -493,18 +504,13 @@ void ptp_init_rcr(struct board_info *db)
 {
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)
 }
+
 u8 ptp_status_bits(struct board_info *db)
 {
 	return RSR_ERR_BITS & ~RSR_PTP_BITS;
-//	u8 err_bits = RSR_ERR_BITS;
-
-//	if (db->ptp_enable) {
-//		err_bits &= ~RSR_PTP_BITS; //_15888_ //To allow support "Enable PTP" must disable checksum_offload
-//	}
-//	return err_bits;
 }
 
-int is_ptp_rxts_enable(struct board_info *db)
+int is_ptp_rxts_en(struct board_info *db)
 {
 	return (db->rxhdr.status & RSR_RXTS_EN) ? 1 : 0; //if T1/T4, // Is it inserted Timestamp?
 }

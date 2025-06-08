@@ -79,12 +79,12 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 #define SET_RCR(b) TX_MOTE2_CONTI_RCR(b)
 int TX_MOTE2_CONTI_RCR(struct board_info *db);
 
-#undef single_tx_len
-#define single_tx_len(b,s)
+#undef LEN_TX
+#define LEN_TX(b,s)
 
-#undef dm9051_single_tx_mode
-#define dm9051_single_tx_mode(b,s)		single_tx_mode_conti(b,s) //conti
-int single_tx_mode_conti(struct board_info *db, struct sk_buff *skb);
+#undef MODE_TX
+#define MODE_TX(b,s)		dm9051_mode_tx_conti(b,s) //conti
+int dm9051_mode_tx_conti(struct board_info *db, struct sk_buff *skb);
 
 //#undef TX_SEND
 //#define TX_SEND(b,s) TX_MODE2_CONTI_TCR(b,s, param->tx_timeout_us) /* _us is global */

@@ -51,7 +51,6 @@ extern const struct plat_cnf_info *plat_cnf;
 /*
  * mac loopback test:
  */
-//static int dm9051_req_tx(struct board_info *db);
 //static int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t features);
 //static int trap_rxb(struct board_info *db, unsigned int *prxbyte);
 //static int trap_clr(struct board_info *db);
@@ -227,7 +226,7 @@ int dm9051_single_rx(struct board_info *db)
 	db->bc.nRxcF++;
 	printk("\n");
 #ifdef DMPLUG_PTP
-	if (pbi->ptp_enable && is_ptp_rxts_enable(db))
+	if (pbi->ptp_enable && is_ptp_rxts_en(db))
 		printk("recv packet %d, rx tstamp %d bytes and %d bytes\n", db->bc.nRxcF, 8, rxlen);
 	else
 #endif
@@ -241,7 +240,7 @@ int dm9051_single_rx(struct board_info *db)
 	//SHOW_ptp_rx_packet_monitor(db, skb);
 #ifdef DMPLUG_PTP
 	if (pbi->ptp_enable) {
-		if (is_ptp_rxts_enable(db)) {	// Inserted Timestamp
+		if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 			sprintf(db->bc.head, "dump rx-tstamp %d", 8);
 			dump_data_001(db, pbi->rxTSbyte, 8);
 		}
@@ -311,6 +310,7 @@ int test_loop_back(struct board_info *db)
 		db->data_len = data_len[i]; //66;
 		db->tcr_wr = TCR_TXREQ; //pre-defined
 		printk("Send_bytes %u\n", db->data_len);
+
 		ret = dm9051_mem_tx(db, buf);
 		if (ret)
 			return ret;
@@ -370,7 +370,22 @@ int test_loop_test(struct board_info *db)
 
 	do {
 		u8 save = db->rctl.rcr_all;
+		unsigned long	rx_packets = db->ndev->stats.rx_packets;
+		unsigned long	tx_packets = db->ndev->stats.tx_packets;
+		unsigned long	rx_bytes = db->ndev->stats.rx_bytes;
+		unsigned long	tx_bytes = db->ndev->stats.tx_bytes;
+		unsigned long	rx_errors = db->ndev->stats.rx_errors;
+		unsigned long	tx_errors = db->ndev->stats.tx_errors;
+		
+
 		ret = test_loop_back(db);
+
+		db->ndev->stats.tx_bytes = tx_bytes;
+		db->ndev->stats.tx_packets = tx_packets;
+		db->ndev->stats.rx_bytes = rx_bytes;
+		db->ndev->stats.rx_packets = rx_packets;
+		db->ndev->stats.tx_errors = rx_errors;
+		db->ndev->stats.rx_errors = tx_errors;
 		db->rctl.rcr_all = save;
 	} while (0);
 

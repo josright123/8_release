@@ -614,9 +614,10 @@ int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *buff,
 			  size_t crlen);
 
 /* operation functions */
-void dm9051_tx_len1(struct board_info *db, struct sk_buff *skb);
+//void dm9051_tx_len(struct board_info *db, struct sk_buff *skb);
 int dm9051_req_tx(struct board_info *db);
-int single_tx_mode(struct board_info *db, struct sk_buff *skb);
+void dm9051_tx_len(struct board_info *db, struct sk_buff *skb);
+int dm9051_mode_tx(struct board_info *db, struct sk_buff *skb);
 int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t features);
 int rx_head_break(struct board_info *db);
 int trap_clr(struct board_info *db);
@@ -749,10 +750,10 @@ enum dm_req_support {
 #define PAD_LEN(len)			len
 
 /* fake raw tx mode */
-#define single_tx_len(b,s)		dm9051_tx_len1(b,s)
-#define single_tx_pad_update(b,s)
-#define dm9051_single_tx_mode(b,s)		single_tx_mode(b,s) //~wd, i.e. bd (byte mode)
-#define dm9051_single_tx(b,s)		single_tx(b,s)
+#define LEN_TX(b,s)		dm9051_tx_len(b,s)
+#define PAD_TX(b,s)
+#define MODE_TX(b,s)		dm9051_mode_tx(b,s) //~wd, i.e. bd (byte mode)
+#define SINGLE_TX(b,s)		dm9051_single_tx(b,s)
 //#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
 //#define TX_SEND(b,s)			dm9051_mode_tx1(b,s)
 
@@ -810,13 +811,13 @@ int dm9051_int_clkout(struct board_info *db);
 #undef PAD_LEN
 #define PAD_LEN(len)						(len & 1) ? len + 1 : len
 
-#undef single_tx_pad_update
-#define single_tx_pad_update(b,s)				single_tx_pad_update_wb(b,s)
-void single_tx_pad_update_wb(struct board_info *db, struct sk_buff *skb);
+#undef PAD_TX
+#define PAD_TX(b,s)				dm9051_tx_pad(b,s)
+void dm9051_tx_pad(struct board_info *db, struct sk_buff *skb);
 
-#undef dm9051_single_tx_mode
-#define dm9051_single_tx_mode(b,s)					single_tx_mode2(b,s) //wd
-int single_tx_mode2(struct board_info *db, struct sk_buff *skb);
+#undef MODE_TX
+#define MODE_TX(b,s)					dm9051_mode_tx2(b,s) //wd
+int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb);
 
 //#undef TX_PAD
 //#define TX_PAD(b,s)							dm9051_expand_skb_txreq(b,s) //wd
@@ -839,6 +840,7 @@ int single_tx_mode2(struct board_info *db, struct sk_buff *skb);
 #define PTP_END(d)
 #define PTP_ETHTOOL_INFO(s)
 #define PTP_STATUS_BITS(b)			RSR_ERR_BITS
+#define PTP_NETDEV_CONSTRAIN(n,f)	f
 #define PTP_NETDEV_IOCTL(s)
 #define PTP_AT_RATE(b)
 
@@ -982,6 +984,9 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 #define PTP_STATUS_BITS(b)		ptp_status_bits(db)
 #define PTP_AT_RATE(b)			on_core_init_ptp_rate(b)
 
+#undef PTP_NETDEV_CONSTRAIN
+#define PTP_NETDEV_CONSTRAIN(n,f)	dm9051_ptp_fix_features(n,f) //(f & ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM)) //f & ~xxx
+
 #undef DMPLUG_RX_TS_MEM
 #undef DMPLUG_RX_HW_TS_SKB
 #undef SHOW_ptp_rx_packet_monitor
@@ -996,12 +1001,12 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 //#undef DMPLUG_PTP_TX_IN_PROGRESS
 //#undef DMPLUG_PTP_TX_PRE
 //#undef DMPLUG_TX_EMIT_TS
-#undef dm9051_single_tx
+#undef SINGLE_TX
 
 //#define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	dm9051_ptp_tx_in_progress(b,s)
 //#define DMPLUG_PTP_TX_PRE(b,s)			dm9051_ptp_tcr_2wr(b,s)
 //#define DMPLUG_TX_EMIT_TS(b,s)			dm9051_ptp_txreq_hwtstamp(b,s)
-#define dm9051_single_tx(b,s)		dm9051_ptp_single_tx(b,s)
+#define SINGLE_TX(b,s)		dm9051_ptp_single_tx(b,s)
 #endif
 
 void ptp_ver_software(struct board_info *db);
@@ -1017,6 +1022,8 @@ void ptp_end(struct board_info *db);
 u8 ptp_status_bits(struct board_info *db);
 void on_core_init_ptp_rate(struct board_info *db);
 
+netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev,
+	netdev_features_t features);
 
 int dm9051_read_ptp_tstamp_mem(struct board_info *db);
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);

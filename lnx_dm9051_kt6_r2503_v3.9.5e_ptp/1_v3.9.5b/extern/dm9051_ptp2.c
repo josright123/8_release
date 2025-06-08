@@ -641,9 +641,9 @@ int dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb)
 	/* 6 tx ptpc */
 	dm9051_ptp_tx_in_progress(db, skb); //DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
 	dm9051_ptp_tcr_2wr(db, skb); //DMPLUG_PTP_TX_PRE(db, skb);
-	single_tx_len(db, skb);
-	single_tx_pad_update(db, skb);
-	ret = dm9051_single_tx_mode(db, skb);
+	LEN_TX(db, skb);
+	PAD_TX(db, skb);
+	ret = MODE_TX(db, skb);
 	if (ret == 0) {
 		dm9051_ptp_txreq_hwtstamp(db, skb); //DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
 		SHOW_DEVLOG_TCR_WR(db);
@@ -705,7 +705,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 #endif
 
 #if 0 //[wait further test..]
-	if (is_ptp_rxts_enable(db)) //if T1/T4, // Is it inserted Timestamp? //[wait further test..]
+	if (is_ptp_rxts_en(db)) //if T1/T4, // Is it inserted Timestamp? //[wait further test..]
 #endif
 	{
 		//So when NOT T1/T4, we can skip tell tstamp (just an empty (virtual) one)
@@ -747,7 +747,7 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 	//_15888_
 	//if (db->ptp_on) { //Even NOT ptp_on, need do.
 	if (pbi->ptp_enable) {
-		if (is_ptp_rxts_enable(db)) {	// Inserted Timestamp
+		if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 			int ret;
 			//printk("Had RX Timestamp... rxstatus = 0x%x\n", db->rxhdr.status);
 			if (db->rxhdr.status & RSR_RXTS_LEN) {	// 8 bytes Timestamp

@@ -102,7 +102,7 @@ enum ptp_sync_type
   PTP_TWO_STEP = 2, /* Two-step sync message */
 };
 
-int				   is_ptp_rxts_enable(struct board_info *db);
+int				   is_ptp_rxts_en(struct board_info *db);
 struct ptp_header *get_ptp_header(struct sk_buff *skb);
 u8				   get_ptp_message_type005(struct ptp_header *ptp_hdr);
 int				   is_ptp_sync_packet(u8 msgtype);

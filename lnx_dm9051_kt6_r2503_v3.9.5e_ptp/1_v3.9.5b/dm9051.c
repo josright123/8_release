@@ -1185,11 +1185,11 @@ static int dm9051_all_stop(struct board_info *db)
 	if (ret)
 		return ret;
 
-	printk("_phy_power_down: [internal] mdio phywr %d %04x\n", 0, 0x3900); //netif_info(db, link, db->ndev, ..
-	netif_crit(db, hw, db->ndev, "netif_crit IsExtra-phy-power-down-redundent!?\n");
-	ret = dm9051_phywrite(db, 0, 0x3900);
-	if (ret)
-		return ret;
+	printk("netif_crit 'NO' Is Extra- if phy-power-down-redundent!?\n");
+	//printk("_phy_power_down: [internal] mdio phywr %d %04x\n", 0, 0x3900); //netif_info(db, link, db->ndev, ..
+	//ret = dm9051_phywrite(db, 0, 0x3900);
+	//if (ret)
+	//	return ret;
 
 	return dm9051_set_reg(db, DM9051_RCR, RCR_RX_DISABLE);
 }
@@ -1586,12 +1586,6 @@ int dm9051_loop_rx(struct board_info *db)
 }
 
 #if defined(DM9051_NORM_BACKUP_TX) // -#if !defined(_DMPLUG_CONTI) -#endif
-void dm9051_tx_len1(struct board_info *db, struct sk_buff *skb)
-{
-	db->data_len = skb->len;
-	db->pad = 0;
-}
-
 int dm9051_mem_tx(struct board_info *db, u8 *p)
 {
 	int ret = dm9051_nsr_poll(db);
@@ -1610,9 +1604,18 @@ int dm9051_req_tx(struct board_info *db)
 	return dm9051_set_reg(db, DM9051_TCR, db->tcr_wr); //base with TCR_TXREQ
 }
 
-int single_tx_mode(struct board_info *db, struct sk_buff *skb)
+//static 
+void dm9051_tx_len(struct board_info *db, struct sk_buff *skb)
+{
+	db->data_len = skb->len;
+	db->pad = 0;
+}
+
+int dm9051_mode_tx(struct board_info *db, struct sk_buff *skb)
 {
 	int ret = dm9051_mem_tx(db, skb->data);
+	
+	//[ret = dm9051_flag_ret_tx_req(ret, db)]
 	if (ret == 0) {
 		ret = dm9051_req_tx(db);
 		if (ret == 0) {
@@ -1626,15 +1629,15 @@ int single_tx_mode(struct board_info *db, struct sk_buff *skb)
 	return ret;
 }
 
-int single_tx(struct board_info *db, struct sk_buff *skb)
+int dm9051_single_tx(struct board_info *db, struct sk_buff *skb)
 {
 	//int ret;
 	/* 6 tx ptpc */
 	//DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
 	//DMPLUG_PTP_TX_PRE(db, skb);
-	single_tx_len(db, skb);
-	single_tx_pad_update(db, skb);
-	return dm9051_single_tx_mode(db, skb);
+	LEN_TX(db, skb);
+	PAD_TX(db, skb);
+	return MODE_TX(db, skb);
 	//if (!ret) {
 	//	DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
 	//	SHOW_DEVLOG_TCR_WR(db);
@@ -1652,7 +1655,7 @@ int dm9051_loop_tx(struct board_info *db)
 	while (!skb_queue_empty(&db->txq)) {
 		struct sk_buff *skb = skb_dequeue(&db->txq);
 		if (skb) {
-			ret = dm9051_single_tx(db, skb);
+			ret = SINGLE_TX(db, skb);
 			if (ret) {
 				db->bc.tx_err_counter++;
 				if (netif_queue_stopped(ndev) &&
@@ -2027,10 +2030,15 @@ static int dm9051_set_mac_address(struct net_device *ndev, void *p)
 	return ret;
 }
 
+static netdev_features_t dm9051_ndo_fix_features(struct net_device *netdev,
+	netdev_features_t features)
+{
+	return PTP_NETDEV_CONSTRAIN(netdev, features);
+}
+
 static int dm9051_ndo_set_features(struct net_device *ndev,
 				   netdev_features_t features)
 {
-	// netdev_features_t changed = ndev->features ^ features;
 	struct board_info *db = to_dm9051_board(ndev);
 
 	if ((features & NETIF_F_RXCSUM) && (features & NETIF_F_HW_CSUM)) {
@@ -2079,6 +2087,7 @@ static const struct net_device_ops dm9051_netdev_ops = {
 	.ndo_set_rx_mode = dm9051_set_rx_mode,
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_set_mac_address = dm9051_set_mac_address,
+	.ndo_fix_features	= dm9051_ndo_fix_features,
 	.ndo_set_features = dm9051_ndo_set_features,
 	.ndo_get_stats = dm9051_get_stats,
 	/* 5 ptpc */

@@ -141,9 +141,11 @@ static int TX_OPS_CONTI(struct board_info *db, struct sk_buff *skb, u64 tx_timeo
 //}
 
 
-int single_tx_mode_conti(struct board_info *db, struct sk_buff *skb)
+int dm9051_mode_tx_conti(struct board_info *db, struct sk_buff *skb)
 {
 	int ret = TX_OPS_CONTI(db, skb, param->tx_timeout_us); //skb->data, data_len); //'double_wb'
+	
+	//[ret = dm9051_flag_ret_tx_req(ret, db)]
 	if (ret == 0) {
 		ret = dm9051_req_tx(db);
 		if (ret == 0) {
