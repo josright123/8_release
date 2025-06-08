@@ -43,9 +43,6 @@
 //#include "extern/extern.h"
 //#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 
-/* Tx 'wb' do skb protect */
-#define DM9051_SKB_PROTECT
-
 // #ifdef DMPLUG_WD
 // #endif
 
@@ -70,6 +67,7 @@ void dm9051_tx_pad(struct board_info *db, struct sk_buff *skb)
 		db->pad = 1;
 }
 
+#ifdef DM9051_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
 {
     struct sk_buff *skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
@@ -83,31 +81,41 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
     return skb;
 }
 
-int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb)
+struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb)
 {
-	int ret;
-
-#ifdef DM9051_SKB_PROTECT
 	if (db->pad)
 		skb = EXPAND_SKB(skb);
+	return skb;
+}
 #endif
 
-	//= return dm9051_mode_tx(db, skb);
-	ret = dm9051_mem_tx(db, skb->data);
-	
-	//[ret = dm9051_flag_ret_tx_req(ret, db)]
-	if (ret == 0) {
-		ret = dm9051_req_tx(db);
-		if (ret == 0) {
-			struct net_device *ndev = db->ndev;
-			ndev->stats.tx_bytes += db->data_len;
-			ndev->stats.tx_packets++;
-		}
-	}
+#if 0
+//int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb)
+//{
+//	int ret;
 
-	//dev_kfree_skb(skb);
-	return ret;
-}
+//#ifdef DM9051_SKB_PROTECT
+//	if (db->pad)
+//		skb = EXPAND_SKB(skb);
+//#endif
+
+//	//= return dm9051_mode_tx(db, skb);
+//	ret = dm9051_mem_tx(db, skb->data);
+//	
+//	//[ret = dm9051_flag_ret_tx_req(ret, db)]
+//	if (ret == 0) {
+//		ret = dm9051_req_tx(db);
+//		if (ret == 0) {
+//			struct net_device *ndev = db->ndev;
+//			ndev->stats.tx_bytes += db->data_len;
+//			ndev->stats.tx_packets++;
+//		}
+//	}
+
+//	//dev_kfree_skb(skb);
+//	return ret;
+//}
+#endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, wd-function");
 MODULE_LICENSE("GPL");

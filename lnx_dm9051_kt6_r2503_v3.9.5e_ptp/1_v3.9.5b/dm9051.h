@@ -21,6 +21,7 @@
 /*#define INT_CLKOUT */ //(INT39 ClkOut)
 /*#define INT_TWO_STEP */ //(INT39 two_step)
 /*#define DMPLUG_WD */ //(wd mode)
+/*#define DM9051_SKB_PROTECT */ //(wd mode skb protect)
 
 /* Macro for already known platforms
  */
@@ -42,6 +43,8 @@
 #define PLUG_ENABLE_WD
 #ifdef PLUG_ENABLE_WD
 #define DMPLUG_WD //(wd mode)
+
+#define DM9051_SKB_PROTECT /* Tx 'wb' do skb protect */
 #endif
 
 /*#include extern/dm9051_ptp1.h */ //(extern/)
@@ -752,6 +755,7 @@ enum dm_req_support {
 /* fake raw tx mode */
 #define LEN_TX(b,s)		dm9051_tx_len(b,s)
 #define PAD_TX(b,s)
+#define CHG_SKB_TX(b,s)
 #define MODE_TX(b,s)		dm9051_mode_tx(b,s) //~wd, i.e. bd (byte mode)
 #define SINGLE_TX(b,s)		dm9051_single_tx(b,s)
 //#define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
@@ -815,9 +819,15 @@ int dm9051_int_clkout(struct board_info *db);
 #define PAD_TX(b,s)				dm9051_tx_pad(b,s)
 void dm9051_tx_pad(struct board_info *db, struct sk_buff *skb);
 
-#undef MODE_TX
-#define MODE_TX(b,s)					dm9051_mode_tx2(b,s) //wd
-int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb);
+#if defined(DM9051_SKB_PROTECT)
+#undef CHG_SKB_TX
+#define CHG_SKB_TX(b,s)			s = dm9051_chg_skb(b,s)
+struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb);
+#endif
+
+//#undef MODE_TX
+//#define MODE_TX(b,s)					dm9051_mode_tx2(b,s) //wd
+//int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb);
 
 //#undef TX_PAD
 //#define TX_PAD(b,s)							dm9051_expand_skb_txreq(b,s) //wd

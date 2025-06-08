@@ -1637,6 +1637,7 @@ int dm9051_single_tx(struct board_info *db, struct sk_buff *skb)
 	//DMPLUG_PTP_TX_PRE(db, skb);
 	LEN_TX(db, skb);
 	PAD_TX(db, skb);
+	CHG_SKB_TX(db, skb);
 	ret = MODE_TX(db, skb);
 	//if (!ret) {
 	//	DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
