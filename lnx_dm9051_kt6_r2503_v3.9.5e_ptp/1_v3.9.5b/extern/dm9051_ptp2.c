@@ -648,6 +648,7 @@ int dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb)
 		dm9051_ptp_txreq_hwtstamp(db, skb); //DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
 		SHOW_DEVLOG_TCR_WR(db);
 	}
+	dev_kfree_skb(skb);
 	return ret;
 }
 

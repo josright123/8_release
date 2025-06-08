@@ -105,7 +105,7 @@ int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb)
 		}
 	}
 
-	dev_kfree_skb(skb);
+	//dev_kfree_skb(skb);
 	return ret;
 }
 

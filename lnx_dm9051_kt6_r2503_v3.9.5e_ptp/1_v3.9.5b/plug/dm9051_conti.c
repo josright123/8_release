@@ -155,7 +155,7 @@ int dm9051_mode_tx_conti(struct board_info *db, struct sk_buff *skb)
 		}
 	}
 
-	dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb.
+	//dev_kfree_skb(skb); //skb from TX_PAD() to dev_kfree_skb(), MUST free the updatest skb.
 	return ret;
 }
 

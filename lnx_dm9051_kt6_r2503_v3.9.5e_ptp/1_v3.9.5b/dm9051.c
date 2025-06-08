@@ -1625,24 +1625,25 @@ int dm9051_mode_tx(struct board_info *db, struct sk_buff *skb)
 		}
 	}
 
-	dev_kfree_skb(skb);
+	//dev_kfree_skb(skb);
 	return ret;
 }
 
 int dm9051_single_tx(struct board_info *db, struct sk_buff *skb)
 {
-	//int ret;
+	int ret;
 	/* 6 tx ptpc */
 	//DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
 	//DMPLUG_PTP_TX_PRE(db, skb);
 	LEN_TX(db, skb);
 	PAD_TX(db, skb);
-	return MODE_TX(db, skb);
+	ret = MODE_TX(db, skb);
 	//if (!ret) {
 	//	DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
 	//	SHOW_DEVLOG_TCR_WR(db);
 	//}
-	//return ret;
+	dev_kfree_skb(skb);
+	return ret;
 }
 #endif
 
