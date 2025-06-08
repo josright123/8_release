@@ -63,7 +63,7 @@ const struct driver_rel_info driver_info = {
 	.release_version = "lnx_dm9051_kt6631_r2502_v3.9.1",
 };
 
-void show_dev_begin(struct device *dev, struct board_info *db) //.SHOW_DEVLOG_REFER_BEGIN
+void show_dev_begin(struct device *dev, struct board_info *db)
 {
 	printk("\n");
 	dev_info(dev, "dev_info Version\n");

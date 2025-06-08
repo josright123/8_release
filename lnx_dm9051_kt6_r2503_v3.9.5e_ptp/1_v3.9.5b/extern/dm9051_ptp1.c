@@ -477,6 +477,18 @@ void ptp_ver(struct board_info *db)
 //	pbi->ptp_enable = 1; // Enable PTP - For the driver whole operations
 //	return 1;
 //}
+
+void ptp_operation_extern(struct board_info *db)
+{
+	db->pbi.ptp_enable = 1;
+}
+
+void ptp_checksum_limit(struct board_info *db, struct net_device *ndev)
+{
+	if (db->pbi.ptp_enable) //(PTP_NEW(db))
+		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
+}
+
 void ptp_init_rcr(struct board_info *db)
 {
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)

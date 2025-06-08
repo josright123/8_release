@@ -2112,31 +2112,24 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->xmit_ttc0 = 0;
 	db->xmit_thrd = 0;
 	db->xmit_ttc = 0;
+	BMSR_OPERATION_CLEAR(db); //earlier
 }
 
-void dm9051_operation_set_extend(struct board_info *db, int val)
-{
-	db->pbi.ptp_enable = val;
-}
+//void dm9051_operation_extern(struct board_info *db)
+//{
+//	db->pbi.ptp_enable = 0;
+//}
 
-void dm9051_checksum_init(struct net_device *ndev)
+static void dm9051_net_checksum_init(struct net_device *ndev)
 {
 	if (plat_cnf->checksuming)
 		ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
 }
 
-void dm9051_checksum_limit(struct board_info *db, struct net_device *ndev)
+static void dm9051_net_checksum_update(struct board_info *db, struct net_device *ndev)
 {
-	if (db->pbi.ptp_enable) //(PTP_NEW(db))
-		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
-}
-
-static void dm9051_operation_set_checksum(struct board_info *db, struct net_device *ndev)
-{
-	/* Set default features */
-	dm9051_checksum_init(ndev);
-
-	/* 2.0 ptpc, PTP_UPDATION(db) is better! */
+	/* 2.0 ptpc, function name as PTP_UPDATION(db) is better! */
+	PTP_SETUP(db);
 	PTP_CHECKSUM_LIMIT(db, ndev);
 
 	ndev->hw_features |= ndev->features;
@@ -2232,15 +2225,15 @@ static int dm9051_probe(struct spi_device *spi)
 	db->spidev = spi;
 	db->ndev = ndev;
 
-	/* 2.0 ptpc, function name as PTP_UPDATION(db) is better! */
-	PTP_SETUP(db);
-	dm9051_operation_set_checksum(db, ndev);
+	dm9051_operation_clear(db); //earlier
+	
+	dm9051_net_checksum_init(ndev); // Init default features
+	dm9051_net_checksum_update(db, ndev); // Fine tune updated features
 
 	ndev->netdev_ops = &dm9051_netdev_ops;
 	ndev->ethtool_ops = &dm9051_ethtool_ops;
 
-	/* version log */
-	SHOW_DEVLOG_REFER_BEGIN(dev, db);
+	SHOW_BEGIN_LOG(dev, db);
 
 	//NETIF_MSG_HW is play for phylib... //db->msg_enable = 0;
 	db->msg_enable = NETIF_MSG_DRV | NETIF_MSG_PROBE | NETIF_MSG_LINK | NETIF_MSG_IFDOWN | NETIF_MSG_IFUP |
@@ -2273,8 +2266,7 @@ static int dm9051_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
-	dm9051_operation_clear(db);
-	BMSR_OPERATION_CLEAR(db);
+//	dm9051_operation_clear(db);
 	skb_queue_head_init(&db->txq);
 
 	ret = devm_register_netdev(dev, ndev);

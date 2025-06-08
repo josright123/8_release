@@ -78,7 +78,7 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 /* re-direct log */
 #if defined(ECO) && defined(DMPLUG_LOG) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
 
-#undef SHOW_DEVLOG_REFER_BEGIN
+#undef SHOW_BEGIN_LOG
 #undef SHOW_LOG_REFER_BEGIN
 #undef SHOW_DEVLOG_MODE
 #undef SHOW_DEVLOG_XMIT_THRD0
@@ -97,7 +97,7 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 #undef dm9051_dump_data1
 #undef monitor_rxb0
 
-#define SHOW_DEVLOG_REFER_BEGIN(d,b) show_dev_begin(d,b)
+#define SHOW_BEGIN_LOG(d,b) show_dev_begin(d,b)
 #define SHOW_LOG_REFER_BEGIN(b) show_log(b)
 #define SHOW_DEVLOG_MODE(d) show_mode(d)
 #define SHOW_DEVLOG_XMIT_THRD0(b) show_xmit_thrd0(b)
