@@ -24,7 +24,7 @@
 
 /* Macro for already known platforms
  */
-#define PLUG_ENABLE_INT
+//#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
 #define DMPLUG_INT //(INT39)
 

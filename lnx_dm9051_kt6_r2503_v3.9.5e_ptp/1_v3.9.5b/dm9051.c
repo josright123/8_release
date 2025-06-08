@@ -88,8 +88,8 @@ static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
 //netif_crit(db, link, db->ndev, "So does NOT (all_restart(err_fnd))");
 static void show_core_reset(struct board_info *db)
 {
-	netif_crit(db, hw, db->ndev, "dm9051.on.(all_start(open))\n");
-	netif_crit(db, hw, db->ndev, "dm9051.on.(all_restart(err_fnd))\n");
+	netif_crit(db, hw, db->ndev, "dm9051.on.(all_start(open)) [or]");
+	netif_crit(db, hw, db->ndev, "dm9051.on.(all_restart(err_fnd))");
 }
 
 static void show_all_upfcr(struct board_info *db)
