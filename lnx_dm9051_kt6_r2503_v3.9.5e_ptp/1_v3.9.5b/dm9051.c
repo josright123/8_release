@@ -100,6 +100,7 @@ static void SHOW_RESTART_SHOW_STATIISTIC(struct board_info *db)
 
 static void SHOW_XMIT_ANALYSIS(struct board_info *db)
 {
+	printk("\n");
 	netif_info(db, tx_done, db->ndev, "%6d [_dely] run %u Pkt %u zero-in %u\n", db->xmit_in,
 		   db->xmit_in, db->xmit_tc, db->xmit_zc);
 	netif_info(db, tx_done, db->ndev, "%6d [_THrd-in] on-THrd-in %u Pkt %u\n", db->xmit_thrd0,
@@ -1033,7 +1034,8 @@ static int dm9051_set_pauseparam(struct net_device *ndev,
 	return 0;
 }
 
-const static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
+//const 
+static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
 	"rx_packets",
 	"tx_packets",
 	"rx_bytes",
@@ -1051,6 +1053,10 @@ static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
 	struct board_info *db = to_dm9051_board(ndev);
 
 	if (sget == ETH_SS_STATS) {
+		db->st_bmsr1 = SHOW_BMSR(db);
+		db->st_bmsr2 = SHOW_BMSR(db);
+		sprintf(dm9051_stats_strings[8], "BMSR %04x =", db->st_bmsr1);
+		sprintf(dm9051_stats_strings[9], "BMSR %04x =", db->st_bmsr2);
 		memcpy(data, dm9051_stats_strings, sizeof(dm9051_stats_strings));
 	}
 }
@@ -1074,23 +1080,18 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	data[5] = ndev->stats.tx_errors = db->bc.tx_err_counter;
 	data[6] = db->bc.fifo_rst_counter; // - 1; //Subtract Initial reset
 	data[7] = db->bc.up_rst_counter;
+	data[8] = db->st_bmsr1; //SHOW_BMSR(db);
+	data[9] = db->st_bmsr2; //SHOW_BMSR(db);
 
-	printk("\n");
 	SHOW_XMIT_ANALYSIS(db);
-
-#if MI_FIX //ee read
+#if MI_FIX
 	mutex_lock(&db->spi_lockm);
 #endif
-	/*PHY_LOG*/
-	DMPLUG_LOG_PHY(db);
-	/*rx-ctrls and BMSRs*/
-	SHOW_RX_CTRLS(db);
-	data[8] = SHOW_BMSR(db);
-	data[9] = SHOW_BMSR(db);
-#if MI_FIX //ee write
+	DMPLUG_LOG_PHY(db); /*PHY_LOG*/
+	SHOW_RX_CTRLS(db); /*rx-ctrls and BMSRs*/
+#if MI_FIX
 	mutex_unlock(&db->spi_lockm);
 #endif
-
 	SHOW_ALL_USER_CONFIG(NULL, db);
 }
 

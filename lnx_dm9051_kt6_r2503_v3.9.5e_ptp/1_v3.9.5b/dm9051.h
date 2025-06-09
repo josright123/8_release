@@ -482,6 +482,9 @@ struct board_info {
 	unsigned int xmit_thrd;
 	unsigned int xmit_ttc; //zero count
 
+	/* state bmsr */
+	unsigned int st_bmsr1;
+	unsigned int st_bmsr2;
 	/* bmsr_wr */
 	unsigned int bmsr;
 	unsigned int lpa;
