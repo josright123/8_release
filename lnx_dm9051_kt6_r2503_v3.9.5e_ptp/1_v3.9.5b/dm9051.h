@@ -329,7 +329,8 @@
  * @large_err_counter: rx get large packet length error counter
  * @rx_err_counter: receive packet error counter
  * @tx_err_counter: transmit packet error counter
- * @fifo_rst_counter: reset operation counter
+ * @fifo_rst_counter: restart reset operation counter
+ * @up_rst_counter: up reset operation counter
  *
  * To keep track for the driver operation statistics
  */
@@ -345,6 +346,7 @@ struct rx_ctl_mach {
 	u32 rx_err_counter;
 	u32 tx_err_counter;
 	u32 fifo_rst_counter;
+	u32 up_rst_counter;
 
 	u16 evaluate_rxb_counter;
 	int nRxcF;

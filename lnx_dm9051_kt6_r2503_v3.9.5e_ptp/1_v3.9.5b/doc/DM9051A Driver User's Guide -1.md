@@ -33,21 +33,18 @@ Welcome to the DM9051A Linux Driver User's Guide. This document provides an over
 - `dm9051.c`：主驅動程式檔案，實作核心邏輯。
 - `dm9051.h`：主標頭檔案，定義主要結構與函式。
 - `extern/`：外部模組，包含 PTP、日誌等功能。
-  - `dm9051_ptp1.h`/`dm9051_ptp1.c`：PTP 基礎功能。
+  - `dm9051_ptp1.h`：PTP 主標頭檔案
+  - `dm9051_ptp1.c`：PTP 基礎功能。
   - `dm9051_ptp2.c`：PTP 進階功能。
 - `Makefile`：編譯配置檔案。
 
 ### 模組依賴關係
 
 ```mermaid
-graph TD
-    A[dm9051.c] --> B[dm9051.h]
-    A --> C[extern/dm9051_ptp1.h]
-    A --> D[extern/dm9051_ptp2.c]
-    B --> E[PTP Clock Kernel]
-    B --> F[PTP Classify]
-    C --> G[PTP Header Definitions]
-    D --> H[PTP Hardware Functions]
+flowchart TD
+    A["dm9051.c"] --> B["dm9051.h"] & C["extern/dm9051_ptp1.c"] & D["extern/dm9051_ptp2.c"]
+    C --> G["基礎功能"]
+    D --> H["進階功能"]
 ```
 
 ## 2. **Key Data Structures**

@@ -93,12 +93,9 @@ static void SHOW_OPEN(struct board_info *db)
 
 static void SHOW_RESTART_SHOW_STATIISTIC(struct board_info *db)
 {
-	netif_warn(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
+	netif_warn(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d, RST_up %d\n", //'netif_crit'
 		   db->bc.status_err_counter + db->bc.large_err_counter,
-		   db->bc.fifo_rst_counter);
-	netif_crit(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d\n",
-		   db->bc.status_err_counter + db->bc.large_err_counter,
-		   db->bc.fifo_rst_counter);
+		   db->bc.fifo_rst_counter, db->bc.up_rst_counter);
 }
 
 static void SHOW_XMIT_ANALYSIS(struct board_info *db)
@@ -1039,22 +1036,26 @@ static int dm9051_set_pauseparam(struct net_device *ndev,
 const static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
 	"rx_packets",
 	"tx_packets",
-	"rx_errors",
-	"tx_errors",
 	"rx_bytes",
 	"tx_bytes",
+	"rx_errors",
+	"tx_errors",
 	"fifo_rst",
+	"up_rst",
 	"dump BMSR register",
 	"dump BMSR register",
 };
 
-static void dm9051_get_strings(struct net_device *netdev, u32 sget, u8 *data)
+static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
 {
-	if (sget == ETH_SS_STATS)
+	struct board_info *db = to_dm9051_board(ndev);
+
+	if (sget == ETH_SS_STATS) {
 		memcpy(data, dm9051_stats_strings, sizeof(dm9051_stats_strings));
+	}
 }
 
-static int dm9051_get_sset_count(struct net_device *netdev, int sset)
+static int dm9051_get_sset_count(struct net_device *ndev, int sset)
 {
 	return (sset == ETH_SS_STATS) ? ARRAY_SIZE(dm9051_stats_strings) : 0;
 }
@@ -1067,11 +1068,12 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	/* ethtool -S eth1, this is the extra dump parts */
 	data[0] = ndev->stats.rx_packets;
 	data[1] = ndev->stats.tx_packets;
-	data[2] = ndev->stats.rx_errors = db->bc.rx_err_counter;
-	data[3] = ndev->stats.tx_errors = db->bc.tx_err_counter;
-	data[4] = ndev->stats.rx_bytes;
-	data[5] = ndev->stats.tx_bytes;
-	data[6] = db->bc.fifo_rst_counter - 1; //Subtract Initial reset
+	data[2] = ndev->stats.rx_bytes;
+	data[3] = ndev->stats.tx_bytes;
+	data[4] = ndev->stats.rx_errors = db->bc.rx_err_counter;
+	data[5] = ndev->stats.tx_errors = db->bc.tx_err_counter;
+	data[6] = db->bc.fifo_rst_counter; // - 1; //Subtract Initial reset
+	data[7] = db->bc.up_rst_counter;
 
 	printk("\n");
 	SHOW_XMIT_ANALYSIS(db);
@@ -1083,8 +1085,8 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	DMPLUG_LOG_PHY(db);
 	/*rx-ctrls and BMSRs*/
 	SHOW_RX_CTRLS(db);
-	data[7] = SHOW_BMSR(db);
 	data[8] = SHOW_BMSR(db);
+	data[9] = SHOW_BMSR(db);
 #if MI_FIX //ee write
 	mutex_unlock(&db->spi_lockm);
 #endif
@@ -1306,9 +1308,10 @@ int dm9051_all_upstart(struct board_info *db)
 			goto dnf_end;
 
 		ret = dm9051_subconcl_and_rerxctrl(db);
-		//if (ret)
-		//	goto dnf_end;
+		if (ret)
+			goto dnf_end;
 #endif
+		db->bc.up_rst_counter++;
 	} while (0);
 	/* Commented: Just done by dm9051_set_fcr(db),
 	 *            No need update again.
@@ -2106,6 +2109,7 @@ static void dm9051_operation_clear(struct board_info *db)
 	db->bc.rx_err_counter = 0;
 	db->bc.tx_err_counter = 0;
 	db->bc.fifo_rst_counter = 0;
+	db->bc.up_rst_counter = 0;
 
 	trap_clr(db);
 	db->bc.nRxcF = 0;
