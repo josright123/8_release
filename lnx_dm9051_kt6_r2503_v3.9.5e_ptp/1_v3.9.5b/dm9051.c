@@ -30,7 +30,7 @@
 
 const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
 
-#define DM9051_INTR_BACKUP // #ifdef DM9051_INTR_BACKUP .. #endif //instead more backup.
+#define DM9051_INTR_BACKUP //
 #define DM9051_NORM_BACKUP_TX // 
 
 /* log: Put here after all included header files
@@ -55,22 +55,6 @@ static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *d
 	INFO_BUSWORK(dev, db);
 	INFO_CONTI(dev, db);
 	INFO_LPBK_TST(dev, db);
-}
-
-int get_dts_irqf(struct board_info *db)
-{
-	struct spi_device *spi = db->spidev;
-	int irq_type = irq_get_trigger_type(spi->irq);
-
-	if (irq_type)
-		return irq_type;
-
-	return IRQF_TRIGGER_LOW;
-}
-
-static unsigned int dm9051_init_intcr_value(struct board_info *db)
-{
-	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || get_dts_irqf(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
 }
 
 static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
@@ -156,6 +140,22 @@ unsigned int SHOW_BMSR(struct board_info *db)
 	dm9051_phyread(db, MII_BMSR, &val); /*.dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
 	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
 	return val;
+}
+
+int get_dts_irqf(struct board_info *db)
+{
+	struct spi_device *spi = db->spidev;
+	int irq_type = irq_get_trigger_type(spi->irq);
+
+	if (irq_type)
+		return irq_type;
+
+	return IRQF_TRIGGER_LOW;
+}
+
+static unsigned int dm9051_init_intcr_value(struct board_info *db)
+{
+	return (get_dts_irqf(db) == IRQF_TRIGGER_LOW || get_dts_irqf(db) == IRQF_TRIGGER_FALLING) ? INTCR_POL_LOW : INTCR_POL_HIGH;
 }
 
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
@@ -367,6 +367,15 @@ static int dm9051_ncr_reset(struct board_info *db)
 	return 0;
 }
 
+/* Set DM9051_IPCOCR in case of int clkout
+ * DUTY_LEN 1 is for 40.96 us
+ */
+int dm9051_int_clkout(struct board_info *db)
+{
+	netif_info(db, intr, db->ndev, "_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
+	return regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
+}
+
 int dm9051_ncr_poll(struct board_info *db)
 {
 	unsigned int mval;
@@ -435,13 +444,41 @@ static int dm9051_set_recv(struct board_info *db)
 	return SET_RCR(db); /* enable rx */
 }
 
-/* Set DM9051_IPCOCR in case of int clkout
- * DUTY_LEN 1 is for 40.96 us
- */
-int dm9051_int_clkout(struct board_info *db)
+static int dm9051_core_reset(struct board_info *db)
 {
-	netif_info(db, intr, db->ndev, "_reset [_core_reset] set DM9051_IPCOCR %02lx\n", IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
-	return regmap_write(db->regmap_dm, DM9051_IPCOCR, IPCOCR_CLKOUT | IPCOCR_DUTY_LEN);
+	int ret = BUS_SETUP(db); /* customization */
+	if (ret)
+		return ret;
+
+	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, BOUND_CONF_BIT); /* MemBound */
+	if (ret)
+		return ret;
+	ret = regmap_write(db->regmap_dm, DM9051_PPCR, PPCR_PAUSE_ADVCOUNT); /* Pause Count */
+	if (ret)
+		return ret;
+
+	ret = regmap_write(db->regmap_dm, 0x31, db->csum_gen_val); /* Checksum Offload */
+	if (ret)
+		return ret;
+	ret = regmap_write(db->regmap_dm, 0x32, db->csum_rcv_val); /* Checksum Offload */
+	if (ret)
+		return ret;
+
+	ret = regmap_write(db->regmap_dm, DM9051_LMCR, db->lcr_all); /* LEDMode1 */
+	if (ret)
+		return ret;
+
+	/* Diagnostic contribute: In dm9051_enable_interrupt()
+	 * (or located in the core reset subroutine is better!!)
+	 */
+	ret = INT_SET_CLKOUT(db); /* clock out */
+	if (ret)
+		return ret;
+
+	show_core_reset(db); /* core init (all_start(open), all_upstart(link_chg), all_restart(err_fnd)) -open ptpc */
+	PTP_AT_RATE(db);
+
+	return ret; /* ~return dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db)) */
 }
 
 static int dm9051_update_fcr(struct board_info *db)
@@ -666,45 +703,6 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 	}
 
 	return -ENODEV;
-}
-
-/* Functions: Core init
- */
-static int dm9051_core_reset(struct board_info *db)
-{
-	int ret = BUS_SETUP(db); /* customization */
-	if (ret)
-		return ret;
-
-	ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, BOUND_CONF_BIT); /* MemBound */
-	if (ret)
-		return ret;
-	ret = regmap_write(db->regmap_dm, DM9051_PPCR, PPCR_PAUSE_ADVCOUNT); /* Pause Count */
-	if (ret)
-		return ret;
-
-	ret = regmap_write(db->regmap_dm, 0x31, db->csum_gen_val); /* Checksum Offload */
-	if (ret)
-		return ret;
-	ret = regmap_write(db->regmap_dm, 0x32, db->csum_rcv_val); /* Checksum Offload */
-	if (ret)
-		return ret;
-
-	ret = regmap_write(db->regmap_dm, DM9051_LMCR, db->lcr_all); /* LEDMode1 */
-	if (ret)
-		return ret;
-
-	/* Diagnostic contribute: In dm9051_enable_interrupt()
-	 * (or located in the core reset subroutine is better!!)
-	 */
-	ret = INT_SET_CLKOUT(db); /* clock out */
-	if (ret)
-		return ret;
-
-	show_core_reset(db); /* core init (all_start(open), all_upstart(link_chg), all_restart(err_fnd)) -open ptpc */
-	PTP_AT_RATE(db);
-
-	return ret; /* ~return dm9051_set_reg(db, DM9051_INTCR, dm9051_init_intcr_value(db)) */
 }
 
 static void dm9051_reg_lock_mutex(void *dbcontext)

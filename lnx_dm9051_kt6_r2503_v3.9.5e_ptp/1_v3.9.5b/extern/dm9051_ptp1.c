@@ -259,8 +259,11 @@ netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev,
 {
 	struct board_info *db = netdev_priv(ndev);
 
-	if (db->pbi.ptp_enable)
+	if (db->pbi.ptp_enable) {
+		if (features & (NETIF_F_HW_CSUM | NETIF_F_RXCSUM))
+			netif_crit(db, hw, db->ndev, "dm9051a: while ptp_enable, checksum offload is NOT allow!!\n");
 		features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM);
+	}
 
 	return features;
 }
