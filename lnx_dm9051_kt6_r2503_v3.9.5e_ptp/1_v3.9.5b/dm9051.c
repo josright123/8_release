@@ -44,6 +44,7 @@ static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *d
 	INFO_INT_CLKOUT(dev, db);
 	INFO_INT_TWOSTEP(dev, db);
 	INFO_WD(dev, db);
+	INFO_SKB_PROT(dev, db);
 	INFO_PTP(dev, db);
 	INFO_PPS(dev, db);
 	INFO_PTP2S(dev, db);

@@ -21,7 +21,7 @@
 /*#define INT_CLKOUT */ //(INT39 ClkOut)
 /*#define INT_TWO_STEP */ //(INT39 two_step)
 /*#define DMPLUG_WD */ //(wd mode)
-/*#define DM9051_SKB_PROTECT */ //(wd mode skb protect)
+/*#define DMPLUG_SKB_PROTECT */ //(wd mode skb protect)
 
 /* Macro for already known platforms
  */
@@ -44,7 +44,10 @@
 #ifdef PLUG_ENABLE_WD
 #define DMPLUG_WD //(wd mode)
 
-#define DM9051_SKB_PROTECT /* Tx 'wb' do skb protect */
+#define PLUG_SKB_PROTECT
+#ifdef PLUG_SKB_PROTECT
+#define DMPLUG_SKB_PROTECT // (skb protect)
+#endif
 #endif
 
 /*#include extern/dm9051_ptp1.h */ //(extern/)
@@ -106,6 +109,12 @@
 #endif
 #if !defined(DMPLUG_WD) && defined(MAIN_DATA)
 #pragma message("dm9051: BD")
+#endif
+#if defined(DMPLUG_SKB_PROTECT) && defined(MAIN_DATA)
+#pragma message("dm9051: SKB_PROT")
+#endif
+#if !defined(DMPLUG_SKB_PROTECT) && defined(MAIN_DATA)
+#pragma message("dm9051: no SKB_PROT")
 #endif
 
 /* pragma, Extended support header files
@@ -522,6 +531,7 @@ struct board_info {
 #define INFO_INT_CLKOUT(dev, db)
 #define INFO_INT_TWOSTEP(dev, db)
 #define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051: BD")
+#define INFO_SKB_PROT(dev, db)				USER_CONFIG(dev, db, "dm9051: no SKB_PROT")
 #define INFO_PTP(dev, db)
 #define INFO_PPS(dev, db)
 #define INFO_PTP2S(dev, db)
@@ -552,6 +562,11 @@ struct board_info {
 #if defined(DMPLUG_WD)
 #undef INFO_WD
 #define INFO_WD(dev, db)					USER_CONFIG(dev, db, "dm9051: WD")
+#endif
+
+#if defined(DMPLUG_SKB_PROTECT)
+#undef INFO_SKB_PROT
+#define INFO_SKB_PROT(dev, db)				USER_CONFIG(dev, db, "dm9051: SKB PROT")
 #endif
 
 /* ptp, clkout, 2step */
@@ -819,7 +834,7 @@ int dm9051_int_clkout(struct board_info *db);
 #define PAD_TX(b,s)				dm9051_tx_pad(b,s)
 void dm9051_tx_pad(struct board_info *db, struct sk_buff *skb);
 
-#if defined(DM9051_SKB_PROTECT)
+#if defined(DMPLUG_SKB_PROTECT)
 #undef CHG_SKB_TX
 #define CHG_SKB_TX(b,s)			s = dm9051_chg_skb(b,s)
 struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb);

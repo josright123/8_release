@@ -43,9 +43,6 @@
 //#include "extern/extern.h"
 //#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 
-// #ifdef DMPLUG_WD
-// #endif
-
 /* particulars, wb mode*/
 //struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb)
 //{
@@ -54,7 +51,7 @@
 //	
 //    db->pad = (skb->len & 1) ? 1 : 0; // db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
 
-//#ifdef DM9051_SKB_PROTECT
+//#ifdef DMPLUG_SKB_PROTECT
 //    if (db->pad)
 //        skb = EXPAND_SKB(skb, db->pad);
 //#endif
@@ -67,7 +64,7 @@ void dm9051_tx_pad(struct board_info *db, struct sk_buff *skb)
 		db->pad = 1;
 }
 
-#ifdef DM9051_SKB_PROTECT
+#ifdef DMPLUG_SKB_PROTECT
 static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
 {
     struct sk_buff *skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
@@ -94,7 +91,7 @@ struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb)
 //{
 //	int ret;
 
-//#ifdef DM9051_SKB_PROTECT
+//#ifdef DMPLUG_SKB_PROTECT
 //	if (db->pad)
 //		skb = EXPAND_SKB(skb);
 //#endif
