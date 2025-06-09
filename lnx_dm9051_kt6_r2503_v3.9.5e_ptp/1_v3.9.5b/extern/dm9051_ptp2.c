@@ -578,16 +578,16 @@ static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 				pbi->ptp_step = (u8)(ptp_hdr->flag_field[0] & PTP_FLAG_TWOSTEP) ? PTP_TWO_STEP : PTP_ONE_STEP;
 				if (pbi->ptp_step == 2) {
 	#if defined(DMPLUG_PTP_TWO_STEP)
-					db->tcr_wr = TCR_TS_EN | TCR_TXREQ;
+					db->tcr_wr = TCR_TSEN_CAP | TCR_TXREQ;
 					db->pbi.ptp_chip_push_tstamp = 1;
 	#else
 	#warning "dm9051 NOT Add H/W PTP TWO STEP.."
 	#endif
 				} else {
-					db->tcr_wr = TCR_TS_EMIT | TCR_TXREQ;
+					db->tcr_wr = TCR_TS1STEP_EMIT | TCR_TXREQ;
 				}
 			} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
-				db->tcr_wr = TCR_TS_EN | TCR_TS_EMIT | TCR_TXREQ;
+				db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
 			//}
 			//}
 			//return message_type;
@@ -613,7 +613,7 @@ static void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb
 //		is_ptp_delayreq_packet(message_type)) { //_15888_,
 
 //.	if (db->pbi.ptp_chip_push_tstamp) //tobe
-	if (db->tcr_wr & TCR_TS_EN) {
+	if (db->tcr_wr & TCR_TSEN_CAP) {
 		int ret;
 
 		/* Poll for TX completion */

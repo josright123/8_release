@@ -36,6 +36,10 @@
 #define DM9051_1588_GPIO_DTA_L		 0x6E
 #define DM9051_1588_GPIO_DTA_H		 0x6F
 
+// 02H TX Control Reg
+#define TCR_TSEN_CAP                 TCR_RSV_BIT7
+#define TCR_TS1STEP_EMIT             TCR_DIS_JABBER_TIMER
+
 // 61H Clock Control Reg
 #define DM9051_CCR_IDX_RST			 BIT(7)
 #define DM9051_CCR_RATE_CTL			 BIT(6)

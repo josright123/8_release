@@ -38,8 +38,6 @@ const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration
  */
 static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
 {
-	INFO_CPU_BITS(dev, db);
-	INFO_CPU_MIS_CONF(dev, db);
 	INFO_INT(dev, db);
 	INFO_INT_CLKOUT(dev, db);
 	INFO_INT_TWOSTEP(dev, db);
@@ -55,6 +53,8 @@ static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *d
 	INFO_BUSWORK(dev, db);
 	INFO_CONTI(dev, db);
 	INFO_LPBK_TST(dev, db);
+	INFO_CPU_BITS(dev, db);
+	INFO_CPU_MIS_CONF(dev, db);
 }
 
 static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
@@ -1187,7 +1187,7 @@ static int dm9051_all_stop(struct board_info *db)
 	if (ret)
 		return ret;
 
-	printk("netif_crit 'NO' Is Extra- if phy-power-down-redundent!?\n");
+	printk("netif_crit 'NO' Is Extra- if phy-power-down-redundent!? [END]\n");
 	//printk("_phy_power_down: [internal] mdio phywr %d %04x\n", 0, 0x3900); //netif_info(db, link, db->ndev, ..
 	//ret = dm9051_phywrite(db, 0, 0x3900);
 	//if (ret)

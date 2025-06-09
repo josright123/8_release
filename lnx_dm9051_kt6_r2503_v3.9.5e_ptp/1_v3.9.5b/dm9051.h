@@ -209,10 +209,9 @@
 #define NSR_TX2END               BIT(3)
 #define NSR_TX1END               BIT(2)
 // 0x02
-#define TCR_TS_EN                BIT(7) //_15888_
+#define TCR_RSV_BIT7             BIT(7) //_15888_
 #define TCR_DIS_JABBER_TIMER     BIT(6) // for Jabber Packet support
 #define TCR_TXREQ                BIT(0)
-#define TCR_TS_EMIT              TCR_DIS_JABBER_TIMER
 // 0x05
 #define RCR_DIS_WATCHDOG_TIMER   BIT(6) // for Jabber Packet support
 #define RCR_DIS_LONG             BIT(5)
