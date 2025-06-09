@@ -1,31 +1,58 @@
+# 基於 LLVM 風格進行自定義配置
 BasedOnStyle: LLVM
-#IndentWidth: 4
-TabWidth: 4
-UseTab: Always
+
+# 縮排設定：使用 2 個空格進行縮排
+IndentWidth: 4
+
+# 禁用 Tab 字符，統一使用空格縮排
+UseTab: Never
+
+# 每行最大字符數限制為 120 字符
 ColumnLimit: 120
 
 # 巨集定義對齊相關設定
+# AlignConsecutiveMacros: AcrossEmptyLines
+# 連續巨集定義對齊，跨越空行和註釋進行對齊
 AlignConsecutiveMacros: AcrossEmptyLinesAndComments
+
+# 巨集區塊開始標記的正則表達式
 MacroBlockBegin: "^BEGIN_.*$"
+
+# 巨集區塊結束標記的正則表達式
 MacroBlockEnd: "^END_.*$"
+
+# 預處理指令縮排：在 # 符號前進行縮排
 IndentPPDirectives: BeforeHash
 
-# 大括號緊跟在前面的代碼後面，不換行
+# 大括號風格設定
+# 原本設定為緊跟模式（Attach）：大括號緊跟在前面的代碼後面，不換行
 # 例如: if (condition) {
 # 而不是: if (condition)
 #         {
 # BreakBeforeBraces: Attach
+
+# 使用 Allman 風格：左大括號獨占一行
+# 例如: if (condition)
+#       {
 BreakBeforeBraces: Allman
 
+# 註釋對齊：對齊行尾註釋
 AlignTrailingComments: true
+
+# 連續賦值語句對齊：對齊等號
 AlignConsecutiveAssignments: true
+
+# 連續聲明語句對齊：對齊變數名稱
 AlignConsecutiveDeclarations: true
 
-# BreakBeforeBraces: Attach
-# AllowShortFunctionsOnASingleLine: Empty
-# SpaceBeforeParens: ControlStatements
+# 備用設定（已註釋）：
+# BreakBeforeBraces: Attach - 大括號附著模式
+# AllowShortFunctionsOnASingleLine: Empty - 允許空函數在單行
+# SpaceBeforeParens: ControlStatements - 控制語句前的空格
 
+# Include 語句處理設定
+# 不對 include 語句進行自動排序，保持原始順序
 SortIncludes: false
 
-
-
+# 保持 include 區塊的原始結構
+IncludeBlocks: Preserve
