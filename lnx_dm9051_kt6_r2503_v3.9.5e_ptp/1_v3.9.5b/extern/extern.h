@@ -110,7 +110,7 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 #define SHOW_MONITOR_RXC(b,n) show_rxc(b,n)
 
 //static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
-#define DMPLUG_LOG_RXPTR(h,b) dm9051_log_rxptr(h,b) //#define dm9051_headlog_regs(h,b,r1,r2) show_log_regs(h,b,r1,r2)
+#define DMPLUG_LOG_RXPTR(h,b) dm9051_log_rxptr(h,b) //#define dm9051_headlog_regs(h,b,r1,r2) 
 #define DMPLUG_LOG_PHY(b) dm9051_log_phy(b) //#define dm9051_phyread_headlog(h,b,r) show_log_phy(h,b,r)
 
 #define dm9051_dump_data1(b,p,n) dump_data(b,p,n)
@@ -127,7 +127,7 @@ void show_rxc(struct board_info *db, int scanrr);
 
 //static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2);
 
-void dm9051_log_rxptr(char *head, struct board_info *db); //static void show_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
+void dm9051_log_rxptr(char *head, struct board_info *db);
 void dm9051_log_phy(struct board_info *db); //static int show_log_phy(char *head, struct board_info *db, unsigned int reg);
 
 void dump_data(struct board_info *db, u8 *packet_data, int packet_len);

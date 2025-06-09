@@ -265,28 +265,29 @@ void show_rxc(struct board_info *db, int scanrr) //.SHOW_MONITOR_RXC
 	}
 }
 
-static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2)
-{
-	unsigned int v1, v2;
+//static void dm9051_dump_reg2s(struct board_info *db, unsigned int reg1, unsigned int reg2)
+//{
+//	unsigned int v1, v2;
 
-	dm9051_get_reg(db, reg1, &v1);
-	dm9051_get_reg(db, reg2, &v2);
-	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
-}
+//	dm9051_get_reg(db, reg1, &v1);
+//	dm9051_get_reg(db, reg2, &v2);
+//	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, reg1, v1, reg2, v2);
+//}
 
-static void show_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2) //.dm9051_headlog_regs
-{
-	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
-	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
-	dm9051_dump_reg2s(db, reg1, reg2);
-}
+//static void show_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2) //.dm9051_headlog_regs
+//{
+//	memset(db->bc.head, 0, HEAD_LOG_BUFSIZE);
+//	snprintf(db->bc.head, HEAD_LOG_BUFSIZE - 1, head);
+//	dm9051_dump_reg2s(db, reg1, reg2);
+//}
+
 /*dm9051_headlog_regs(DM9051_MRRL, DM9051_MRRH);
  *dm9051_headlog_regs(0x24, 0x25);
  */
 void dm9051_log_rxptr(char *head, struct board_info *db)
 {
-	show_log_regs(head, db, DM9051_MRRL, DM9051_MRRH);
-	show_log_regs(head, db, 0x24, 0x25);
+	dm9051_log_regs(head, db, DM9051_MRRL, DM9051_MRRH); //show_log_regs
+	dm9051_log_regs(head, db, 0x24, 0x25); //show_log_regs
 }
 
 /* dm9051_phyread.EXTEND for 'link'

@@ -525,25 +525,11 @@ struct board_info
     #endif
 #endif //__x86_64__ || __aarch64__
 
-#if (defined(__x86_64__) || defined(__aarch64__))
-    #define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "dm9051: __aarch64__")
-    #ifdef CONFIG_64BIT
-        #define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
-    #else                                  // config !64-bit specific code
-        #define INFO_CPU_MIS_CONF(dev, db) USER_CONFIG(dev, db, "dm9051: CONFIG_32BIT (kconfig) ?!")
-    #endif
-#elif (!defined(__x86_64__) && !defined(__aarch64__))
-    #define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "dm9051: __aarch32__")
-    #ifdef CONFIG_64BIT // config 64-bit specific code
-        #define INFO_CPU_MIS_CONF(dev, db) USER_CONFIG(dev, db, "dm9051: CONFIG_64BIT(kconfig) ?!")
-    #else
-        #define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
-    #endif
-#endif //__x86_64__ || __aarch64__
-
 /* macro fakes
  */
 // info INFO_FAK0
+#define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "dm9051: __aarch64__")
+#define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
 #define INFO_INT(dev, db) USER_CONFIG(dev, db, "dm9051: POL")
 #define INFO_INT_CLKOUT(dev, db)
 #define INFO_INT_TWOSTEP(dev, db)
@@ -559,6 +545,26 @@ struct board_info
 #define INFO_BUSWORK(dev, db)
 #define INFO_CONTI(dev, db)
 #define INFO_LPBK_TST(dev, db)
+
+/* system */
+#if (defined(__x86_64__) || defined(__aarch64__))
+    //#define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "dm9051: __aarch64__")
+    #ifdef CONFIG_64BIT
+        //#define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
+    #else                                  // config !64-bit specific code
+		#undef INFO_CPU_MIS_CONF
+        #define INFO_CPU_MIS_CONF(dev, db) USER_CONFIG(dev, db, "dm9051: CONFIG_32BIT (kconfig) ?!")
+    #endif
+#elif (!defined(__x86_64__) && !defined(__aarch64__))
+	#undef INFO_CPU_BITS
+    #define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "dm9051: __aarch32__")
+    #ifdef CONFIG_64BIT // config 64-bit specific code
+		#undef INFO_CPU_MIS_CONF
+        #define INFO_CPU_MIS_CONF(dev, db) USER_CONFIG(dev, db, "dm9051: CONFIG_64BIT(kconfig) ?!")
+    #else
+        //#define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
+    #endif
+#endif //__x86_64__ || __aarch64__
 
 /* main */
 #if defined(DMPLUG_INT)
@@ -619,6 +625,7 @@ static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *
 int get_dts_irqf(struct board_info *db);
 // static void USER_CONFIG(struct device *dev, struct board_info *db, char *str); //implement in dm9051.c
 
+void dm9051_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
 unsigned int SHOW_BMSR(struct board_info *db);
 
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb);
@@ -871,7 +878,7 @@ struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb);
 #define PTP_VER(b)
 #define PTP_VER_SOFTWARE(b)
 
-#define PTP_SETUP(b) b->pbi.ptp_enable = 0 // dm9051_operation_extern(b)
+#define PTP_SETUP(b) b->pbi.ptp_enable = 0 // dm9051_operation_clear_extern(b)
 #define PTP_CHECKSUM_LIMIT(b, nd)
 // #define PTP_NEW(d)				0
 #define PTP_INIT_RCR(d)
