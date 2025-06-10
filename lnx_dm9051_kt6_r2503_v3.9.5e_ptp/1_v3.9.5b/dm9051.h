@@ -54,6 +54,8 @@
 /*#define DMPLUG_PTP */            //(ptp1588)
 /*#define DMPLUG_PPS_CLKOUT */     //(ptp1588 pps)
 /*#define DMPLUG_PTP_TWO_STEP */   //(ptp1588 two step)
+/*#define DMPLUG_PTP_SW */   		//(ptp1588 software)
+/*#define DMPLUG_MI_FIX */   		//(driver config)
 
 /* Capabilities:
  *        hardware-transmit
@@ -88,6 +90,12 @@
 #ifdef PLUG_PTP_1588_SW
     #define DMPLUG_PTP_SW //(ptp 1588 S/W)
 #endif                    //(ptp 1588 S/W)
+
+//[#define MI_FIX  1] //(driver config)
+#define PLUG_MI_FIX
+#ifdef PLUG_MI_FIX
+    #define DMPLUG_MI_FIX	//(driver config)
+#endif                    	//(driver config)
 
 /* pragma
  */
@@ -135,6 +143,10 @@
 
 #if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
     #pragma message("dm9051: S/W PTP (TWO STEP)")
+#endif
+
+#if defined(DMPLUG_MI_FIX) && defined(MAIN_DATA)
+    #pragma message("dm9051: MI_FIX")
 #endif
 
 /* Extended support header files
@@ -314,9 +326,6 @@
 
 #define FORCE_SILENCE_TX_TIMEOUT 0
 #define FORCE_MONITOR_TX_TIMEOUT 1
-
-/* driver config */
-#define MI_FIX                   1
 
 #define AMDIX_LOG_BUFSIZE        72
 
@@ -539,6 +548,7 @@ struct board_info
 #define INFO_PPS(dev, db)
 #define INFO_PTP2S(dev, db)
 #define INFO_PTP_SW_2S(dev, db)
+#define INFO_MI_FIX(dev, db)
 #define INFO_LOG(dev, db)
 #define INFO_BMCR_WR(dev, db)
 #define INFO_MRR_WR(dev, db)
@@ -609,6 +619,11 @@ struct board_info
 #if defined(DMPLUG_PTP_SW)
     #undef INFO_PTP_SW_2S
     #define INFO_PTP_SW_2S(dev, db) USER_CONFIG(dev, db, "dm9051: S/W PTP (TWO STEP)")
+#endif
+
+#if defined(DMPLUG_MI_FIX)
+    #undef INFO_MI_FIX
+    #define INFO_MI_FIX(dev, db) USER_CONFIG(dev, db, "dm9051: MI_FIX")
 #endif
 
 /* Helper functions */
@@ -903,6 +918,10 @@ struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb);
 /* ptp sw */
 #define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)
 
+/* mi fix */
+#define MI_MUTEX_LOCK(b)
+#define MI_MUTEX_UNLOCK(b)
+
 /* plug/ macro fakes
  */
 
@@ -986,6 +1005,14 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
 }
 
 int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
+
+/* mi fixed */
+#if defined(DMPLUG_MI_FIX)
+#undef MI_MUTEX_LOCK
+#define MI_MUTEX_LOCK(b)		mutex_lock(&b->spi_lockm)
+#undef MI_MUTEX_UNLOCK
+#define MI_MUTEX_UNLOCK(b)		mutex_unlock(&b->spi_lockm)
+#endif
 
 /* ptp sw */
 #if defined(DMPLUG_PTP_SW)

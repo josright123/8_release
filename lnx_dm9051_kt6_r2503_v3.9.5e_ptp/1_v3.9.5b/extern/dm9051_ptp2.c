@@ -187,8 +187,7 @@ int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 
 	}
 
-	//mutex_lock(&clock->extreg_lock);
-	//ADDR_LOCK_HEAD_ESSENTIAL(db); //mutex_lock
+	//mutex_lock(&clock->extreg_lock); //ADDR_LOCK_HEAD_ESSENTIAL(db); //mutex_lock
 
 	//printk("@@@2-1 ptp_dm8806_adjtime delta %llx \n", delta);
 	ts.tv_sec = div_s64(delta, 0x3b9aca00);

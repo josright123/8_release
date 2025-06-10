@@ -47,6 +47,7 @@ static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *d
 	INFO_PPS(dev, db);
 	INFO_PTP2S(dev, db);
 	INFO_PTP_SW_2S(dev, db);
+	INFO_MI_FIX(dev, db);
 	INFO_LOG(dev, db);
 	INFO_BMCR_WR(dev, db);
 	INFO_MRR_WR(dev, db);
@@ -661,17 +662,9 @@ static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 
 	if (addr == DM9051_PHY_ADDR) {
 		int ret;
-
-#if MI_FIX
-		mutex_lock(&db->spi_lockm);
-#endif
-
+		mutex_lock(&db->spi_lockm); //mdio read
 		ret = PHY_READ(db, regnum, &val);
-
-#if MI_FIX
-		mutex_unlock(&db->spi_lockm);
-#endif
-
+		mutex_unlock(&db->spi_lockm); //mdio read
 		if (ret)
 			return ret;
 		return val;
@@ -685,16 +678,13 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 	struct board_info *db = bus->priv;
 
 	if (addr == DM9051_PHY_ADDR) {
-		static int mdio_write_count = 0;
 		int ret;
+		static int mdio_write_count = 0;
 
-#if MI_FIX
 		if (regnum == 0x0d || regnum == 0x0e) //unknown of dm9051a
 			return 0;
 
-		mutex_lock(&db->spi_lockm);
-#endif
-
+		mutex_lock(&db->spi_lockm); //mdio write
 		do {
 			/* [dbg] Wr BMCR to power-down */
 			if ((regnum == 0) && (val & BIT(11))) { //BIT(11) = 0x800
@@ -707,10 +697,7 @@ static int dm9051_mdio_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 				netif_info(db, link, db->ndev, "[count%d] mdio phywr %d %04x\n", mdio_write_count++, regnum, val);
 		} while (0);
 		ret = dm9051_phywrite(db, regnum, val);
-
-#if MI_FIX
-		mutex_unlock(&db->spi_lockm);
-#endif
+		mutex_unlock(&db->spi_lockm); //mdio write
 
 		return ret;
 	}
@@ -975,13 +962,9 @@ static int dm9051_get_eeprom(struct net_device *ndev,
 	ee->magic = DM_EEPROM_MAGIC;
 
 	for (i = 0; i < len; i += 2) {
-#if MI_FIX //ee read
-		mutex_lock(&db->spi_lockm); //.ee
-#endif
+		mutex_lock(&db->spi_lockm); //ee read
 		ret = dm9051_eeprom_read(db, (offset + i) / 2, data + i);
-#if MI_FIX //ee read
-		mutex_unlock(&db->spi_lockm);
-#endif
+		mutex_unlock(&db->spi_lockm); //ee read
 		if (ret)
 			break;
 	}
@@ -1002,17 +985,13 @@ static int dm9051_set_eeprom(struct net_device *ndev,
 	if (ee->magic != DM_EEPROM_MAGIC)
 		return -EINVAL;
 
-#if MI_FIX //ee write
-	mutex_lock(&db->spi_lockm); //.
-#endif
+	mutex_lock(&db->spi_lockm); //ee write
 	for (i = 0; i < len; i += 2) {
 		ret = dm9051_eeprom_write(db, (offset + i) / 2, data + i);
 		if (ret)
 			break;
 	}
-#if MI_FIX //ee write
-	mutex_unlock(&db->spi_lockm);
-#endif
+	mutex_unlock(&db->spi_lockm); //ee write
 	return ret;
 }
 
@@ -1033,13 +1012,9 @@ static int dm9051_set_pauseparam(struct net_device *ndev,
 
 	if (pause->autoneg == AUTONEG_DISABLE) {
 		int ret;
-#if MI_FIX //fcr
-		mutex_lock(&db->spi_lockm); //.fcr
-#endif
+		mutex_lock(&db->spi_lockm); //fcr
 		ret = dm9051_update_fcr(db);
-#if MI_FIX //fcr
-		mutex_unlock(&db->spi_lockm);
-#endif
+		mutex_unlock(&db->spi_lockm); //fcr
 		return ret;
 	}
 
@@ -1099,14 +1074,12 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	data[9] = db->st_bmsr2; //SHOW_BMSR(db);
 
 	SHOW_XMIT_ANALYSIS(db);
-#if MI_FIX
-	mutex_lock(&db->spi_lockm);
-#endif
+
+	mutex_lock(&db->spi_lockm); //ethtool_stats
 	DMPLUG_LOG_PHY(db); /*PHY_LOG*/
 	SHOW_RX_CTRLS(db); /*rx-ctrls and BMSRs*/
-#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-#endif
+	mutex_unlock(&db->spi_lockm); //ethtool_stats
+
 	SHOW_ALL_USER_CONFIG(NULL, db);
 }
 
@@ -1135,18 +1108,18 @@ static const struct ethtool_ops dm9051_ethtool_ops = {
 //{
 //	int ret;
 
-////	mutex_unlock(&db->spi_lockm);
+////	mutex_unlock(&db->spi_lockm); //MI_MUTEX_UNLOCK(db);
 ////	phy_stop(db->phydev);
-////	mutex_lock(&db->spi_lockm);
+////	mutex_lock(&db->spi_lockm); //MI_MUTEX_LOCK(db);
 
 //	ret = _dm9051_core_reset(db);
 //	if (ret)
 //		return ret;
 
-////	mutex_unlock(&db->spi_lockm);
+////	mutex_unlock(&db->spi_lockm); //MI_MUTEX_UNLOCK(db);
 ////	phy_start(db->phydev);
 ////	phy_start_aneg(db->phydev);
-////	mutex_lock(&db->spi_lockm);
+////	mutex_lock(&db->spi_lockm); //MI_MUTEX_LOCK(db);
 
 //	ret = dm9051_all_start_intr(db);
 //	if (ret)
@@ -1215,11 +1188,8 @@ static int dm9051_all_start_mlock(struct board_info *db)
 {
 	int ret;
 
-#if MI_FIX
-	mutex_lock(&db->spi_lockm); //.open
-#endif
-
-	ret = dmplug_loop_test(db); //.DMPLUG_LPBK_TST
+	mutex_lock(&db->spi_lockm); //open
+	ret = dmplug_loop_test(db); //DMPLUG_LPBK_TST
 	if (ret)
 		return ret;
 
@@ -1227,10 +1197,7 @@ static int dm9051_all_start_mlock(struct board_info *db)
 	if (ret)
 		return ret;
 
-#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-#endif
-
+	mutex_unlock(&db->spi_lockm); //open
 	return ret;
 }
 
@@ -1238,16 +1205,9 @@ static int dm9051_all_stop_mlock(struct board_info *db)
 {
 	int ret;
 
-#if MI_FIX
-	mutex_lock(&db->spi_lockm);
-#endif
-
+	mutex_lock(&db->spi_lockm); //stop
 	ret = dm9051_all_stop(db);
-
-#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-#endif
-
+	mutex_unlock(&db->spi_lockm); //stop
 	return ret;
 }
 
@@ -1290,11 +1250,9 @@ static int dm9051_all_restart(struct board_info *db) //todo
 //{
 	if (db->phydev->link)
 		printk("LOCK_MUTEX\n");
-//		#if MI_FIX
-//		mutex_lock(&db->spi_lockm);
+//		MI_MUTEX_LOCK(db);
 //		_LINKCHG_UPSTART(db);
-//		mutex_unlock(&db->spi_lockm);
-//		#endif
+//		MI_MUTEX_UNLOCK(db);
 		printk("UNLOCK_MUTEX\n");
 //}
 #endif
@@ -1692,18 +1650,18 @@ static void dm9051_rxctl_delay(struct work_struct *work)
 	struct net_device *ndev = db->ndev;
 	int result;
 
-	mutex_lock(&db->spi_lockm);
+	mutex_lock(&db->spi_lockm); //rxctl
 
 	result = dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, sizeof(ndev->dev_addr));
 	if (result < 0)
 		goto out_unlock;
 
-	dm9051_set_recv(db);
+	dm9051_set_recv(db); //rxctl
 
 	/* To has mutex unlock and return from this function if regmap function fail
 	 */
 out_unlock:
-	mutex_unlock(&db->spi_lockm);
+	mutex_unlock(&db->spi_lockm); //rxctl
 }
 
 /* start_xmit schedule delay works */
@@ -1712,8 +1670,7 @@ static void dm9051_tx_delay(struct work_struct *work)
 	struct board_info *db = container_of(work, struct board_info, tx_work);
 	int ntx;
 
-	mutex_lock(&db->spi_lockm);
-
+	mutex_lock(&db->spi_lockm); //tx
 	sprintf(db->bc.head, "_dely");
 	db->bc.mode = TX_DELAY;
 	ntx = dm9051_loop_tx(db);
@@ -1724,8 +1681,7 @@ static void dm9051_tx_delay(struct work_struct *work)
 		db->xmit_in++;
 		SHOW_DEVLOG_XMIT_IN(db);
 	}
-
-	mutex_unlock(&db->spi_lockm);
+	mutex_unlock(&db->spi_lockm); //tx
 }
 
 #if 1
@@ -1761,10 +1717,8 @@ void dm9051_thread_irq(void *pw) //.(macro)_rx_tx_plat() //dm9051_rx_threaded_ir
 	struct board_info *db = pw;
 	int result;
 
-	mutex_lock(&db->spi_lockm);
-
-	//[REAL.'MI_FIX'] //(result is as 'dm9051_rx_xplat_disable'(db))
-	result = dm9051_disable_interrupt(db);
+	mutex_lock(&db->spi_lockm); //rx
+	result = dm9051_disable_interrupt(db); //[REAL.'MI_FIX'] //(result is as 'dm9051_rx_xplat_disable'(db))
 	if (result)
 		goto out_unlock;
 
@@ -1783,7 +1737,7 @@ void dm9051_thread_irq(void *pw) //.(macro)_rx_tx_plat() //dm9051_rx_threaded_ir
 	/* To exit and has mutex unlock while rx or tx error
 	 */
 out_unlock:
-	mutex_unlock(&db->spi_lockm);
+	mutex_unlock(&db->spi_lockm); //rx
 	//_thread_servicep_done = 1;
 	//return IRQ_HANDLED;
 }
@@ -1902,16 +1856,9 @@ static int dm9051_open(struct net_device *ndev)
 		return ret;
 	}
 
-
-#if MI_FIX
-	mutex_lock(&db->spi_lockm);//.open's
-#endif
-
+	MI_MUTEX_LOCK(db);
 	ret = dm9051_all_start_intr(db); /* near the bottom */
-
-#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-#endif
+	MI_MUTEX_UNLOCK(db);
 
 	if (ret) {
 		phy_stop(db->phydev);
@@ -1929,14 +1876,14 @@ static int dm9051_open(struct net_device *ndev)
  */
 ////static int dm9051_stop001(struct net_device *ndev)
 ////{
-//	mutex_lock(&db->spi_lockm);
+//	MI_MUTEX_LOCK(db);
 //	ret = dm9051_all_stop(db);
-//	mutex_unlock(&db->spi_lockm);
+//	MI_MUTEX_UNLOCK(db);
 //	if (ret)
 //		return ret;
-////	mutex_lock(&db->spi_lockm);
+////	MI_MUTEX_LOCK(db);
 //	phy_stop(db->phydev);
-////	mutex_unlock(&db->spi_lockm);
+////	MI_MUTEX_UNLOCK(db);
 ////}
 static int dm9051_stop(struct net_device *ndev)
 {
@@ -2032,13 +1979,9 @@ static int dm9051_set_mac_address(struct net_device *ndev, void *p)
 
 	eth_commit_mac_addr_change(ndev, p);
 
-#if MI_FIX //mac
-	mutex_lock(&db->spi_lockm);
-#endif
+	MI_MUTEX_LOCK(db); //mac
 	ret = dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, sizeof(ndev->dev_addr));
-#if MI_FIX //mac
-	mutex_unlock(&db->spi_lockm);
-#endif
+	MI_MUTEX_UNLOCK(db); //mac
 	return ret;
 }
 
@@ -2071,14 +2014,10 @@ static int dm9051_ndo_set_features(struct net_device *ndev,
 		db->csum_rcv_val = 0x0; //dm9051_set_reg(db, 0x32, 0x0);
 	}
 
-#if MI_FIX
-	mutex_lock(&db->spi_lockm);
-#endif
+	MI_MUTEX_LOCK(db);
 	dm9051_set_reg(db, 0x31, db->csum_gen_val);
 	dm9051_set_reg(db, 0x32, db->csum_rcv_val);
-#if MI_FIX
-	mutex_unlock(&db->spi_lockm);
-#endif
+	MI_MUTEX_UNLOCK(db);
 
 	return 0;
 }
@@ -2196,11 +2135,10 @@ static void dm9051_handle_link_change(struct net_device *ndev)
 			db->pause.tx_pause = true;
 		}
 
-#if MI_FIX
-		mutex_lock(&db->spi_lockm);
+		mutex_lock(&db->spi_lockm); //link_change
 		LINKCHG_UPSTART(db);
-		mutex_unlock(&db->spi_lockm);
-#endif
+		mutex_unlock(&db->spi_lockm); //link_change
+
 		printk("UNLOCK_MUTEX\n");
 		printk("\n");
 	}
