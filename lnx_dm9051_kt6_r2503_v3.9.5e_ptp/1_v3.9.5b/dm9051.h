@@ -560,6 +560,7 @@ struct board_info
 #define INFO_BUSWORK(dev, db)
 #define INFO_CONTI(dev, db)
 #define INFO_LPBK_TST(dev, db)
+#define INFO_MSG_ENABLE(dev, db)	MACRO_MSG_CONFIG(dev, db)
 
 /* system */
 #if (defined(__x86_64__) || defined(__aarch64__))
@@ -643,6 +644,14 @@ static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *
         dev_warn(dev, "%s", str);
     else if (db)
         netif_info(db, drv, db->ndev, "%s", str);
+}
+
+static inline void MACRO_MSG_CONFIG(struct device *dev, struct board_info *db)
+{
+	char buff[32];
+
+	sprintf(buff, "msg_enable: 0x%08x", db->msg_enable);
+	USER_CONFIG(dev, db, buff);
 }
 
 int get_dts_irqf(struct board_info *db);

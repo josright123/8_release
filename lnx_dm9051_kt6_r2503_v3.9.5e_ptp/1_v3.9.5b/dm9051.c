@@ -59,6 +59,7 @@ static inline int SHOW_ALL_USER_CONFIG(char *head, struct device *dev, struct bo
 	INFO_LPBK_TST(dev, db);
 	INFO_CPU_BITS(dev, db);
 	INFO_CPU_MIS_CONF(dev, db);
+	INFO_MSG_ENABLE(dev, db); //msg_enable
 	return db->ucfg_count;
 }
 
