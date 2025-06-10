@@ -48,7 +48,7 @@ ins install :
 	sudo insmod dm9051a.ko
 
 s:
-	ethtool eth1
+#	ethtool eth1
 	ethtool -S eth1
 
 rm remove :

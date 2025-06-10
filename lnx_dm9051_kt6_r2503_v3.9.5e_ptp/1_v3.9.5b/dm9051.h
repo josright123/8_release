@@ -25,7 +25,7 @@
 
 /* Macro for already known platforms
  */
-// #define PLUG_ENABLE_INT
+#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
     #define DMPLUG_INT //(INT39)
 
@@ -327,6 +327,7 @@
 #define FORCE_SILENCE_TX_TIMEOUT 0
 #define FORCE_MONITOR_TX_TIMEOUT 1
 
+#define MAX_USR_CONFIG			 20 //check grow develop of SHOW_ALL_USER_CONFIG()
 #define AMDIX_LOG_BUFSIZE        72
 
 /**
@@ -502,6 +503,10 @@ struct board_info
     unsigned int xmit_thrd;
     unsigned int xmit_ttc; // zero count
 
+    /* user config strings */
+	int ucfg_count;
+	char user_config_strings[MAX_USR_CONFIG][ETH_GSTRING_LEN];
+
     /* state bmsr */
     unsigned int st_bmsr1;
     unsigned int st_bmsr2;
@@ -631,10 +636,13 @@ static inline struct board_info *to_dm9051_board(struct net_device *ndev) { retu
 
 static inline void USER_CONFIG(struct device *dev, struct board_info *db, char *str)
 {
+	if (db->ucfg_count < MAX_USR_CONFIG)
+		sprintf(db->user_config_strings[db->ucfg_count++], "%s", str); //Collection
+
     if (dev)
-        dev_warn(dev, "%s\n", str);
+        dev_warn(dev, "%s", str);
     else if (db)
-        netif_info(db, drv, db->ndev, "%s\n", str);
+        netif_info(db, drv, db->ndev, "%s", str);
 }
 
 int get_dts_irqf(struct board_info *db);

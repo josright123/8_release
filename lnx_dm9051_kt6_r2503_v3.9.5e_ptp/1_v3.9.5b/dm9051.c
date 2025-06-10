@@ -36,8 +36,11 @@ const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration
 /* log: Put here after all included header files
  *      So conditional USER_CONFIG strings could be exactly correct
  */
-static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *db)
+static inline int SHOW_ALL_USER_CONFIG(char *head, struct device *dev, struct board_info *db)
 {
+	db->ucfg_count = 0;
+	printk("\n");
+	netif_warn(db, drv, db->ndev, "%s", head);
 	INFO_INT(dev, db);
 	INFO_INT_CLKOUT(dev, db);
 	INFO_INT_TWOSTEP(dev, db);
@@ -56,6 +59,7 @@ static inline void SHOW_ALL_USER_CONFIG(struct device *dev, struct board_info *d
 	INFO_LPBK_TST(dev, db);
 	INFO_CPU_BITS(dev, db);
 	INFO_CPU_MIS_CONF(dev, db);
+	return db->ucfg_count;
 }
 
 static int SHOW_MAP_CHIPID(struct device *dev, unsigned short wid)
@@ -86,9 +90,7 @@ static void show_all_upfcr(struct board_info *db)
 
 static void SHOW_OPEN(struct board_info *db)
 {
-	printk("\n");
-	netif_warn(db, drv, db->ndev, "dm9051_open\n");
-	SHOW_ALL_USER_CONFIG(NULL, db);
+	SHOW_ALL_USER_CONFIG("dm9051_open", NULL, db);
 	/* amdix_log_reset(db); */ //(to be determined)
 }
 
@@ -154,6 +156,13 @@ unsigned int SHOW_BMSR(struct board_info *db)
 	dm9051_phyread(db, MII_BMSR, &val); /*.dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
 	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
 	return val;
+}
+
+void SHOW_DB_BMSR(struct board_info *db)
+{
+	printk("\n");
+	db->st_bmsr1 = SHOW_BMSR(db);
+	db->st_bmsr2 = SHOW_BMSR(db);
 }
 
 int get_dts_irqf(struct board_info *db)
@@ -1041,10 +1050,15 @@ static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
 static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
 {
 	struct board_info *db = to_dm9051_board(ndev);
+	int uc;
+	//char user_config_strings[][ETH_GSTRING_LEN]; //USER_CONFIG, 'ETH_GSTRING_LEN' is 32
 
 	if (sget == ETH_SS_STATS) {
-		db->st_bmsr1 = SHOW_BMSR(db);
-		db->st_bmsr2 = SHOW_BMSR(db);
+		uc = SHOW_ALL_USER_CONFIG("ethtool_stats", NULL, db);
+		memcpy(data, db->user_config_strings, uc * ETH_GSTRING_LEN);
+		data += uc * ETH_GSTRING_LEN;
+
+		SHOW_DB_BMSR(db);
 		sprintf(dm9051_stats_strings[8], "BMSR %04x =", db->st_bmsr1);
 		sprintf(dm9051_stats_strings[9], "BMSR %04x =", db->st_bmsr2);
 		memcpy(data, dm9051_stats_strings, sizeof(dm9051_stats_strings));
@@ -1053,25 +1067,29 @@ static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
 
 static int dm9051_get_sset_count(struct net_device *ndev, int sset)
 {
-	return (sset == ETH_SS_STATS) ? ARRAY_SIZE(dm9051_stats_strings) : 0;
+	struct board_info *db = to_dm9051_board(ndev);
+	return (sset == ETH_SS_STATS) ? db->ucfg_count + ARRAY_SIZE(dm9051_stats_strings) : 0;
 }
 
 static void dm9051_get_ethtool_stats(struct net_device *ndev,
 				     struct ethtool_stats *stats, u64 *data)
 {
 	struct board_info *db = to_dm9051_board(ndev);
+	int i;
 
 	/* ethtool -S eth1, this is the extra dump parts */
-	data[0] = ndev->stats.rx_packets;
-	data[1] = ndev->stats.tx_packets;
-	data[2] = ndev->stats.rx_bytes;
-	data[3] = ndev->stats.tx_bytes;
-	data[4] = ndev->stats.rx_errors = db->bc.rx_err_counter;
-	data[5] = ndev->stats.tx_errors = db->bc.tx_err_counter;
-	data[6] = db->bc.fifo_rst_counter; // - 1; //Subtract Initial reset
-	data[7] = db->bc.up_rst_counter;
-	data[8] = db->st_bmsr1; //SHOW_BMSR(db);
-	data[9] = db->st_bmsr2; //SHOW_BMSR(db);
+	for (i = 0; i < db->ucfg_count; i++)
+		data[i] = 1; //1 indicate defined
+	data[db->ucfg_count+0] = ndev->stats.rx_packets;
+	data[db->ucfg_count+1] = ndev->stats.tx_packets;
+	data[db->ucfg_count+2] = ndev->stats.rx_bytes;
+	data[db->ucfg_count+3] = ndev->stats.tx_bytes;
+	data[db->ucfg_count+4] = ndev->stats.rx_errors = db->bc.rx_err_counter;
+	data[db->ucfg_count+5] = ndev->stats.tx_errors = db->bc.tx_err_counter;
+	data[db->ucfg_count+6] = db->bc.fifo_rst_counter;
+	data[db->ucfg_count+7] = db->bc.up_rst_counter;
+	data[db->ucfg_count+8] = db->st_bmsr1; //_SHOW_BMSR(db);
+	data[db->ucfg_count+9] = db->st_bmsr2; //_SHOW_BMSR(db);
 
 	SHOW_XMIT_ANALYSIS(db);
 
@@ -1079,8 +1097,6 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	DMPLUG_LOG_PHY(db); /*PHY_LOG*/
 	SHOW_RX_CTRLS(db); /*rx-ctrls and BMSRs*/
 	mutex_unlock(&db->spi_lockm); //ethtool_stats
-
-	SHOW_ALL_USER_CONFIG(NULL, db);
 }
 
 static const struct ethtool_ops dm9051_ethtool_ops = {
@@ -1889,7 +1905,7 @@ static int dm9051_stop(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
 
-	netif_err(db, probe, ndev, "dm9051_stop\n"); //as 'probe' type, original dev_info()
+	netif_crit(db, probe, ndev, "dm9051_stop\n"); //as 'probe' type, original dev_info()
 
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
