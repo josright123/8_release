@@ -589,7 +589,7 @@ struct board_info
 
 #if defined(DMPLUG_SKB_PROTECT)
     #undef INFO_SKB_PROT
-    #define INFO_SKB_PROT(dev, db) USER_CONFIG(dev, db, "dm9051: SKB PROT")
+    #define INFO_SKB_PROT(dev, db) USER_CONFIG(dev, db, "dm9051: WD SKB PROT")
 #endif
 
 /* ptp, clkout, 2step */
@@ -763,8 +763,8 @@ enum dm_req_support
 #define MCO                      //(MainCoerce)
 
 /* fake int */
-#define FREE_IRQ(b)              // empty
-#define CANCEL_DLY_IRQ2(b)       // empty
+#define DM9051_STOP_FREEIRQ(b)   // empty
+#define DM9051_STOP_CANCELDLY2(b)// empty
 #define DM9051_PROBE_DLYSETUP(b) // empty
 
 /* fake int */
@@ -795,21 +795,21 @@ enum dm_req_support
 // #define TX_SEND(b,s)			dm9051_mode_tx1(b,s)
 
 #if defined(MCO) && defined(DMPLUG_INT)
-    #undef FREE_IRQ
-    #define FREE_IRQ(db) dm9051_thread_irq_free(db->ndev) // dm9051_free_irqworks(db);
     #if defined(INT_TWO_STEP)
-        #undef CANCEL_DLY_IRQ2
-        #define CANCEL_DLY_IRQ2(db) cancel_delayed_work_sync(&db->irq_servicep) // of dm9051_thread_irq_free(ndev)
         #undef DM9051_PROBE_DLYSETUP
         #define DM9051_PROBE_DLYSETUP(b) PROBE_INT2_DLY_SETUP(b)
+        #undef DM9051_STOP_CANCELDLY2
+        #define DM9051_STOP_CANCELDLY2(db) cancel_delayed_work_sync(&db->irq_servicep) // of dm9051_thread_irq_free(ndev)
     #endif
+    #undef DM9051_STOP_FREEIRQ
+    #define DM9051_STOP_FREEIRQ(db) dm9051_thread_irq_free(db->ndev) // dm9051_free_irqworks(db);
 #endif
 
 #if defined(MCO) && !defined(DMPLUG_INT)
-    #undef FREE_IRQ
-    #define FREE_IRQ(db) cancel_delayed_work_sync(&db->irq_workp) // dm9051_free_irqworks(db)
     #undef DM9051_PROBE_DLYSETUP
     #define DM9051_PROBE_DLYSETUP(b) PROBE_POLL_SETUP(b)
+    #undef DM9051_STOP_FREEIRQ
+    #define DM9051_STOP_FREEIRQ(db) cancel_delayed_work_sync(&db->irq_workp) // dm9051_free_irqworks(db)
 #endif
 
 #if defined(MCO) && defined(INT_TWO_STEP) /* && defined(MAIN_DATA)*/

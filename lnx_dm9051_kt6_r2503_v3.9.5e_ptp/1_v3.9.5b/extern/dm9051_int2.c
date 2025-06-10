@@ -34,7 +34,6 @@ int thread_servicep_re_enterII = 0;
 #ifdef INT_TWO_STEP
 void PROBE_INT2_DLY_SETUP(struct board_info *db)
 {
-
 	INIT_DELAYED_WORK(&db->irq_servicep, dm9051_rx_irq_servicep);
 }
 

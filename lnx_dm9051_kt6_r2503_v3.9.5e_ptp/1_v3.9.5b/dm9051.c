@@ -1814,7 +1814,7 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw)
 /*
  * Interrupt:
  */
-#if defined(DM9051_INTR_BACKUP) // -#if defined(DMPLUG_INT) -#endif
+#if defined(DM9051_INTR_BACKUP) //defined(DMPLUG_INT)
 static int dm9051_req_irq(struct board_info *db, irq_handler_t handler)
 {
 	struct spi_device *spi = db->spidev;
@@ -1840,7 +1840,7 @@ static int dm9051_threaded_irq(struct board_info *db, irq_handler_t handler)
 	return 0;
 #endif
 
-#if defined(DM9051_INTR_BACKUP) // -#if defined(DMPLUG_INT) -#endif
+#if defined(DM9051_INTR_BACKUP) //defined(DMPLUG_INT)
 	/* int2 */
 	if (dm9051_int2_supp())
 		return dm9051_int2_irq(db, dm9051_rx_int2_delay);
@@ -1849,12 +1849,12 @@ static int dm9051_threaded_irq(struct board_info *db, irq_handler_t handler)
 #endif
 }
 
-#if defined(DM9051_INTR_BACKUP)
-static void dm9051_thread_irq_free(struct net_device *ndev)
+#if defined(DM9051_INTR_BACKUP) //~static//defined(DMPLUG_INT)
+void dm9051_thread_irq_free(struct net_device *ndev)
 {
 	struct board_info *db = to_dm9051_board(ndev);
 
-	CANCEL_DLY_IRQ2(db);
+	DM9051_STOP_CANCELDLY2(db);
 	free_irq(db->spidev->irq, db);
 	netif_err(db, intr, ndev, "_[stop] remove: free irq %d\n", db->spidev->irq);
 }
@@ -1915,7 +1915,7 @@ static int dm9051_open(struct net_device *ndev)
 
 	if (ret) {
 		phy_stop(db->phydev);
-		FREE_IRQ(db); //dm9051_free_irqworks(db);
+		DM9051_STOP_FREEIRQ(db); //dm9051_free_irqworks(db);
 		return ret;
 	}
 
@@ -1949,7 +1949,7 @@ static int dm9051_stop(struct net_device *ndev)
 
 	phy_stop(db->phydev);
 
-	FREE_IRQ(db); //dm9051_free_irqworks(db);
+	DM9051_STOP_FREEIRQ(db); //dm9051_free_irqworks(db);
 
 	netif_stop_queue(ndev);
 
