@@ -40,28 +40,28 @@
 // #define SECOND_MAIN //(sec)
 #include "dm9051.h"
 
-//#include "extern/extern.h"
-//#include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
+// #include "extern/extern.h"
+// #include "extern/dm9051_ptp1.h" /* 0.1 ptpc */
 
 /* particulars, wb mode*/
-//struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb)
+// struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb)
 //{
-//    db->data_len = skb->len;
+//     db->data_len = skb->len;
 //	db->pad = 0;
-//	
-//    db->pad = (skb->len & 1) ? 1 : 0; // db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
+//
+//     db->pad = (skb->len & 1) ? 1 : 0; // db->pad = (plat_cnf->skb_wb_mode && (skb->len & 1)) ? 1 : 0; //'~wb'
 
-//#ifdef DMPLUG_SKB_PROTECT
-//    if (db->pad)
-//        skb = EXPAND_SKB(skb, db->pad);
-//#endif
-//    return skb;
-//}
+// #ifdef DMPLUG_SKB_PROTECT
+//     if (db->pad)
+//         skb = EXPAND_SKB(skb, db->pad);
+// #endif
+//     return skb;
+// }
 
 void dm9051_tx_pad(struct board_info *db, struct sk_buff *skb)
 {
-	if (skb->len & 1)
-		db->pad = 1;
+    if (skb->len & 1)
+        db->pad = 1;
 }
 
 #ifdef DMPLUG_SKB_PROTECT
@@ -80,9 +80,9 @@ static struct sk_buff *EXPAND_SKB(struct sk_buff *skb)
 
 struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb)
 {
-	if (db->pad)
-		skb = EXPAND_SKB(skb);
-	return skb;
+    if (db->pad)
+        skb = EXPAND_SKB(skb);
+    return skb;
 }
 #endif
 
