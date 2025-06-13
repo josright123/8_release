@@ -1,0 +1,1 @@
+# sudo ./ptp4l -m -f josfigs/p2p-master.conf -i eth1 -H -P
