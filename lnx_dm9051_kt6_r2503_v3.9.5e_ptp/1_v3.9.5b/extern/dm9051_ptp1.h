@@ -111,6 +111,7 @@ struct ptp_header *get_ptp_header(struct sk_buff *skb);
 u8				   get_ptp_message_type005(struct ptp_header *ptp_hdr);
 int				   is_ptp_sync_packet(u8 msgtype);
 int				   is_ptp_delayreq_packet(u8 msgtype);
+int					is_peer_delayreq_packet(u8 msgtype);
 
 // typedef struct ptp_board_info {
 // } ptp_board_info_t;

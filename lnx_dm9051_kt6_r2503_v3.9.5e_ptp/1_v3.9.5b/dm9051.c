@@ -150,6 +150,15 @@ static void SHOW_RX_CTRLS(struct board_info *db)
 //	netif_info(db, rx_status, db->ndev, "%s dm9051_get reg(%02x)= %02x  reg(%02x)= %02x\n", db->bc.head, DM9051_MRRL, v1, DM9051_MRRH, v2);
 }
 
+void SHOW_ETH_MAC(struct board_info *db)
+{
+	struct net_device *ndev = db->ndev;
+
+	netif_warn(db, hw, db->ndev, "MAC %02x %02x %02x %02x %02x %02x",
+			ndev->dev_addr[0], ndev->dev_addr[1], ndev->dev_addr[2],
+			ndev->dev_addr[3], ndev->dev_addr[4], ndev->dev_addr[5]);
+}
+
 unsigned int SHOW_BMSR(struct board_info *db)
 {
 	unsigned int val;
@@ -159,9 +168,10 @@ unsigned int SHOW_BMSR(struct board_info *db)
 	return val;
 }
 
-void SHOW_DB_BMSR(struct board_info *db)
+void SHOW_ETH_BMSR(struct board_info *db)
 {
 	printk("\n");
+	SHOW_ETH_MAC(db);
 	db->st_bmsr1 = SHOW_BMSR(db);
 	db->st_bmsr2 = SHOW_BMSR(db);
 }
@@ -915,7 +925,7 @@ static int dm9051_map_etherdev_par(struct net_device *ndev, struct board_info *d
 	if (!is_valid_ether_addr(addr)) {
 		dm90951_get_random(ndev, addr);
 
-		ret = dm9051_set_regs(db, DM9051_PAR, addr, sizeof(addr));
+		ret = dm9051_set_regs(db, DM9051_PAR, addr, ETH_ALEN); //sizeof(addr)
 		if (ret < 0)
 			return ret;
 
@@ -1044,6 +1054,7 @@ static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
 	"tx_errors",
 	"fifo_rst",
 	"up_rst",
+	"dump MAC address",
 	"dump BMSR register",
 	"dump BMSR register",
 };
@@ -1059,9 +1070,12 @@ static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
 		memcpy(data, db->user_config_strings, uc * ETH_GSTRING_LEN);
 		data += uc * ETH_GSTRING_LEN;
 
-		SHOW_DB_BMSR(db);
-		sprintf(dm9051_stats_strings[8], "BMSR %04x =", db->st_bmsr1);
-		sprintf(dm9051_stats_strings[9], "BMSR %04x =", db->st_bmsr2);
+		SHOW_ETH_BMSR(db);
+		sprintf(dm9051_stats_strings[8], "MAC %02x %02x %02x %02x %02x %02x =",
+			ndev->dev_addr[0], ndev->dev_addr[1], ndev->dev_addr[2],
+			ndev->dev_addr[3], ndev->dev_addr[4], ndev->dev_addr[5]);
+		sprintf(dm9051_stats_strings[9], "BMSR %04x =", db->st_bmsr1);
+		sprintf(dm9051_stats_strings[10], "BMSR %04x =", db->st_bmsr2);
 		memcpy(data, dm9051_stats_strings, sizeof(dm9051_stats_strings));
 	}
 }
@@ -1089,8 +1103,9 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev,
 	data[db->ucfg_count+5] = ndev->stats.tx_errors = db->bc.tx_err_counter;
 	data[db->ucfg_count+6] = db->bc.fifo_rst_counter;
 	data[db->ucfg_count+7] = db->bc.up_rst_counter;
-	data[db->ucfg_count+8] = db->st_bmsr1; //_SHOW_BMSR(db);
-	data[db->ucfg_count+9] = db->st_bmsr2; //_SHOW_BMSR(db);
+	data[db->ucfg_count+8] = 1;
+	data[db->ucfg_count+9] = db->st_bmsr1; //_SHOW_BMSR(db);
+	data[db->ucfg_count+10] = db->st_bmsr2; //_SHOW_BMSR(db);
 
 	SHOW_XMIT_ANALYSIS(db);
 
@@ -1669,7 +1684,7 @@ static void dm9051_rxctl_delay(struct work_struct *work)
 
 	mutex_lock(&db->spi_lockm); //rxctl
 
-	result = dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, sizeof(ndev->dev_addr));
+	result = dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, ETH_ALEN); //sizeof(ndev->dev_addr)
 	if (result < 0)
 		goto out_unlock;
 
@@ -1997,7 +2012,7 @@ static int dm9051_set_mac_address(struct net_device *ndev, void *p)
 	eth_commit_mac_addr_change(ndev, p);
 
 	MI_MUTEX_LOCK(db); //mac
-	ret = dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, sizeof(ndev->dev_addr));
+	ret = dm9051_set_regs(db, DM9051_PAR, ndev->dev_addr, ETH_ALEN); //sizeof(ndev->dev_addr)
 	MI_MUTEX_UNLOCK(db); //mac
 	return ret;
 }

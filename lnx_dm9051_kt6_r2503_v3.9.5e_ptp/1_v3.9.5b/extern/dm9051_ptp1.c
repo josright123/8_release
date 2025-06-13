@@ -329,6 +329,10 @@ int is_ptp_delayreq_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_DELAY_REQ) ? 1 : 0;
 }
+int is_peer_delayreq_packet(u8 msgtype)
+{
+	return (msgtype == PTP_MSGTYPE_PDELAY_REQ) ? 1 : 0;
+}
 
 struct ptp_header *get_ptp_header(struct sk_buff *skb)
 {
@@ -438,7 +442,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 						printk("Slave(%d)-get-ANNOUNCE without tstamp. \n", --slave_get_ptpFrame);
 					}
 				}
-		} else if (is_ptp_delayreq_packet(message_type)) {
+		} else if (is_ptp_delayreq_packet(message_type)) { //skip is_peer_delayreq_packet();
 			if (pbi->ptp_enable) {
 				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
 					if (master_get_delayReq6) {

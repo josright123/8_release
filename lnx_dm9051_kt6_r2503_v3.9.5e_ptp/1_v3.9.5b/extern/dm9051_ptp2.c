@@ -585,7 +585,10 @@ static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 				} else {
 					db->tcr_wr = TCR_TS1STEP_EMIT | TCR_TXREQ;
 				}
-			} else if (is_ptp_delayreq_packet(message_type)) //_15888_,
+			}
+			else if (is_ptp_delayreq_packet(message_type))
+				db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
+			else if (is_peer_delayreq_packet(message_type))
 				db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
 			//}
 			//}
@@ -609,7 +612,8 @@ static void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb
 
 //	if ((is_ptp_sync_packet(message_type) &&
 //		db->ptp_step == 2) ||
-//		is_ptp_delayreq_packet(message_type)) { //_15888_,
+//		is_ptp_delayreq_packet(message_type) ||
+//		is_peer_delayreq_packet(message_type)) { //_15888_,
 
 //.	if (db->pbi.ptp_chip_push_tstamp) //tobe
 	if (db->tcr_wr & TCR_TSEN_CAP) {
