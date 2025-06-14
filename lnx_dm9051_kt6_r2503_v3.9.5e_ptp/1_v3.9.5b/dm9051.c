@@ -1961,7 +1961,14 @@ static void dm9051_set_rx_mode(struct net_device *ndev)
 	struct board_info *db = to_dm9051_board(ndev);
 	struct dm9051_rxctrl rxctrl;
 	struct netdev_hw_addr *ha;
+#if 0
+	/* NOT valid line here, db->rctl.rcr_all already in dm9051_open()
+	 */
 	u8 rcr = RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN;
+#else
+	//[found while (run ptp p2p).]
+	u8 rcr = db->rctl.rcr_all; //_15888_ //HAS Disable discard CRC error (work around)
+#endif
 	u32 hash_val;
 
 	memset(&rxctrl, 0, sizeof(rxctrl));
