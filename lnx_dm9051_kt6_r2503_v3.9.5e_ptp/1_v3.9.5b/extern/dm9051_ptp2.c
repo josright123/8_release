@@ -248,6 +248,26 @@ int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 
 }
 
+// OF ptp_9051_gettime()
+// AS dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 8);
+//
+int dm9051_ptp_rx_packet_monitor_ts(struct board_info *db)
+{
+	ptp_board_info_t *pbi = &db->pbi;
+	unsigned int uIntTemp;
+	int i;
+
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
+		       DM9051_CCR_IDX_RST | DM9051_CCR_PTP_READ);
+
+	for (i = 0; i < 8; i++) {
+		regmap_read(db->regmap_dm, DM9051_1588_TS, &uIntTemp);
+		//temp[i] = (u8)(uIntTemp & 0xFF);
+		pbi->rxTSbyte[i] = (u8)(uIntTemp & 0xFF);
+	}
+	return 0;
+}
+
 int ptp_9051_gettime(struct ptp_clock_info *caps,
 		     struct timespec64 *ts)
 {
@@ -259,22 +279,17 @@ int ptp_9051_gettime(struct ptp_clock_info *caps,
 	struct board_info *db = pbi->db;
 
 //ptp_board_info_t *pbi = &db->pbi;
-	unsigned int temp[8];
-	int i;
-	unsigned int uIntTemp;
+	//unsigned int temp[8];
+	//int i;
+	//unsigned int uIntTemp;
+	u8 *temp = &pbi->rxTSbyte[0];
 
 	printk("DM9051A ...ptp_9051_gettime\n");
 
 // tom: from stone's doc. write 0x84 to reg 0x61 is enough,
 // bit 0 PTP_EN has been set in ptp_init
 	mutex_lock(&db->spi_lockm);
-	dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
-		       DM9051_CCR_IDX_RST | DM9051_CCR_PTP_READ);
-
-	for (i = 0; i < 8; i++) {
-		regmap_read(db->regmap_dm, DM9051_1588_TS, &uIntTemp);
-		temp[i] = (u8)(uIntTemp & 0xFF);
-	}
+	dm9051_ptp_rx_packet_monitor_ts(db);
 	mutex_unlock(&db->spi_lockm);
 	/*
 	dm9051_read_mem(db, DM9051_1588_TS, temp, DM9051_1588_TS_BULK_SIZE);
@@ -285,6 +300,8 @@ int ptp_9051_gettime(struct ptp_clock_info *caps,
 //regmap_noinc_read(db->regmap_dm, DM9051_1588_TS, &temp, 8);	//Spenser -  Read HW Timestamp from DM9051A REG_68H
 
 // tom: re-write the upper statements
+	printk("DM9051A ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
+	temp = &pbi->rxTSbyte[0];
 	ts->tv_nsec = ((uint32_t)temp[3] << 24) | ((uint32_t)temp[2] << 16) |
 		      ((uint32_t)temp[1] << 8) | (uint32_t)temp[0];
 	ts->tv_sec  = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
@@ -518,6 +535,8 @@ void on_core_init_ptp_rate(struct board_info *db)
 // SKBTX_SCHED_TSTAMP = 1 << 6,
 static void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
 {
+	int b_ptphdr;
+	
 	db->pbi.ptp_skp_hw_tstamp = 0;
 	
 #if 0
@@ -535,14 +554,23 @@ static void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb
 	//		return;
 #endif
 	
+	b_ptphdr =dm9051_ptp_tx_packet_monitor(db, skb);
+	
 	/* Use: skb->tx_flags, is better~
 	 */
-	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP))
+	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+		if (b_ptphdr)
+			printk("TX b_ptphdr packet SKBTX_IN_PROGRESS() - NOT set tx_in_progress ?\n");
 		return;
+	}
 
 	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
 		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
 		db->pbi.ptp_skp_hw_tstamp = 1;
+		if (b_ptphdr)
+			printk("PTP b_ptphdr packet SKBTX_IN_PROGRESS() - YES set tx_in_progress.\n");
+		else
+			printk("PTP !b_ptphdr packet SKBTX_IN_PROGRESS() - WARN set tx_in_progress ?\n");
 		//return 1;
 	}
 	//return 0;
@@ -589,7 +617,9 @@ static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 			else if (is_ptp_delayreq_packet(message_type))
 				db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
 			else if (is_peer_delayreq_packet(message_type))
-				db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
+				//To be as Sync of one step
+				//db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
+				db->tcr_wr = TCR_TS1STEP_EMIT | TCR_TXREQ;
 			//}
 			//}
 			//return message_type;

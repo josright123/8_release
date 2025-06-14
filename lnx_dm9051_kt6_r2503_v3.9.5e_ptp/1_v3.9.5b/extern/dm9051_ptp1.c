@@ -392,21 +392,53 @@ u8 get_ptp_message_type005(struct ptp_header *ptp_hdr)
 	return ptp_hdr->tsmt & 0x0f;
 }
 
+int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
+{
+	struct ptp_header *ptp_hdr = get_ptp_header(skb);
+	if (ptp_hdr) {
+		u8 message_type = get_ptp_message_type005(ptp_hdr); //for tx monitor
+		if (is_ptp_sync_packet(message_type))
+			printk("Master() - sync in SKBTX_IN_PROGRESS.\n");
+		
+		else if (message_type == PTP_MSGTYPE_FOLLOW_UP)
+			printk("Master() - FOLLOW_UP in SKBTX_IN_PROGRESS.\n");
+		else if (message_type == PTP_MSGTYPE_DELAY_RESP)
+			printk("Master() - sync in SKBTX_IN_PROGRESS.\n");
+		else if (message_type == PTP_MSGTYPE_ANNOUNCE)
+			printk("Master() - announce in SKBTX_IN_PROGRESS.\n");
+		else if (is_ptp_delayreq_packet(message_type))
+			printk("PTP() - delayREQ in SKBTX_IN_PROGRESS.\n");
+
+		else if (is_peer_delayreq_packet(message_type))
+			printk("PTP() - peerDelayREQ in SKBTX_IN_PROGRESS.\n");
+		else
+			printk("PTP() UNKNOW (msg type %u) in SKBTX_IN_PROGRESS.\n", message_type);
+		return 1;
+	}
+	return 0;
+}
+
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
-	struct ptp_header *ptp_hdr = get_ptp_header(skb);
+	struct ptp_header *ptp_hdr;
+	
+	ptp_hdr = get_ptp_header(skb);
 	if (ptp_hdr) { //is_ptp_packet(skb->data)
 		static int slave_get_ptpFrame = 9;
 		static int slave_get_ptpFrameResp3 = 3;
 		static int master_get_delayReq6 = 6; //5;
+		static int master_get_pdelayReq6 = 6; //5;
 		static int slave_get_ptpMisc = 9;
+		static int total_ptp_frames = 0;
 		u8 message_type = get_ptp_message_type005(ptp_hdr); //for rx monitor
+		
+		printk("dm9051_ptp_rx_packet_monitor .ptp_hdr.msg_type: %u (frame %d)\n", message_type, ++total_ptp_frames);
 
 		if (is_ptp_sync_packet(message_type)) {
 			if (slave_get_ptpFrame)
 				if (pbi->ptp_enable) {
-					if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 						printk("\n");
 						printk("Slave(%d)-get-sync with tstamp. \n", --slave_get_ptpFrame);
 						//sprintf(db->bc.head, "Slave-get-sync with tstamp, len= %3d", skb->len);
@@ -418,7 +450,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		} else if (message_type == PTP_MSGTYPE_FOLLOW_UP) {
 			if (slave_get_ptpFrame)
 				if (pbi->ptp_enable) {
-					if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 						printk("Slave(%d)-get-followup with tstamp. \n", --slave_get_ptpFrame);
 					} else {
 						printk("Slave(%d)-get-followup without tstamp. \n", --slave_get_ptpFrame);
@@ -427,7 +459,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		} else if (message_type == PTP_MSGTYPE_DELAY_RESP) {
 			if (slave_get_ptpFrameResp3)
 				if (pbi->ptp_enable) {
-					if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 						printk("Slave(%d)-get-DELAY_RESP with tstamp. \n", --slave_get_ptpFrameResp3);
 					} else {
 						printk("Slave(%d)-get-DELAY_RESP without tstamp. \n", --slave_get_ptpFrameResp3);
@@ -436,7 +468,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		} else if (message_type == PTP_MSGTYPE_ANNOUNCE) {
 			if (slave_get_ptpFrame)
 				if (pbi->ptp_enable) {
-					if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 						printk("Slave(%d)-get-ANNOUNCE with tstamp. \n", --slave_get_ptpFrame);
 					} else {
 						printk("Slave(%d)-get-ANNOUNCE without tstamp. \n", --slave_get_ptpFrame);
@@ -444,7 +476,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 				}
 		} else if (is_ptp_delayreq_packet(message_type)) { //skip is_peer_delayreq_packet();
 			if (pbi->ptp_enable) {
-				if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+				if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 					if (master_get_delayReq6) {
 						printk("Master(%d)-get-DELAY_REQ with tstamp. \n", --master_get_delayReq6);
 					}
@@ -452,10 +484,21 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 					printk("Master-get-DELAY_REQ without tstamp.\n");
 				}
 			}
+		} else if (is_peer_delayreq_packet(message_type)) {
+			//if (pbi->ptp_enable) {
+				if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
+					if (master_get_pdelayReq6)
+						printk("Master(%d)-get-PEER_DELAY_REQ with tstamp. \n", --master_get_pdelayReq6);
+				}
+				else {
+					dm9051_ptp_rx_packet_monitor_ts(db);
+					printk("Master-get-PEER_DELAY_REQ without tstamp. CHIP_WRONG_CONDITION !!\n");
+				}
+			//}
 		} else {
 			if (slave_get_ptpMisc)
 				if (pbi->ptp_enable) {
-					if (db->rxhdr.status & RSR_RXTS_EN) {	// Inserted Timestamp
+					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 						printk("Slave(%d) or Master get-knonw with tstamp. \n", --slave_get_ptpMisc);
 					} else {
 						printk("Slave(%d) or Master get-knonw without tstamp. \n", --slave_get_ptpMisc);
@@ -510,6 +553,9 @@ void ptp_checksum_limit(struct board_info *db, struct net_device *ndev)
 void ptp_init_rcr(struct board_info *db)
 {
 	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)
+#if 1 //[ptp p2p]
+	db->rctl.rcr_all |= RCR_ALL;
+#endif
 }
 
 u8 ptp_status_bits(struct board_info *db)

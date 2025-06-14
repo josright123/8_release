@@ -1105,11 +1105,13 @@ void on_core_init_ptp_rate(struct board_info *db);
 
 netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev, netdev_features_t features);
 
+int  dm9051_ptp_rx_packet_monitor_ts(struct board_info *db);
 int  dm9051_read_ptp_tstamp_mem(struct board_info *db);
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rxc_from_master(struct board_info *db);
 
+int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb);
 // void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb);
 // void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb);
 // void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
