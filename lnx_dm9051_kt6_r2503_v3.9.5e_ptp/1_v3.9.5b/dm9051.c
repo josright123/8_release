@@ -1859,8 +1859,7 @@ static int dm9051_open(struct net_device *ndev)
 	SHOW_OPEN(db);
 	db->imr_all = IMR_PAR | IMR_PRM;
 	db->lcr_all = LMCR_MODE1;
-	db->rctl.rcr_all = RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN;
-	PTP_INIT_RCR(db);
+	INIT_RCR(db); //RCR_RXEN, //or PTP's
 	memset(db->rctl.hash_table, 0, sizeof(db->rctl.hash_table));
 
 	ndev->irq = spi->irq; /* by dts */

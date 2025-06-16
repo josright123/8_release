@@ -755,7 +755,31 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 			/* Since we cannot turn off the Rx timestamp logic if the device is
 			 * doing Tx timestamping, check if Rx timestamping is configured.
 			 */
-			u64 ns = rx_extract_ts(pbi->rxTSbyte);
+			u64 ns;
+
+			if (pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ) {
+				u16 ns_hi, ns_lo, s_hi, s_lo;
+				u32 sec;
+				//u64 ns;
+
+				ns_lo = pbi->rxTSbyte[7] | (pbi->rxTSbyte[6] << 8);
+				ns_hi = pbi->rxTSbyte[5] | (pbi->rxTSbyte[4] << 8);
+
+				s_lo = pbi->rxTSbyte[3] | (pbi->rxTSbyte[2] << 8);
+				s_hi = pbi->rxTSbyte[1] | (pbi->rxTSbyte[0] << 8);
+
+				sec = s_lo;
+				sec |= s_hi << 16;
+
+				ns = ns_lo;
+				ns |= ns_hi  << 16;
+
+				printk("dm9051_ptp_rx_packet_monitor .sec.ns: %u (frame %d) ts bytes %d is %u sec %llu ns\n", 
+					pbi->ptp_rx_msgtype, pbi->total_ptp_frames, pbi->ptp_ts_bytes,
+					sec, ns);
+			}
+
+			ns = rx_extract_ts(pbi->rxTSbyte);
 			/* Use skb_hwtstamps(skb) get 'skb_shared_hwtstamps' and then copy to ->hwtstamp
 			 * We can also use skb_complete_rx_timestamp() to make the same result.
 			 */
@@ -780,6 +804,7 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 
 	//_15888_
 	//if (db->ptp_on) { //Even NOT ptp_on, need do.
+	pbi->ptp_ts_bytes = 0;
 	if (pbi->ptp_enable) {
 		if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 			int ret;
@@ -790,6 +815,7 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 					netif_err(db, hw, db->ndev, "Read TimeStamp8 error: %02x\n", ret);
 					return ret;
 				}
+				pbi->ptp_ts_bytes = 8;
 			} else {	// 4 bytes Timestamp
 				/* 4bytes, dm9051a NOT supported, Will only support for OASPI function chip.
 				 */
@@ -798,6 +824,7 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 					netif_err(db, hw, db->ndev, "Read TimeStamp4 error: %02x\n", ret);
 					return ret;
 				}
+				pbi->ptp_ts_bytes = 4;
 			}
 		}
 	}
@@ -852,6 +879,8 @@ void ptp_init(struct board_info *db)
 	/* Turn on by ptp4l run command
 	 * db->ptp_on = 1; */
 	pbi->ptp_on = 0;
+	pbi->ptp_ts_bytes = 0;
+	pbi->total_ptp_frames = 0;
 	dm9051_ptp_register(db); //_15888_
 	dm9051_ptp_core_init(db); //only by _probe [for further functionality test, do eliminate here, put to _open, and further _core_init]
 }

@@ -417,8 +417,10 @@ typedef struct ptp_board_info
     int ptp_chip_push_tstamp; // 0: no push tstamp 1: push tstamp
     int ptp_enable;
     int ptp_on;    //_15888_
+	int ptp_ts_bytes;
     u8  ptp_step;  // dividual
-    u8  _ptp_rsrv; // ptp_packet; //dividual
+    u8  ptp_rx_msgtype; // ptp_packet; //dividual
+	int total_ptp_frames;
 
     struct hwtstamp_config tstamp_config;
 
@@ -906,6 +908,7 @@ struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb);
  * extern/ macro fakes
  */
 // struct board_info;
+#define INIT_RCR(b)					b->rctl.rcr_all = (RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN)
 
 #define PTP_VER(b)
 #define PTP_VER_SOFTWARE(b)
@@ -913,7 +916,6 @@ struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb);
 #define PTP_SETUP(b) b->pbi.ptp_enable = 0 // dm9051_operation_clear_extern(b)
 #define PTP_CHECKSUM_LIMIT(b, nd)
 // #define PTP_NEW(d)				0
-#define PTP_INIT_RCR(d)
 #define PTP_INIT(d)
 #define PTP_END(d)
 #define PTP_ETHTOOL_INFO(s)
@@ -1041,13 +1043,18 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
     #define DMPLUG_PTP_TX_TIMESTAMPING_SW(s) dm9051_ptp_tx_swtstamp(s)
 #endif
 
+/* ptp sw || ptp */
+#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+    #undef INIT_RCR
+    #define INIT_RCR(b)           	  b->rctl.rcr_all = (RCR_ALL | RCR_DIS_LONG | RCR_RXEN) //ptp_init_rcr(d)
+#endif
+
 /* ptp */
 #if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1) (re-direct ptpc) */
     #undef PTP_VER
     #undef PTP_SETUP
     #undef PTP_CHECKSUM_LIMIT
     // #undef PTP_NEW
-    #undef PTP_INIT_RCR
     #undef PTP_INIT
     #undef PTP_END
     #undef PTP_STATUS_BITS
@@ -1057,7 +1064,6 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
     #define PTP_SETUP(b)              ptp_operation_extern(b)
     #define PTP_CHECKSUM_LIMIT(b, nd) ptp_checksum_limit(b, nd)
     // #define PTP_NEW(d)			  ptp_new(d)
-    #define PTP_INIT_RCR(d)           ptp_init_rcr(d)
     #define PTP_INIT(d)               ptp_init(d)
     #define PTP_END(d)                ptp_end(d)
     #define PTP_STATUS_BITS(b)        ptp_status_bits(db)
@@ -1095,7 +1101,7 @@ void ptp_ver(struct board_info *db);
 void ptp_operation_extern(struct board_info *db);
 void ptp_checksum_limit(struct board_info *db, struct net_device *ndev);
 // int ptp_new(struct board_info *db);
-void ptp_init_rcr(struct board_info *db);
+//void ptp_init_rcr(struct board_info *db);
 void ptp_init(struct board_info *db);
 void ptp_end(struct board_info *db);
 
