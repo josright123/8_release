@@ -619,7 +619,8 @@ static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 			else if (is_peer_delayreq_packet(message_type))
 				//To be as Sync of one step
 				//db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
-				db->tcr_wr = TCR_TS1STEP_EMIT | TCR_TXREQ;
+				//db->tcr_wr = TCR_TS1STEP_EMIT | TCR_TXREQ;
+				db->tcr_wr = TCR_TSEN_CAP | TCR_TXREQ;
 			//}
 			//}
 			//return message_type;
@@ -631,6 +632,7 @@ static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 //SKBTX_HW_TSTAMP
 static void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
+	static int flags_count = 0; //to debug show
 	//ptp_board_info_t *pbi = &db->pbi;
 	//	if (!pbi->tstamp_config.tx_type)
 	//		return;
@@ -655,14 +657,14 @@ static void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb
 			netdev_err(db->ndev, "ptp TX hwtstamp completion polling timeout\n");
 			//.return ret; //.only can be less hurt
 		}
-
 		dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
-	}
-	if (db->pbi.ptp_skp_hw_tstamp) { //.(flags & SKBTX_IN_PROGRESS)
-		static int flags_count = 0; //to debug show
+
 		flags_count++;
 		netif_crit(db, hw, db->ndev, "Yes, %05d dm9051_nsr_poll\n", flags_count);
 		netif_info(db, hw, db->ndev, "Yes, %05d skb_tstamp_tx\n", flags_count);
+	}
+	if (db->pbi.ptp_skp_hw_tstamp) { //.(flags & SKBTX_IN_PROGRESS)
+		netif_info(db, hw, db->ndev, "Yes, %05d YES done tx_in_progress\n", flags_count);
 	}
 
 //	}
