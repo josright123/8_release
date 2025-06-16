@@ -397,6 +397,7 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 	struct ptp_header *ptp_hdr = get_ptp_header(skb);
 	if (ptp_hdr) {
 		u8 message_type = get_ptp_message_type005(ptp_hdr); //for tx monitor
+		db->pbi.ptp_tx_msgtype = message_type;
 		if (is_ptp_sync_packet(message_type))
 			printk("Master() - sync in SKBTX_IN_PROGRESS.\n");
 		
@@ -411,6 +412,8 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 
 		else if (is_peer_delayreq_packet(message_type))
 			printk("PTP() - peerDelayREQ in SKBTX_IN_PROGRESS.\n");
+		else if (message_type == PTP_MSGTYPE_PDELAY_RESP)
+			printk("PTP() - peerDelayRESP in SKBTX_IN_PROGRESS.\n");
 		else
 			printk("PTP() UNKNOW (msg type %u) in SKBTX_IN_PROGRESS.\n", message_type);
 		return 1;

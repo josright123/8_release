@@ -419,7 +419,9 @@ typedef struct ptp_board_info
     int ptp_on;    //_15888_
 	int ptp_ts_bytes;
     u8  ptp_step;  // dividual
+	u8  _ptp_step;
     u8  ptp_rx_msgtype; // ptp_packet; //dividual
+    u8  ptp_tx_msgtype;
 	int total_ptp_frames;
 
     struct hwtstamp_config tstamp_config;

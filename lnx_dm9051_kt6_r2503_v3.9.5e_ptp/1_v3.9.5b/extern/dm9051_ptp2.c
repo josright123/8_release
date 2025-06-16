@@ -485,6 +485,12 @@ static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	ns = ns_lo;
 	ns |= ns_hi  << 16;
 
+	if (db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_PDELAY_RESP) {
+		printk("dm9051_ptp_tx_hwtstamp .sec.ns: %u (tx) ts is %u sec %llu ns\n",
+			db->pbi.ptp_rx_msgtype,
+			sec, ns);
+	}
+
 #ifdef DE_TIMESTAMP
 	//remark4-slave
 	//printk(" TXTXTXTXTX hwtstamp sec = %x, ns = %x \r\n", sec, (u32)ns);
@@ -621,6 +627,10 @@ static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 				//db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
 				//db->tcr_wr = TCR_TS1STEP_EMIT | TCR_TXREQ;
 				db->tcr_wr = TCR_TSEN_CAP | TCR_TXREQ;
+			else if (message_type == PTP_MSGTYPE_PDELAY_RESP)
+				db->tcr_wr = TCR_TSEN_CAP | TCR_TXREQ; /* since, send peer delay respons failed) */
+			else
+				printk("[THIS PTP TX IS STRANGER!]\n");
 			//}
 			//}
 			//return message_type;
