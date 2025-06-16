@@ -619,7 +619,8 @@ static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 			else if (is_peer_delayreq_packet(message_type))
 				//To be as Sync of one step
 				//db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
-				db->tcr_wr = TCR_TS1STEP_EMIT | TCR_TXREQ;
+				//db->tcr_wr = TCR_TS1STEP_EMIT | TCR_TXREQ;
+				db->tcr_wr = TCR_TSEN_CAP | TCR_TXREQ;
 			//}
 			//}
 			//return message_type;
@@ -631,6 +632,7 @@ static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 //SKBTX_HW_TSTAMP
 static void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb)
 {
+	static int flags_count = 0; //to debug show
 	//ptp_board_info_t *pbi = &db->pbi;
 	//	if (!pbi->tstamp_config.tx_type)
 	//		return;
@@ -655,14 +657,14 @@ static void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb
 			netdev_err(db->ndev, "ptp TX hwtstamp completion polling timeout\n");
 			//.return ret; //.only can be less hurt
 		}
-
 		dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
-	}
-	if (db->pbi.ptp_skp_hw_tstamp) { //.(flags & SKBTX_IN_PROGRESS)
-		static int flags_count = 0; //to debug show
+
 		flags_count++;
 		netif_crit(db, hw, db->ndev, "Yes, %05d dm9051_nsr_poll\n", flags_count);
 		netif_info(db, hw, db->ndev, "Yes, %05d skb_tstamp_tx\n", flags_count);
+	}
+	if (db->pbi.ptp_skp_hw_tstamp) { //.(flags & SKBTX_IN_PROGRESS)
+		netif_info(db, hw, db->ndev, "Yes, %05d YES done tx_in_progress\n", flags_count);
 	}
 
 //	}
@@ -755,7 +757,31 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 			/* Since we cannot turn off the Rx timestamp logic if the device is
 			 * doing Tx timestamping, check if Rx timestamping is configured.
 			 */
-			u64 ns = rx_extract_ts(pbi->rxTSbyte);
+			u64 ns;
+
+			if (pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ) {
+				u16 ns_hi, ns_lo, s_hi, s_lo;
+				u32 sec;
+				//u64 ns;
+
+				ns_lo = pbi->rxTSbyte[7] | (pbi->rxTSbyte[6] << 8);
+				ns_hi = pbi->rxTSbyte[5] | (pbi->rxTSbyte[4] << 8);
+
+				s_lo = pbi->rxTSbyte[3] | (pbi->rxTSbyte[2] << 8);
+				s_hi = pbi->rxTSbyte[1] | (pbi->rxTSbyte[0] << 8);
+
+				sec = s_lo;
+				sec |= s_hi << 16;
+
+				ns = ns_lo;
+				ns |= ns_hi  << 16;
+
+				printk("dm9051_ptp_rx_packet_monitor .sec.ns: %u (frame %d) ts bytes %d is %u sec %llu ns\n", 
+					pbi->ptp_rx_msgtype, pbi->total_ptp_frames, pbi->ptp_ts_bytes,
+					sec, ns);
+			}
+
+			ns = rx_extract_ts(pbi->rxTSbyte);
 			/* Use skb_hwtstamps(skb) get 'skb_shared_hwtstamps' and then copy to ->hwtstamp
 			 * We can also use skb_complete_rx_timestamp() to make the same result.
 			 */
@@ -780,6 +806,7 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 
 	//_15888_
 	//if (db->ptp_on) { //Even NOT ptp_on, need do.
+	pbi->ptp_ts_bytes = 0;
 	if (pbi->ptp_enable) {
 		if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 			int ret;
@@ -790,6 +817,7 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 					netif_err(db, hw, db->ndev, "Read TimeStamp8 error: %02x\n", ret);
 					return ret;
 				}
+				pbi->ptp_ts_bytes = 8;
 			} else {	// 4 bytes Timestamp
 				/* 4bytes, dm9051a NOT supported, Will only support for OASPI function chip.
 				 */
@@ -798,6 +826,7 @@ int dm9051_read_ptp_tstamp_mem(struct board_info *db)
 					netif_err(db, hw, db->ndev, "Read TimeStamp4 error: %02x\n", ret);
 					return ret;
 				}
+				pbi->ptp_ts_bytes = 4;
 			}
 		}
 	}
@@ -852,6 +881,8 @@ void ptp_init(struct board_info *db)
 	/* Turn on by ptp4l run command
 	 * db->ptp_on = 1; */
 	pbi->ptp_on = 0;
+	pbi->ptp_ts_bytes = 0;
+	pbi->total_ptp_frames = 0;
 	dm9051_ptp_register(db); //_15888_
 	dm9051_ptp_core_init(db); //only by _probe [for further functionality test, do eliminate here, put to _open, and further _core_init]
 }

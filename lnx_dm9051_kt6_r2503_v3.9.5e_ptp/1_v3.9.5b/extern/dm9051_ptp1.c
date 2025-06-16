@@ -430,10 +430,13 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		static int master_get_delayReq6 = 6; //5;
 		static int master_get_pdelayReq6 = 6; //5;
 		static int slave_get_ptpMisc = 9;
-		static int total_ptp_frames = 0;
+		//static int total_ptp_frames = 0;
 		u8 message_type = get_ptp_message_type005(ptp_hdr); //for rx monitor
 		
-		printk("dm9051_ptp_rx_packet_monitor .ptp_hdr.msg_type: %u (frame %d)\n", message_type, ++total_ptp_frames);
+		pbi->total_ptp_frames++;
+		pbi->ptp_rx_msgtype = message_type;
+		printk("dm9051_ptp_rx_packet_monitor .ptp_hdr.msg_type: %u (frame %d) ts bytes %d\n", 
+			message_type, pbi->total_ptp_frames, pbi->ptp_ts_bytes);
 
 		if (is_ptp_sync_packet(message_type)) {
 			if (slave_get_ptpFrame)
@@ -550,13 +553,13 @@ void ptp_checksum_limit(struct board_info *db, struct net_device *ndev)
 		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
 }
 
-void ptp_init_rcr(struct board_info *db)
-{
-	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)
-#if 1 //[ptp p2p]
-	db->rctl.rcr_all |= RCR_ALL;
-#endif
-}
+//void ptp_init_rcr(struct board_info *db)
+//{
+//	db->rctl.rcr_all = RCR_DIS_LONG | RCR_RXEN; //_15888_ //Disable discard CRC error (work around)
+//#if 1 //[ptp p2p]
+//	db->rctl.rcr_all |= RCR_ALL;
+//#endif
+//}
 
 u8 ptp_status_bits(struct board_info *db)
 {
