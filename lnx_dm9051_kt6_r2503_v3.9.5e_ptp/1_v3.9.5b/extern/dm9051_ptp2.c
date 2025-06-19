@@ -274,12 +274,13 @@ int dm9051_get_clk_ts(struct board_info *db)
 		t.tv_nsec = ((uint32_t)temp[3] << 24) | ((uint32_t)temp[2] << 16) |
 		      ((uint32_t)temp[1] << 8) | (uint32_t)temp[0];
 		      
-//		t.tv_sec = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
-//		      ((uint32_t)temp[5] << 8) | (uint32_t)temp[4];
+		t.tv_sec = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
+		      ((uint32_t)temp[5] << 8) | (uint32_t)temp[4];
 
 //.		printk("DM9051A ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
 //.		printk("DM9051A ...ptp_9051_gettime  %llu s, %lu ns\n", t.tv_sec, t.tv_nsec);
-		printk("clkTSbyte %lu s\n", t.tv_nsec);
+		//printk("clkTSbyte %l\u s\n", t.tv_sec);
+		printk("clkTSbyte ...get_clk_ts %llu s\n", t.tv_sec);
 	} while(0);
 	return 0;
 }
@@ -840,7 +841,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 				ns = ns_lo;
 				ns |= ns_hi  << 16;
 
-				if (pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ)
+				if (pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ_pri)
 					printk("Peer get-pdly_Req.sec.ns: (frame %d) ts bytes %d: %u sec\n", 
 						pbi->total_ptp_frames, pbi->ptp_ts_bytes, sec);
 				if (slave_get_ptpFrame) {
