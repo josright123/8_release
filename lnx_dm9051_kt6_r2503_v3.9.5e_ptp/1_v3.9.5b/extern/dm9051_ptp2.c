@@ -251,12 +251,14 @@ int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 }
 
 // OF ptp_9051_gettime()
-// AS dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 8);
-//
-int dm9051_ptp_rx_packet_monitor_ts(struct board_info *db)
+// v.s. dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 8);
+// THIS get ts, got wrong ts : to be verified!
+// (TO MAKE IT RIGHT!)
+int dm9051_get_clk_ts(struct board_info *db)
 {
 	ptp_board_info_t *pbi = &db->pbi;
 	unsigned int uIntTemp;
+	u8 *temp = &pbi->clkTSbyte[0];
 	int i;
 
 	dm9051_set_reg(db, DM9051_1588_CLK_CTRL,
@@ -264,19 +266,20 @@ int dm9051_ptp_rx_packet_monitor_ts(struct board_info *db)
 
 	for (i = 0; i < 8; i++) {
 		regmap_read(db->regmap_dm, DM9051_1588_TS, &uIntTemp);
-		//temp[i] = (u8)(uIntTemp & 0xFF);
-		pbi->rxTSbyte[i] = (u8)(uIntTemp & 0xFF);
+		temp[i] = (u8)(uIntTemp & 0xFF); //this is ok
 	}
 	
 	do {
 		struct timespec64 t;
-		u8 *temp = &pbi->rxTSbyte[0];
 		t.tv_nsec = ((uint32_t)temp[3] << 24) | ((uint32_t)temp[2] << 16) |
 		      ((uint32_t)temp[1] << 8) | (uint32_t)temp[0];
-		t.tv_sec = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
-		      ((uint32_t)temp[5] << 8) | (uint32_t)temp[4];
-		printk("DM9051A ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
-		printk("DM9051A ...ptp_9051_gettime  %llu s, %lu ns\n", t.tv_sec, t.tv_nsec);
+		      
+//		t.tv_sec = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
+//		      ((uint32_t)temp[5] << 8) | (uint32_t)temp[4];
+
+//.		printk("DM9051A ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
+//.		printk("DM9051A ...ptp_9051_gettime  %llu s, %lu ns\n", t.tv_sec, t.tv_nsec);
+		printk("clkTSbyte %lu s\n", t.tv_nsec);
 	} while(0);
 	return 0;
 }
@@ -295,14 +298,17 @@ int ptp_9051_gettime(struct ptp_clock_info *caps,
 	//unsigned int temp[8];
 	//int i;
 	//unsigned int uIntTemp;
-	u8 *temp = &pbi->rxTSbyte[0];
+	u8 *temp = &pbi->clkTSbyte[0];
 
-	printk("DM9051A ...ptp_9051_gettime\n");
+	printk("DM9051A.4l ...ptp_9051_gettime\n");
 
 // tom: from stone's doc. write 0x84 to reg 0x61 is enough,
 // bit 0 PTP_EN has been set in ptp_init
 	mutex_lock(&db->spi_lockm);
-	dm9051_ptp_rx_packet_monitor_ts(db);
+	/* v.s. AS dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 8);
+	 * THIS get ts, got wrong ts : to be verified!
+	 */
+	dm9051_get_clk_ts(db);
 	mutex_unlock(&db->spi_lockm);
 	/*
 	dm9051_read_mem(db, DM9051_1588_TS, temp, DM9051_1588_TS_BULK_SIZE);
@@ -313,8 +319,8 @@ int ptp_9051_gettime(struct ptp_clock_info *caps,
 //regmap_noinc_read(db->regmap_dm, DM9051_1588_TS, &temp, 8);	//Spenser -  Read HW Timestamp from DM9051A REG_68H
 
 // tom: re-write the upper statements
-	printk("DM9051A.00 ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
-	temp = &pbi->rxTSbyte[0];
+	//printk("DM9051A.00 ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
+	//temp = &pbi->clkTSbyte[0];
 	ts->tv_nsec = ((uint32_t)temp[3] << 24) | ((uint32_t)temp[2] << 16) |
 		      ((uint32_t)temp[1] << 8) | (uint32_t)temp[0];
 	ts->tv_sec  = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
@@ -424,7 +430,7 @@ static void dm9051_ptp_core_init(struct board_info *db)
 	dm9051_set_reg(db, 0x3C, 0xB0);
 #endif
 
-#if 1 //[TEST INIT CLK TO 0]
+#if 0 //[TEST INIT CLK TO 0]
 	//mutex_lock(&db->spi_lockm);
 	printk("...ptp_9051_settime - [TEST INIT CLK TO 0]\n");
 
@@ -471,6 +477,7 @@ static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	u16 ns_hi, ns_lo, s_hi, s_lo;
 	u32 sec;
 	u64 ns;
+	static int delayRespSent = 0;
 	//int i;
 	//unsigned int uIntTemp = 0;
 
@@ -518,10 +525,16 @@ static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	ns = ns_lo;
 	ns |= ns_hi  << 16;
 
-	if (db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_PDELAY_RESP) {
-		printk("dm9051_ptp_tx_hwtstamp .sec.ns: %u (tx) ts is %u sec %llu ns\n",
+	if (db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_SYNC_pri && delayRespSent == 0) {
+		printk("Master %u s\n", sec);
+	}
+	if (db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_DELAY_RESP_pri) {
+		delayRespSent = 1;
+	}
+	if (db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_PDELAY_RESP_pri) {
+		printk("Peer Resp (tx %u) ts is %u sec\n", //" %llu ns"
 			db->pbi.ptp_rx_msgtype,
-			sec, ns);
+			sec); //, ns
 	}
 
 #ifdef DE_TIMESTAMP
@@ -607,7 +620,7 @@ static void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb
 		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
 		db->pbi.ptp_skp_hw_tstamp = 1;
 		if (b_ptphdr)
-			printk("PTP b_ptphdr packet SKBTX_IN_PROGRESS() - YES set tx_in_progress.\n");
+			; //printk("PTP b_ptphdr packet SKBTX_IN_PROGRESS() - YES set tx_in_progress.\n");
 		else
 			printk("PTP !b_ptphdr packet SKBTX_IN_PROGRESS() - WARN set tx_in_progress ?\n");
 		//return 1;
@@ -703,8 +716,10 @@ static void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb
 		dm9051_ptp_tx_hwtstamp(db, skb); //dm9051_hwtstamp_to_skb(skb, db); //_15888_,
 
 		flags_count++;
+#if 0
 		netif_crit(db, hw, db->ndev, "Yes, %05d dm9051_nsr_poll\n", flags_count);
 		netif_info(db, hw, db->ndev, "Yes, %05d skb_tstamp_tx\n", flags_count);
+#endif
 	}
 	if (db->pbi.ptp_skp_hw_tstamp) { //.(flags & SKBTX_IN_PROGRESS)
 		netif_info(db, hw, db->ndev, "Yes, %05d YES done tx_in_progress\n", flags_count);
@@ -759,7 +774,7 @@ static u64 rx_extract_ts(u8 *rxTSbyte)
 	ns = ns_lo;
 	ns |= ns_hi  << 16;
 	
-	printk("Slave(%d)-DM9051A ...extract_ts  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
+	//.printk("Slave(%d)-DM9051A ...extract_ts  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
 
 	ns += ((u64)sec) * 1000000000ULL;
 	//printk("_dm9051_ptp_rx_hwtstamp ns_lo=%x, ns_hi=%x s_lo=%x s_hi=%x \r\n", ns_lo, ns_hi, s_lo, s_hi);
@@ -826,12 +841,12 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 				ns |= ns_hi  << 16;
 
 				if (pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ)
-					printk("dm9051_ptp_rx_packet_monitor .sec.ns: %u (frame %d) ts bytes %d is %u sec %llu ns\n", 
-						pbi->ptp_rx_msgtype, pbi->total_ptp_frames, pbi->ptp_ts_bytes,
-						sec, ns);
+					printk("Peer get-pdly_Req.sec.ns: (frame %d) ts bytes %d: %u sec\n", 
+						pbi->total_ptp_frames, pbi->ptp_ts_bytes, sec);
 				if (slave_get_ptpFrame) {
 					//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %" PRIu64 " ns\n", sec, ns);
-					printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
+					//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
+					printk("Slave %u s\n", sec);
 					slave_get_ptpFrame--;
 				}
 			}

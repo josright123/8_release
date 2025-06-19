@@ -433,22 +433,25 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		static int slave_get_ptpFrameResp3 = 3;
 		static int master_get_delayReq6 = 6; //5;
 		static int master_get_pdelayReq6 = 6; //5;
+		static int master_get_pdelayResp6 = 6;
 		static int slave_get_ptpMisc = 9;
 		//static int total_ptp_frames = 0;
 		u8 message_type = get_ptp_message_type005(ptp_hdr); //for rx monitor
 		
 		pbi->total_ptp_frames++;
 		pbi->ptp_rx_msgtype = message_type;
-		printk("dm9051_ptp_rx_packet_monitor .ptp_hdr.msg_type: %u (frame %d) ts bytes %d\n", 
-			message_type, pbi->total_ptp_frames, pbi->ptp_ts_bytes);
 
 		if (is_ptp_sync_packet(message_type)) {
 			if (slave_get_ptpFrame)
 				if (pbi->ptp_enable) {
 					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 						printk("\n");
-						printk("Slave(%d)-get-sync with tstamp. \n", slave_get_ptpFrame);
-						dm9051_ptp_rx_packet_monitor_ts(db);
+						printk("get-sync\n"); //printk("Slave(%d)-get-sync with tstamp. \n", slave_get_ptpFrame);
+						/* THIS get ts, v.s. AS dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 8)
+						 * THIS get ts, Pls don't store into pbi->rxTSbyte[]
+						 * where had already ts data by dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 8)
+						 */
+						dm9051_get_clk_ts(db);
 						//sprintf(db->bc.head, "Slave-get-sync with tstamp, len= %3d", skb->len);
 						//dm9051_dump_data1(db, skb->data, skb->len);
 					} else {
@@ -496,13 +499,23 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 			//if (pbi->ptp_enable) {
 				if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 					if (master_get_pdelayReq6)
-						printk("Master(%d)-get-PEER_DELAY_REQ with tstamp. \n", --master_get_pdelayReq6);
+						printk("PEER(%d)-get-PEER_DELAY_REQ with tstamp. ts bytes %d\n",
+							--master_get_pdelayReq6, pbi->ptp_ts_bytes);
 				}
 				else {
-					dm9051_ptp_rx_packet_monitor_ts(db);
-					printk("Master-get-PEER_DELAY_REQ without tstamp. CHIP_WRONG_CONDITION !!\n");
+					dm9051_get_clk_ts(db);
+					printk("PEER-get-PEER_DELAY_REQ without tstamp. CHIP_WRONG_CONDITION !!\n");
 				}
 			//}
+		} else if (message_type == PTP_MSGTYPE_PDELAY_RESP_pri) {
+				if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
+					if (master_get_pdelayResp6)
+						printk("PEER(%d)-get-PEER_DELAY_RESP: (frame %d) tstamp ts bytes %d\n", 
+							--master_get_pdelayResp6, pbi->total_ptp_frames, pbi->ptp_ts_bytes);
+				}
+				else {
+					printk("PEER-get-PEER_DELAY_RESP without tstamp. CHIP_WRONG_CONDITION !!\n");
+				}
 		} else {
 			if (slave_get_ptpMisc)
 				if (pbi->ptp_enable) {

@@ -427,6 +427,7 @@ typedef struct ptp_board_info
     struct hwtstamp_config tstamp_config;
 
     s64 pre_rate;
+    u8  clkTSbyte[8];
     u8  rxTSbyte[8]; //_15888_ // Store 1588 Time Stamp
                      // #endif
 } ptp_board_info_t;
@@ -929,7 +930,7 @@ struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb);
 /* ptp2 */
 #define DMPLUG_RX_TS_MEM(b) 0
 #define DMPLUG_RX_HW_TS_SKB(b, s)
-#define SHOW_ptp_rx_packet_monitor(b, s)
+#define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s)
 #define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
 
 // #define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	//0
@@ -1079,8 +1080,8 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
     #define DMPLUG_RX_TS_MEM(b)       dm9051_read_ptp_tstamp_mem(b)
     #define DMPLUG_RX_HW_TS_SKB(b, s) dm9051_ptp_rx_hwtstamp(b, s)
 
-    #undef SHOW_ptp_rx_packet_monitor
-    #define SHOW_ptp_rx_packet_monitor(b, s) dm9051_ptp_rx_packet_monitor(b, s)
+    #undef DMPLUG_SHOW_ptp_rx_packet_monitor
+    #define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s) dm9051_ptp_rx_packet_monitor(b, s)
 
     #undef DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER
     #define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b) dm9051_ptp_rxc_from_master(b)
@@ -1113,7 +1114,7 @@ void on_core_init_ptp_rate(struct board_info *db);
 
 netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev, netdev_features_t features);
 
-int  dm9051_ptp_rx_packet_monitor_ts(struct board_info *db);
+int  dm9051_get_clk_ts(struct board_info *db);
 int  dm9051_read_ptp_tstamp_mem(struct board_info *db);
 void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);

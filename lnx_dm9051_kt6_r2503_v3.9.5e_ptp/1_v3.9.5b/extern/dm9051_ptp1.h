@@ -73,8 +73,13 @@
   #define PTP_MSGTYPE_DELAY_REQ 0x1
 #endif
 
-#define PTP_MSGTYPE_PDELAY_REQ     0x2 // #define PTP_MSGTYPE_PDELAY_REQ     0x2
-#define PTP_MSGTYPE_PDELAY_RESP    0x3 // #define PTP_MSGTYPE_PDELAY_RESP    0x3
+#define PTP_MSGTYPE_SYNC_pri									0x0
+#define PTP_MSGTYPE_DELAY_REQ_pri 						0x1
+#define PTP_MSGTYPE_PDELAY_REQ_pri     				0x2 // #define PTP_MSGTYPE_PDELAY_REQ     0x2
+#define PTP_MSGTYPE_PDELAY_RESP_pri    				0x3 // #define PTP_MSGTYPE_PDELAY_RESP    0x3
+#define PTP_MSGTYPE_DELAY_RESP_pri						0x9
+#define PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP_pri	0xA
+
 #define PTP_MSGTYPE_FOLLOW_UP			  0x8
 #define PTP_MSGTYPE_DELAY_RESP			  0x9
 #define PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP 0xA

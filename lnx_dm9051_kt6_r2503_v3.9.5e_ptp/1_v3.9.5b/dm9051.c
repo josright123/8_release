@@ -1557,7 +1557,7 @@ int dm9051_loop_rx(struct board_info *db)
 			return ret;
 		}
 
-		SHOW_ptp_rx_packet_monitor(db, skb); /* 7.2dbg ptpc */
+		DMPLUG_SHOW_ptp_rx_packet_monitor(db, skb); /* 7.2dbg ptpc */
 
 		skb->protocol = eth_type_trans(skb, db->ndev);
 
