@@ -421,6 +421,8 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 	return 0;
 }
 
+int slave_get_ptpFrame = 109;
+		
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
@@ -428,7 +430,6 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 	
 	ptp_hdr = get_ptp_header(skb);
 	if (ptp_hdr) { //is_ptp_packet(skb->data)
-		static int slave_get_ptpFrame = 9;
 		static int slave_get_ptpFrameResp3 = 3;
 		static int master_get_delayReq6 = 6; //5;
 		static int master_get_pdelayReq6 = 6; //5;
@@ -446,20 +447,21 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 				if (pbi->ptp_enable) {
 					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 						printk("\n");
-						printk("Slave(%d)-get-sync with tstamp. \n", --slave_get_ptpFrame);
+						printk("Slave(%d)-get-sync with tstamp. \n", slave_get_ptpFrame);
+						dm9051_ptp_rx_packet_monitor_ts(db);
 						//sprintf(db->bc.head, "Slave-get-sync with tstamp, len= %3d", skb->len);
 						//dm9051_dump_data1(db, skb->data, skb->len);
 					} else {
-						printk("Slave(%d)-get-sync without tstamp. \n", --slave_get_ptpFrame);
+						printk("Slave(%d)-get-sync without tstamp. \n", slave_get_ptpFrame);
 					}
 				}
 		} else if (message_type == PTP_MSGTYPE_FOLLOW_UP) {
 			if (slave_get_ptpFrame)
 				if (pbi->ptp_enable) {
 					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
-						printk("Slave(%d)-get-followup with tstamp. \n", --slave_get_ptpFrame);
+						printk("Slave(%d)-get-followup with tstamp. \n", slave_get_ptpFrame);
 					} else {
-						printk("Slave(%d)-get-followup without tstamp. \n", --slave_get_ptpFrame);
+						printk("Slave(%d)-get-followup without tstamp. \n", slave_get_ptpFrame);
 					}
 				}
 		} else if (message_type == PTP_MSGTYPE_DELAY_RESP) {
@@ -475,9 +477,9 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 			if (slave_get_ptpFrame)
 				if (pbi->ptp_enable) {
 					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
-						printk("Slave(%d)-get-ANNOUNCE with tstamp. \n", --slave_get_ptpFrame);
+						printk("Slave(%d)-get-ANNOUNCE with tstamp. \n", slave_get_ptpFrame);
 					} else {
-						printk("Slave(%d)-get-ANNOUNCE without tstamp. \n", --slave_get_ptpFrame);
+						printk("Slave(%d)-get-ANNOUNCE without tstamp. \n", slave_get_ptpFrame);
 					}
 				}
 		} else if (is_ptp_delayreq_packet(message_type)) { //skip is_peer_delayreq_packet();

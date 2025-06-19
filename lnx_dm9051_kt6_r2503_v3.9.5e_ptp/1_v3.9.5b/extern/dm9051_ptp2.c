@@ -3,6 +3,8 @@
  * Copyright (c) 2025 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
+//#include <stdint.h>
+//#include <inttypes.h>
 #include <linux/etherdevice.h>
 #include <linux/ethtool.h>
 #include <linux/interrupt.h>
@@ -265,6 +267,17 @@ int dm9051_ptp_rx_packet_monitor_ts(struct board_info *db)
 		//temp[i] = (u8)(uIntTemp & 0xFF);
 		pbi->rxTSbyte[i] = (u8)(uIntTemp & 0xFF);
 	}
+	
+	do {
+		struct timespec64 t;
+		u8 *temp = &pbi->rxTSbyte[0];
+		t.tv_nsec = ((uint32_t)temp[3] << 24) | ((uint32_t)temp[2] << 16) |
+		      ((uint32_t)temp[1] << 8) | (uint32_t)temp[0];
+		t.tv_sec = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
+		      ((uint32_t)temp[5] << 8) | (uint32_t)temp[4];
+		printk("DM9051A ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
+		printk("DM9051A ...ptp_9051_gettime  %llu s, %lu ns\n", t.tv_sec, t.tv_nsec);
+	} while(0);
 	return 0;
 }
 
@@ -300,12 +313,14 @@ int ptp_9051_gettime(struct ptp_clock_info *caps,
 //regmap_noinc_read(db->regmap_dm, DM9051_1588_TS, &temp, 8);	//Spenser -  Read HW Timestamp from DM9051A REG_68H
 
 // tom: re-write the upper statements
-	printk("DM9051A ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
+	printk("DM9051A.00 ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
 	temp = &pbi->rxTSbyte[0];
 	ts->tv_nsec = ((uint32_t)temp[3] << 24) | ((uint32_t)temp[2] << 16) |
 		      ((uint32_t)temp[1] << 8) | (uint32_t)temp[0];
 	ts->tv_sec  = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
 		      ((uint32_t)temp[5] << 8) | (uint32_t)temp[4];
+	printk("DM9051A.4l ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
+	printk("DM9051A.4l ...ptp_9051_gettime  %llu s, %lu ns\n", ts->tv_sec, ts->tv_nsec);
 
 
 //printk("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ptp_dm9051_gettime sec=%llx nsec=%lx \n", ts->tv_sec, ts->tv_nsec);
@@ -407,6 +422,24 @@ static void dm9051_ptp_core_init(struct board_info *db)
 
 #ifdef DMPLUG_PPS_CLKOUT
 	dm9051_set_reg(db, 0x3C, 0xB0);
+#endif
+
+#if 1 //[TEST INIT CLK TO 0]
+	//mutex_lock(&db->spi_lockm);
+	printk("...ptp_9051_settime - [TEST INIT CLK TO 0]\n");
+
+	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)0);             // Write register 0x68
+	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)0);      // Write register 0x68
+	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)0);     // Write register 0x68
+	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)0);     // Write register 0x68
+
+	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)0);             // Write register 0x68
+	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)0);      // Write register 0x68
+	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)0);     // Write register 0x68
+	dm9051_set_reg(db, DM9051_1588_TS, (uint8_t)0);     // Write register 0x68
+
+	dm9051_set_reg(db, DM9051_1588_CLK_CTRL, DM9051_CCR_PTP_WRITE);
+	//mutex_unlock(&db->spi_lockm);
 #endif
 }
 
@@ -697,6 +730,8 @@ int dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb)
 	return ret;
 }
 
+extern int slave_get_ptpFrame;
+
 static u64 rx_extract_ts(u8 *rxTSbyte)
 {
 	//u8 temp[12];
@@ -723,6 +758,8 @@ static u64 rx_extract_ts(u8 *rxTSbyte)
 
 	ns = ns_lo;
 	ns |= ns_hi  << 16;
+	
+	printk("Slave(%d)-DM9051A ...extract_ts  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
 
 	ns += ((u64)sec) * 1000000000ULL;
 	//printk("_dm9051_ptp_rx_hwtstamp ns_lo=%x, ns_hi=%x s_lo=%x s_hi=%x \r\n", ns_lo, ns_hi, s_lo, s_hi);
@@ -750,7 +787,8 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 		return;
 #endif
 
-#if 0 //[wait further test..]
+#if 1 //[wait further test..]
+	//[Now]
 	if (is_ptp_rxts_en(db)) //if T1/T4, // Is it inserted Timestamp? //[wait further test..]
 #endif
 	{
@@ -769,16 +807,17 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 			 */
 			u64 ns;
 
-			if (pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ) {
+			if (slave_get_ptpFrame || pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ) {
+				u8 *rxTSbyte = pbi->rxTSbyte;
 				u16 ns_hi, ns_lo, s_hi, s_lo;
 				u32 sec;
 				//u64 ns;
 
-				ns_lo = pbi->rxTSbyte[7] | (pbi->rxTSbyte[6] << 8);
-				ns_hi = pbi->rxTSbyte[5] | (pbi->rxTSbyte[4] << 8);
+				ns_lo = rxTSbyte[7] | (rxTSbyte[6] << 8); //pbi->rxTSbyte[7] | (pbi->rxTSbyte[6] << 8);
+				ns_hi = rxTSbyte[5] | (rxTSbyte[4] << 8); //pbi->rxTSbyte[5] | (pbi->rxTSbyte[4] << 8);
 
-				s_lo = pbi->rxTSbyte[3] | (pbi->rxTSbyte[2] << 8);
-				s_hi = pbi->rxTSbyte[1] | (pbi->rxTSbyte[0] << 8);
+				s_lo = rxTSbyte[3] | (rxTSbyte[2] << 8); //pbi->rxTSbyte[3] | (pbi->rxTSbyte[2] << 8);
+				s_hi = rxTSbyte[1] | (rxTSbyte[0] << 8); //pbi->rxTSbyte[1] | (pbi->rxTSbyte[0] << 8);
 
 				sec = s_lo;
 				sec |= s_hi << 16;
@@ -786,9 +825,15 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 				ns = ns_lo;
 				ns |= ns_hi  << 16;
 
-				printk("dm9051_ptp_rx_packet_monitor .sec.ns: %u (frame %d) ts bytes %d is %u sec %llu ns\n", 
-					pbi->ptp_rx_msgtype, pbi->total_ptp_frames, pbi->ptp_ts_bytes,
-					sec, ns);
+				if (pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ)
+					printk("dm9051_ptp_rx_packet_monitor .sec.ns: %u (frame %d) ts bytes %d is %u sec %llu ns\n", 
+						pbi->ptp_rx_msgtype, pbi->total_ptp_frames, pbi->ptp_ts_bytes,
+						sec, ns);
+				if (slave_get_ptpFrame) {
+					//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %" PRIu64 " ns\n", sec, ns);
+					printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
+					slave_get_ptpFrame--;
+				}
 			}
 
 			ns = rx_extract_ts(pbi->rxTSbyte);
