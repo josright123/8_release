@@ -673,7 +673,7 @@ static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 				//db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
 				//db->tcr_wr = TCR_TS1STEP_EMIT | TCR_TXREQ;
 				db->tcr_wr = TCR_TSEN_CAP | TCR_TXREQ;
-			else if (message_type == PTP_MSGTYPE_PDELAY_RESP)
+			else if (message_type == PTP_MSGTYPE_PDELAY_RESP_pri)
 				db->tcr_wr = TCR_TSEN_CAP | TCR_TXREQ; /* since, send peer delay respons failed) */
 			else
 				printk("[THIS PTP TX IS STRANGER!]\n");
@@ -822,7 +822,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 			 */
 			u64 ns;
 
-			if (slave_get_ptpFrame || pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ) {
+			if (slave_get_ptpFrame || pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ_pri) {
 				u8 *rxTSbyte = pbi->rxTSbyte;
 				u16 ns_hi, ns_lo, s_hi, s_lo;
 				u32 sec;

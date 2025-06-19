@@ -331,7 +331,7 @@ int is_ptp_delayreq_packet(u8 msgtype)
 }
 int is_peer_delayreq_packet(u8 msgtype)
 {
-	return (msgtype == PTP_MSGTYPE_PDELAY_REQ) ? 1 : 0;
+	return (msgtype == PTP_MSGTYPE_PDELAY_REQ_pri) ? 1 : 0;
 }
 
 struct ptp_header *get_ptp_header(struct sk_buff *skb)
@@ -412,7 +412,7 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 
 		else if (is_peer_delayreq_packet(message_type))
 			printk("PTP() - peerDelayREQ in SKBTX_IN_PROGRESS.\n");
-		else if (message_type == PTP_MSGTYPE_PDELAY_RESP)
+		else if (message_type == PTP_MSGTYPE_PDELAY_RESP_pri)
 			printk("PTP() - peerDelayRESP in SKBTX_IN_PROGRESS.\n");
 		else
 			printk("PTP() UNKNOW (msg type %u) in SKBTX_IN_PROGRESS.\n", message_type);
