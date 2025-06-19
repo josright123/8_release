@@ -529,10 +529,8 @@ static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	if (db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_SYNC_pri && delayRespSent == 0) {
 		printk("Master %u s\n", sec);
 	}
-	if (db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_DELAY_RESP_pri) {
+	if (is_peer_delayresp_packet(db->pbi.ptp_tx_msgtype)) {
 		delayRespSent = 1;
-	}
-	if (db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_PDELAY_RESP_pri) {
 		printk("Peer Resp (tx %u) ts is %u sec\n", //" %llu ns"
 			db->pbi.ptp_rx_msgtype,
 			sec); //, ns
@@ -674,7 +672,7 @@ static void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb)
 				//db->tcr_wr = TCR_TSEN_CAP | TCR_TS1STEP_EMIT | TCR_TXREQ;
 				//db->tcr_wr = TCR_TS1STEP_EMIT | TCR_TXREQ;
 				db->tcr_wr = TCR_TSEN_CAP | TCR_TXREQ;
-			else if (message_type == PTP_MSGTYPE_PDELAY_RESP_pri)
+			else if (is_peer_delayresp_packet(message_type))
 				db->tcr_wr = TCR_TSEN_CAP | TCR_TXREQ; /* since, send peer delay respons failed) */
 			else
 				printk("[THIS PTP TX IS STRANGER!]\n");
@@ -823,7 +821,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 			 */
 			u64 ns;
 
-			if (slave_get_ptpFrame || pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ_pri) {
+			if (slave_get_ptpFrame || is_peer_delayreq_packet(pbi->ptp_rx_msgtype)) {
 				u8 *rxTSbyte = pbi->rxTSbyte;
 				u16 ns_hi, ns_lo, s_hi, s_lo;
 				u32 sec;
@@ -841,7 +839,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 				ns = ns_lo;
 				ns |= ns_hi  << 16;
 
-				if (pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ_pri)
+				if (is_peer_delayreq_packet(pbi->ptp_rx_msgtype))
 					printk("Peer get-pdly_Req.sec.ns: (frame %d) ts bytes %d: %u sec\n", 
 						pbi->total_ptp_frames, pbi->ptp_ts_bytes, sec);
 				if (slave_get_ptpFrame) {
