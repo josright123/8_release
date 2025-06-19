@@ -321,6 +321,11 @@ void ptp_ver_software(struct board_info *db)
 #endif
 
 #ifdef DMPLUG_PTP
+/* Sync
+ * Delay Request
+ * Peer Delay Request
+ * Peer Delay Response
+ */
 int is_ptp_sync_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_SYNC) ? 1 : 0;
@@ -332,6 +337,10 @@ int is_ptp_delayreq_packet(u8 msgtype)
 int is_peer_delayreq_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_PDELAY_REQ_pri) ? 1 : 0;
+}
+int is_peer_delayresp_packet(u8 msgtype)
+{
+	return (msgtype == PTP_MSGTYPE_PDELAY_RESP_pri) ? 1 : 0;
 }
 
 struct ptp_header *get_ptp_header(struct sk_buff *skb)
@@ -412,7 +421,7 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 
 		else if (is_peer_delayreq_packet(message_type))
 			printk("PTP() - peerDelayREQ in SKBTX_IN_PROGRESS.\n");
-		else if (message_type == PTP_MSGTYPE_PDELAY_RESP_pri)
+		else if (is_peer_delayresp_packet(message_type))
 			printk("PTP() - peerDelayRESP in SKBTX_IN_PROGRESS.\n");
 		else
 			printk("PTP() UNKNOW (msg type %u) in SKBTX_IN_PROGRESS.\n", message_type);
@@ -507,7 +516,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 					printk("PEER-get-PEER_DELAY_REQ without tstamp. CHIP_WRONG_CONDITION !!\n");
 				}
 			//}
-		} else if (message_type == PTP_MSGTYPE_PDELAY_RESP_pri) {
+		} else if (is_peer_delayresp_packet(message_type)) {
 				if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
 					if (master_get_pdelayResp6)
 						printk("PEER(%d)-get-PEER_DELAY_RESP: (frame %d) tstamp ts bytes %d\n", 
