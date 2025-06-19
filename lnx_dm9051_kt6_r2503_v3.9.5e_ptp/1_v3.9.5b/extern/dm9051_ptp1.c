@@ -415,14 +415,16 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		else if (message_type == PTP_MSGTYPE_DELAY_RESP)
 			printk("Master() - sync in SKBTX_IN_PROGRESS.\n");
 		else if (message_type == PTP_MSGTYPE_ANNOUNCE)
-			printk("Master() - announce in SKBTX_IN_PROGRESS.\n");
+			; //printk("Master() - announce in SKBTX_IN_PROGRESS.\n");
 		else if (is_ptp_delayreq_packet(message_type))
-			printk("PTP() - delayREQ in SKBTX_IN_PROGRESS.\n");
+			; //printk("PTP() - delayREQ in SKBTX_IN_PROGRESS.\n");
 
 		else if (is_peer_delayreq_packet(message_type))
-			printk("PTP() - peerDelayREQ in SKBTX_IN_PROGRESS.\n");
+			; //printk("PTP() - peerDelayREQ in SKBTX_IN_PROGRESS.\n");
 		else if (is_peer_delayresp_packet(message_type))
-			printk("PTP() - peerDelayRESP in SKBTX_IN_PROGRESS.\n");
+			; //printk("PTP() - peerDelayRESP in SKBTX_IN_PROGRESS.\n");
+		else if (message_type == PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP_pri)
+			; //..
 		else
 			printk("PTP() UNKNOW (msg type %u) in SKBTX_IN_PROGRESS.\n", message_type);
 		return 1;

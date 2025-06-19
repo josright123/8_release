@@ -531,9 +531,11 @@ static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	}
 	if (is_peer_delayresp_packet(db->pbi.ptp_tx_msgtype)) {
 		delayRespSent = 1;
+	  #if 1
 		printk("Peer Resp (tx %u) ts is %u sec\n", //" %llu ns"
 			db->pbi.ptp_rx_msgtype,
 			sec); //, ns
+	  #endif
 	}
 
 #ifdef DE_TIMESTAMP
@@ -586,10 +588,6 @@ void on_core_init_ptp_rate(struct board_info *db)
 // SKBTX_SCHED_TSTAMP = 1 << 6,
 static void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb)
 {
-	int b_ptphdr;
-	
-	db->pbi.ptp_skp_hw_tstamp = 0;
-	
 #if 0
 	/* Use: enum hwtstamp_tx_types
 	 */
@@ -605,26 +603,28 @@ static void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb
 	//		return;
 #endif
 	
-	b_ptphdr =dm9051_ptp_tx_packet_monitor(db, skb);
-	
 	/* Use: skb->tx_flags, is better~
 	 */
+	int b_ptphdr =dm9051_ptp_tx_packet_monitor(db, skb);
+
+	db->pbi.ptp_skp_hw_tstamp = 0;
+
 	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
-		if (b_ptphdr)
-			printk("TX b_ptphdr packet SKBTX_IN_PROGRESS() - NOT set tx_in_progress ?\n");
+		if (b_ptphdr && is_peer_delayresp_packet(db->pbi.ptp_tx_msgtype)) //YES, this way. peer_delayresp the NOT with SKBTX_HW_TSTAMP bit.
+			return;
+		if (b_ptphdr) {
+			printk("TX b_ptphdr packet SKBTX_IN_PROGRESS() - NOT set tx_in_progress ?\n"); //what 'ptp_tx_msgtype'
+		}
 		return;
 	}
 
-	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
-		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
-		db->pbi.ptp_skp_hw_tstamp = 1;
-		if (b_ptphdr)
-			; //printk("PTP b_ptphdr packet SKBTX_IN_PROGRESS() - YES set tx_in_progress.\n");
-		else
-			printk("PTP !b_ptphdr packet SKBTX_IN_PROGRESS() - WARN set tx_in_progress ?\n");
-		//return 1;
-	}
-	//return 0;
+	db->pbi.ptp_skp_hw_tstamp = 1;
+	skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
+
+	if (b_ptphdr)
+		; //printk("PTP b_ptphdr packet SKBTX_IN_PROGRESS() - YES set tx_in_progress.\n");
+	else
+		printk("PTP !b_ptphdr packet SKBTX_IN_PROGRESS() - WARN set tx_in_progress ?\n");
 }
 
 //SKBTX_HW_TSTAMP
@@ -721,7 +721,7 @@ static void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb
 #endif
 	}
 	if (db->pbi.ptp_skp_hw_tstamp) { //.(flags & SKBTX_IN_PROGRESS)
-		netif_info(db, hw, db->ndev, "Yes, %05d YES done tx_in_progress\n", flags_count);
+		//netif_info(db, hw, db->ndev, "Yes, %05d YES done tx_in_progress\n", flags_count);
 	}
 
 //	}
@@ -839,9 +839,11 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 				ns = ns_lo;
 				ns |= ns_hi  << 16;
 
-				if (is_peer_delayreq_packet(pbi->ptp_rx_msgtype))
+				#if 0 //chk OK
+				if (is_peer_delayreq_packet(pbi->ptp_rx_msgtype)) 
 					printk("Peer get-pdly_Req.sec.ns: (frame %d) ts bytes %d: %u sec\n", 
 						pbi->total_ptp_frames, pbi->ptp_ts_bytes, sec);
+				#endif
 				if (slave_get_ptpFrame) {
 					//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %" PRIu64 " ns\n", sec, ns);
 					//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
