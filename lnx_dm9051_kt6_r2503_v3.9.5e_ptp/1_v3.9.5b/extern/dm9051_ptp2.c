@@ -613,7 +613,7 @@ static void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb
 		if (b_ptphdr && is_peer_delayresp_packet(db->pbi.ptp_tx_msgtype)) //YES, this way. peer_delayresp the NOT with SKBTX_HW_TSTAMP bit.
 			return;
 		if (b_ptphdr) {
-			printk("TX b_ptphdr packet SKBTX_IN_PROGRESS() - NOT set tx_in_progress ?\n"); //what 'ptp_tx_msgtype'
+			printk("TX b_ptphdr packet SKBTX_IN_PROGRESS() - msgType %u, NOT set tx_in_progress ?\n", db->pbi.ptp_tx_msgtype); //what 'ptp_tx_msgtype'
 		}
 		return;
 	}

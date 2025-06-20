@@ -334,6 +334,10 @@ int is_ptp_delayreq_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_DELAY_REQ) ? 1 : 0;
 }
+int is_ptp_delayresp_packet(u8 msgtype)
+{
+	return (msgtype ==  PTP_MSGTYPE_DELAY_RESP) ? 1 : 0;
+}
 int is_peer_delayreq_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_PDELAY_REQ_pri) ? 1 : 0;
@@ -412,8 +416,8 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		
 		else if (message_type == PTP_MSGTYPE_FOLLOW_UP)
 			printk("Master() - FOLLOW_UP in SKBTX_IN_PROGRESS.\n");
-		else if (message_type == PTP_MSGTYPE_DELAY_RESP)
-			printk("Master() - sync in SKBTX_IN_PROGRESS.\n");
+		else if (is_ptp_delayresp_packet(message_type))
+			printk("Master() - delayRESP in SKBTX_IN_PROGRESS.\n");
 		else if (message_type == PTP_MSGTYPE_ANNOUNCE)
 			; //printk("Master() - announce in SKBTX_IN_PROGRESS.\n");
 		else if (is_ptp_delayreq_packet(message_type))
@@ -478,7 +482,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 						printk("Slave(%d)-get-followup without tstamp. \n", slave_get_ptpFrame);
 					}
 				}
-		} else if (message_type == PTP_MSGTYPE_DELAY_RESP) {
+		} else if (is_ptp_delayresp_packet(message_type)) { //= (message_type == PTP_MSGTYPE_DELAY_RESP)
 			if (slave_get_ptpFrameResp3)
 				if (pbi->ptp_enable) {
 					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
