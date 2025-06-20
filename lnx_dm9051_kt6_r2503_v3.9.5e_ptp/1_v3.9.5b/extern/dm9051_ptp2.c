@@ -185,7 +185,7 @@ int ptp_9051_adjtime(struct ptp_clock_info *caps, s64 delta)
 		sign = 0;
 		delta = -delta;
 
-		printk("delta less han zero.. \n");
+		printk("delta less than zero.. \n");
 
 	}
 
@@ -277,7 +277,7 @@ int dm9051_get_clk_ts(struct board_info *db)
 		t.tv_sec = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
 		      ((uint32_t)temp[5] << 8) | (uint32_t)temp[4];
 
-//.		printk("DM9051A ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
+//.		printk("DM9051A ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->clkTSbyte[0]);
 //.		printk("DM9051A ...ptp_9051_gettime  %llu s, %lu ns\n", t.tv_sec, t.tv_nsec);
 		//printk("clkTSbyte %l\u s\n", t.tv_sec);
 		printk("clkTSbyte ...get_clk_ts %llu s\n", t.tv_sec);
@@ -326,7 +326,7 @@ int ptp_9051_gettime(struct ptp_clock_info *caps,
 		      ((uint32_t)temp[1] << 8) | (uint32_t)temp[0];
 	ts->tv_sec  = ((uint32_t)temp[7] << 24) | ((uint32_t)temp[6] << 16) |
 		      ((uint32_t)temp[5] << 8) | (uint32_t)temp[4];
-	printk("DM9051A.4l ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->rxTSbyte[0]);
+	printk("DM9051A.4l ...ptp_9051_gettime / %p vs %p\n", temp, &pbi->clkTSbyte[0]);
 	printk("DM9051A.4l ...ptp_9051_gettime  %llu s, %lu ns\n", ts->tv_sec, ts->tv_nsec);
 
 
@@ -614,6 +614,8 @@ static void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb
 			return;
 		if (b_ptphdr && is_peer_delayresp_packet(db->pbi.ptp_tx_msgtype)) //YES, this way. peer_delayresp the NOT with SKBTX_HW_TSTAMP bit.
 			return;
+		if (b_ptphdr && db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP_pri) //YES,
+			return;
 		if (b_ptphdr) {
 			printk("TX b_ptphdr packet SKBTX_IN_PROGRESS() - msgType %u, NOT set tx_in_progress ?\n", db->pbi.ptp_tx_msgtype); //what 'ptp_tx_msgtype'
 		}
@@ -814,7 +816,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 		//So when NOT T1/T4, we can skip tell tstamp (just an empty (virtual) one)
 
 #if 0
-			= original.dm9051_ptp_rx_hwtstamp(db, skb /*, db->rxTSbyte*/); //_15888_,
+			= original.dm9051_ptp_rx_hwtstamp(db, skb); //_15888_,
 #endif
 		if (dm9051_rx_ptp_hdr_monitor(db)) {
 			/* following, with netif_rx(skb),
@@ -862,6 +864,10 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 							//}
 
 						}
+						else if (pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ_pri ||
+								pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_RESP_pri ||
+								pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP_pri)
+							; //skip
 						else
 							printk("Slave(!) rx msgtype %u, %u s\n", pbi->ptp_rx_msgtype, sec);
 						slave_get_ptpFrame--;

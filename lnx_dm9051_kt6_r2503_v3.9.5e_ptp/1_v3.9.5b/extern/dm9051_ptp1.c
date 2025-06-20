@@ -105,7 +105,7 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
 //}
 
 #if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-int all_know_allow_show = 10;
+int all_know_allow_show = 5;
 
 static int lan_ptp_get_ts_ioctl(struct net_device *netdev, struct ifreq *ifr)
 {
@@ -473,7 +473,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 	if (ptp_hdr) { //is_ptp_packet(skb->data)
 		static int slave_get_ptpFrameResp3 = 3;
 		static int master_get_delayReq6 = 6; //5;
-		static int master_get_pdelayReq6 = 6; //5;
+		//static int master_get_pdelayReq6 = 6; //5;
 		static int master_get_pdelayResp6 = 6;
 		static int slave_get_ptpMisc = 9;
 		//static int total_ptp_frames = 0;
@@ -538,10 +538,10 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 			}
 		} else if (is_peer_delayreq_packet(message_type)) {
 			//if (pbi->ptp_enable) {
-				if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
-					if (master_get_pdelayReq6)
-						printk("PEER(%d)-get-PEER_DELAY_REQ with tstamp. ts bytes %d\n",
-							--master_get_pdelayReq6, pbi->ptp_ts_bytes);
+				if (is_ptp_rxts_en(db)) {	// Inserted Timestamp //skip
+					//if (master_get_pdelayReq6)
+					//	printk("PEER(%d)-get-PEER_DELAY_REQ with tstamp. ts bytes %d\n",
+					//		--master_get_pdelayReq6, pbi->ptp_ts_bytes);
 				}
 				else {
 					dm9051_get_clk_ts(db);
@@ -550,20 +550,22 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 			//}
 		} else if (is_peer_delayresp_packet(message_type)) {
 				if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
-					if (master_get_pdelayResp6)
-						printk("PEER(%d)-get-PEER_DELAY_RESP: (frame %d) tstamp ts bytes %d\n", 
-							--master_get_pdelayResp6, pbi->total_ptp_frames, pbi->ptp_ts_bytes);
+					if (master_get_pdelayResp6) //skip
+						; //printk("PEER(%d)-get-PEER_DELAY_RESP: (frame %d) tstamp ts bytes %d\n", 
+							// --master_get_pdelayResp6, pbi->total_ptp_frames, pbi->ptp_ts_bytes);
 				}
 				else {
 					printk("PEER-get-PEER_DELAY_RESP without tstamp. CHIP_WRONG_CONDITION !!\n");
 				}
+		} else if (message_type == PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP_pri) {
+			//skip
 		} else {
 			if (slave_get_ptpMisc)
 				if (pbi->ptp_enable) {
 					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
-						printk("Slave(%d) or Master get-knonw with tstamp. \n", --slave_get_ptpMisc);
+						printk("Slave(%d) or Master get msgtype - %d W/ tstamp. \n", --slave_get_ptpMisc, message_type);
 					} else {
-						printk("Slave(%d) or Master get-knonw without tstamp. \n", --slave_get_ptpMisc);
+						printk("Slave(%d) or Master get msgtype - %d W/O tstamp. \n", --slave_get_ptpMisc, message_type);
 					}
 				}
 		}
