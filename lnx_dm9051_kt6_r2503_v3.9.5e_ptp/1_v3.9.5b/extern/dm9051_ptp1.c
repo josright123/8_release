@@ -441,13 +441,26 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 }
 
 int slave_get_ptpFrame = 109;
-		
+
+extern u8 *gpacket_data;
+extern int gpacket_len;
+
+struct ptp_header *dm9051_rx_ptp_hdr_monitor(struct board_info *db)
+{
+	ptp_board_info_t *pbi = &db->pbi;
+
+	return pbi->ptp_hdr_rx;
+}
+
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
 	struct ptp_header *ptp_hdr;
 	
-	ptp_hdr = get_ptp_header(skb);
+	gpacket_data = skb->data;
+	gpacket_len = skb->len;
+	
+	pbi->ptp_hdr_rx = ptp_hdr = get_ptp_header(skb);
 	if (ptp_hdr) { //is_ptp_packet(skb->data)
 		static int slave_get_ptpFrameResp3 = 3;
 		static int master_get_delayReq6 = 6; //5;

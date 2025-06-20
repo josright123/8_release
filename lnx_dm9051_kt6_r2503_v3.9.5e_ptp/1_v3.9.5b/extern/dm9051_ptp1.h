@@ -115,6 +115,7 @@ int is_ptp_rxts_en(struct board_info *db);
 
 struct ptp_header *get_ptp_header(struct sk_buff *skb);
 
+struct ptp_header *dm9051_rx_ptp_hdr_monitor(struct board_info *db);
 u8  get_ptp_message_type005(struct ptp_header *ptp_hdr);
 int is_ptp_announce_packet(u8 msgtype);
 int is_ptp_sync_packet(u8 msgtype);

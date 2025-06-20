@@ -130,8 +130,12 @@ void show_rxc(struct board_info *db, int scanrr);
 void dm9051_log_rxptr(char *head, struct board_info *db);
 void dm9051_log_phy(struct board_info *db); //static int show_log_phy(char *head, struct board_info *db, unsigned int reg);
 
-void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
 void show_rxb(struct board_info *db, unsigned int rxbyte);
 #endif
+
+/* directly use : allow */
+//#if defined(DMPLUG_LOG) || 1
+//void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
+//#endif
 
 #endif //_DM9051_EXTERN_H_

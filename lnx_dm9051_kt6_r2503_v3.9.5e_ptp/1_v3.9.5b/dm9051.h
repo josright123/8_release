@@ -424,6 +424,7 @@ typedef struct ptp_board_info
     u8  ptp_tx_msgtype;
 	int total_ptp_frames;
 
+	struct ptp_header *ptp_hdr_rx; //save as a flag
     struct hwtstamp_config tstamp_config;
 
     s64 pre_rate;
@@ -1125,5 +1126,11 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb);
 // void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb);
 // void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
 int dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb);
+
+#if defined(DMPLUG_LOG) || 1
+/* Consider: Put into dm9051.c */
+/* of dm9051_log.c: directly use : allow */
+void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
+#endif
 
 #endif /* _DM9051_H_ */
