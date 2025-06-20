@@ -141,27 +141,27 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 	switch (config.tx_type) {
 	case HWTSTAMP_TX_OFF:
 		//dev_info(&adb->spidev->dev, "IOCtl - Now db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", adb->ptp_on);
-		netif_info(db, hw, db->ndev, "IOCtl - Now db->ptp_on %d, NOTE: Stop tx sync !\n", pbi->ptp_on);
+		netif_info(db, hw, db->ndev, "tx_type= HWTSTAMP_TX_OFF(0): Now db->ptp_on %d, NOTE: Stop tx sync !\n", pbi->ptp_on);
 		//lan743x_ptp_set_sync_ts_insert(adapter, false);
 		break;
 	case HWTSTAMP_TX_ONESTEP_SYNC:
 		//.		db->ptp_onestep = true;
 		pbi->ptp_on = 1;
 		//dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", adb->ptp_on);
-		netif_info(db, hw, db->ndev, "IOCtl: Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", pbi->ptp_on);
+		netif_info(db, hw, db->ndev, "tx_type= _TX_ONESTEP_SYNC(2): _ptp_set_sync_ts_insert(adapter, true)\n"); //"Set db.ptp_on %d", pbi->ptp_on
 		//gem_ptp_set_one_step_sync(bp, 1);
 		//lan743x_ptp_set_sync_ts_insert(adapter, true);
 		break;
 	case HWTSTAMP_TX_ON:
 		//.		db->ptp_onestep = false;
 		pbi->ptp_on = 1;
-		netif_info(db, hw, db->ndev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, false)\n", pbi->ptp_on);
+		netif_info(db, hw, db->ndev, "tx_type= _TX_ON(1): _ptp_set_sync_ts_insert(adapter, false)\n"); //"Set db.ptp_on %d", pbi->ptp_on
 		//gem_ptp_set_one_step_sync(bp, 0);
 		//lan743x_ptp_set_sync_ts_insert(adapter, false);
 		break;
 	case HWTSTAMP_TX_ONESTEP_P2P:
 		//ret = -ERANGE;
-		netif_warn(db, hw, db->ndev, "IOCtl - Now db->ptp_on %d, Error Range!\n", pbi->ptp_on);
+		netif_warn(db, hw, db->ndev, "tx_type= _TX_ONESTEP_P2P(3): Now db->ptp_on %d, Error Range !?! \n", pbi->ptp_on);
 		return -ERANGE;
 	//break;
 	default:
@@ -189,7 +189,7 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 	case HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ:
 	case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
 		//dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_PTP_V2_EVENT\n"); //~ db->ptp_on = 1;
-		netif_info(db, hw, db->ndev, "config->rx_filter: Master.Slave.Has, to be HWTSTAMP_FILTER_PTP_V2_EVENT\n");
+		netif_info(db, hw, db->ndev, "rx_filter= _PTP_V2_EVENT(12): To be HWTSTAMP_FILTER_PTP_V2_EVENT\n");
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
 		break;
 	case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
@@ -242,10 +242,10 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 	/* copy to db _tstamp_config */
 	memcpy(&pbi->tstamp_config, &config, sizeof(pbi->tstamp_config));
 
-	netif_info(db, hw, db->ndev, "lan743x_ptp_ioctl = flag %d, tx_typ %d, rx_fltr %d\n",
-		   pbi->tstamp_config.flags,
-		   pbi->tstamp_config.tx_type,
-		   pbi->tstamp_config.rx_filter);
+//	netif_info(db, hw, db->ndev, "lan743x_ptp_ioctl = flag %d, tx_typ %d, rx_fltr %d\n",
+//		   pbi->tstamp_config.flags,
+//		   pbi->tstamp_config.tx_type,
+//		   pbi->tstamp_config.rx_filter);
 
 	/* copy to user */
 	return copy_to_user(ifr->ifr_data, &config, sizeof(config)) ?
@@ -287,7 +287,7 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 		//db->ptp_on = 1;
 		//return dm9051_ptp_get_ts_config(ndev, rq);
 		ret = lan_ptp_get_ts_ioctl(ndev, rq);
-		printk("_get_ts_ioctl/SIOCGHWTSTAMP = flag %d, tx_typ %d, rx_fltr %d\n",
+		netif_warn(db, hw, db->ndev, "_ptp_get_ts_ioctl/SIOCGHWTSTAMP = flag %d, tx_typ %d, rx_fltr %d\n",
 		       pbi->tstamp_config.flags,
 		       pbi->tstamp_config.tx_type,
 		       pbi->tstamp_config.rx_filter);
@@ -326,6 +326,10 @@ void ptp_ver_software(struct board_info *db)
  * Peer Delay Request
  * Peer Delay Response
  */
+int is_ptp_announce_packet(u8 msgtype)
+{
+	return (msgtype == PTP_MSGTYPE_ANNOUNCE) ? 1 : 0;
+}
 int is_ptp_sync_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_SYNC) ? 1 : 0;
@@ -412,13 +416,13 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		u8 message_type = get_ptp_message_type005(ptp_hdr); //for tx monitor
 		db->pbi.ptp_tx_msgtype = message_type;
 		if (is_ptp_sync_packet(message_type))
-			printk("Master() - sync in SKBTX_IN_PROGRESS.\n");
+			; //printk("Master() - sync in SKBTX_IN_PROGRESS.\n");
 		
 		else if (message_type == PTP_MSGTYPE_FOLLOW_UP)
 			printk("Master() - FOLLOW_UP in SKBTX_IN_PROGRESS.\n");
 		else if (is_ptp_delayresp_packet(message_type))
 			printk("Master() - delayRESP in SKBTX_IN_PROGRESS.\n");
-		else if (message_type == PTP_MSGTYPE_ANNOUNCE)
+		else if (is_ptp_announce_packet(message_type))
 			; //printk("Master() - announce in SKBTX_IN_PROGRESS.\n");
 		else if (is_ptp_delayreq_packet(message_type))
 			; //printk("PTP() - delayREQ in SKBTX_IN_PROGRESS.\n");
@@ -491,7 +495,7 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 						printk("Slave(%d)-get-DELAY_RESP without tstamp. \n", --slave_get_ptpFrameResp3);
 					}
 				}
-		} else if (message_type == PTP_MSGTYPE_ANNOUNCE) {
+		} else if (is_ptp_announce_packet(message_type)) {
 			if (slave_get_ptpFrame)
 				if (pbi->ptp_enable) {
 					if (is_ptp_rxts_en(db)) {	// Inserted Timestamp

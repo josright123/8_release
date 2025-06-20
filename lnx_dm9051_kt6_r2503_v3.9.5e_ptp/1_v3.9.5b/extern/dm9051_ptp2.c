@@ -610,6 +610,8 @@ static void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb
 	db->pbi.ptp_skp_hw_tstamp = 0;
 
 	if (!(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)) {
+		if (b_ptphdr && is_ptp_announce_packet(db->pbi.ptp_tx_msgtype)) //YES,
+			return;
 		if (b_ptphdr && is_peer_delayresp_packet(db->pbi.ptp_tx_msgtype)) //YES, this way. peer_delayresp the NOT with SKBTX_HW_TSTAMP bit.
 			return;
 		if (b_ptphdr) {
@@ -847,7 +849,10 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 				if (slave_get_ptpFrame) {
 					//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %" PRIu64 " ns\n", sec, ns);
 					//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
-					printk("Slave %u s\n", sec);
+					if (is_ptp_sync_packet(pbi->ptp_rx_msgtype))
+						printk("Slave %u s\n", sec);
+					else
+						printk("Slave(!) rx msgtype %u, %u s\n", pbi->ptp_rx_msgtype, sec);
 					slave_get_ptpFrame--;
 				}
 			}
