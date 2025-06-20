@@ -105,6 +105,8 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
 //}
 
 #if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+int all_know_allow_show = 10;
+
 static int lan_ptp_get_ts_ioctl(struct net_device *netdev, struct ifreq *ifr)
 {
 	struct board_info *db = netdev_priv(netdev);
@@ -116,7 +118,7 @@ static int lan_ptp_get_ts_ioctl(struct net_device *netdev, struct ifreq *ifr)
 	       -EFAULT : 0;
 }
 
-static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd)
+static int lan743x_ptp_set_ts_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd)
 {
 	struct board_info *db = netdev_priv(netdev);
 	ptp_board_info_t *pbi = &db->pbi;
@@ -148,7 +150,8 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 		//.		db->ptp_onestep = true;
 		pbi->ptp_on = 1;
 		//dev_info(&adb->spidev->dev, "IOCtl - Set db->ptp_on %d, _ptp_set_sync_ts_insert(adapter, true)\n", adb->ptp_on);
-		netif_info(db, hw, db->ndev, "tx_type= _TX_ONESTEP_SYNC(2): _ptp_set_sync_ts_insert(adapter, true)\n"); //"Set db.ptp_on %d", pbi->ptp_on
+		if (all_know_allow_show)
+			netif_info(db, hw, db->ndev, "tx_type= _TX_ONESTEP_SYNC(2): _ptp_set_sync_ts_insert(adapter, true)\n"); //"Set db.ptp_on %d", pbi->ptp_on
 		//gem_ptp_set_one_step_sync(bp, 1);
 		//lan743x_ptp_set_sync_ts_insert(adapter, true);
 		break;
@@ -189,7 +192,8 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 	case HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ:
 	case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
 		//dev_info(&adb->spidev->dev, "config->rx_filter - to be, HWTSTAMP_FILTER_PTP_V2_EVENT\n"); //~ db->ptp_on = 1;
-		netif_info(db, hw, db->ndev, "rx_filter= _PTP_V2_EVENT(12): To be HWTSTAMP_FILTER_PTP_V2_EVENT\n");
+		if (all_know_allow_show)
+			netif_info(db, hw, db->ndev, "rx_filter= _PTP_V2_EVENT(12): To be HWTSTAMP_FILTER_PTP_V2_EVENT\n");
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
 		break;
 	case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
@@ -242,7 +246,7 @@ static int lan743x_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int c
 	/* copy to db _tstamp_config */
 	memcpy(&pbi->tstamp_config, &config, sizeof(pbi->tstamp_config));
 
-//	netif_info(db, hw, db->ndev, "lan743x_ptp_ioctl = flag %d, tx_typ %d, rx_fltr %d\n",
+//	netif_info(db, hw, db->ndev, "_lan743x_ptp_ioctl = flag %d, tx_typ %d, rx_fltr %d\n",
 //		   pbi->tstamp_config.flags,
 //		   pbi->tstamp_config.tx_type,
 //		   pbi->tstamp_config.rx_filter);
@@ -287,7 +291,8 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 		//db->ptp_on = 1;
 		//return dm9051_ptp_get_ts_config(ndev, rq);
 		ret = lan_ptp_get_ts_ioctl(ndev, rq);
-		netif_warn(db, hw, db->ndev, "_ptp_get_ts_ioctl/SIOCGHWTSTAMP = flag %d, tx_typ %d, rx_fltr %d\n",
+		if (all_know_allow_show)
+			netif_warn(db, hw, db->ndev, "_ptp_get_ts_ioctl/SIOCGHWTSTAMP = flag %d, tx_typ %d, rx_fltr %d\n",
 		       pbi->tstamp_config.flags,
 		       pbi->tstamp_config.tx_type,
 		       pbi->tstamp_config.rx_filter);
@@ -296,11 +301,15 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 		//printk("Process SIOCSHWTSTAMP\n");
 		//db->ptp_on = 1;
 		//return dm9051_ptp_set_ts_config(ndev, rq);
-		ret = lan743x_ptp_ioctl(ndev, rq, cmd);
-		printk("_ptp_set_ts_ioctl/SIOCSHWTSTAMP = flag %d, tx_typ %d, rx_fltr %d\n",
-		       pbi->tstamp_config.flags,
-		       pbi->tstamp_config.tx_type,
-		       pbi->tstamp_config.rx_filter);
+		ret = lan743x_ptp_set_ts_ioctl(ndev, rq, cmd);
+		if (all_know_allow_show)
+			printk("_ptp_set_ts_ioctl/SIOCSHWTSTAMP = flag %d, tx_typ %d, rx_fltr %d [allow %d]\n",
+				   pbi->tstamp_config.flags,
+				   pbi->tstamp_config.tx_type,
+				   pbi->tstamp_config.rx_filter,
+					all_know_allow_show);
+		if (all_know_allow_show)
+			all_know_allow_show--;
 		return ret;
 	case SIOCBONDINFOQUERY:
 		printk("dm9051_netdev_ioctl SIOCBONDINFOQUERY = cmd 0x%X. NOT support\n", cmd);

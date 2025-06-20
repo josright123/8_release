@@ -532,9 +532,9 @@ static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	if (is_peer_delayresp_packet(db->pbi.ptp_tx_msgtype)) {
 		delayRespSent = 1;
 	  #if 1
-		printk("Peer Resp (tx %u) ts is %u sec\n", //" %llu ns"
-			db->pbi.ptp_rx_msgtype,
-			sec); //, ns
+		//printk("Peer Resp (tx %u) ts is %u sec\n", //" %llu ns"
+		//	db->pbi.ptp_tx_msgtype,
+		//	sec); //, ns
 	  #endif
 	}
 
