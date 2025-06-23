@@ -25,7 +25,7 @@
 
 /* Macro for already known platforms
  */
-//#define PLUG_ENABLE_INT
+#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
     #define DMPLUG_INT //(INT39)
 
@@ -40,7 +40,7 @@
     #endif
 #endif
 
-#define PLUG_ENABLE_WD
+//#define PLUG_ENABLE_WD
 #ifdef PLUG_ENABLE_WD
     #define DMPLUG_WD //(wd mode)
 
@@ -62,7 +62,7 @@
  *        hardware-receive
  *        hardware-raw-clock
  */
-#define PLUG_PTP_1588
+//#define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
     #define DMPLUG_PTP //(ptp 1588)
 
@@ -86,7 +86,7 @@
  *Hardware Transmit Timestamp Modes: none
  *Hardware Receive Filter Modes: none
  */
-#define PLUG_PTP_1588_SW
+//#define PLUG_PTP_1588_SW
 #ifdef PLUG_PTP_1588_SW
     #define DMPLUG_PTP_SW //(ptp 1588 S/W)
 #endif                    //(ptp 1588 S/W)
@@ -114,15 +114,15 @@
 
 #if defined(DMPLUG_WD) && defined(MAIN_DATA)
     #pragma message("dm9051: WD")
+	#if defined(DMPLUG_SKB_PROTECT) && defined(MAIN_DATA)
+		#pragma message("dm9051: SKB_PROT")
+	#endif
+	#if !defined(DMPLUG_SKB_PROTECT) && defined(MAIN_DATA)
+		#pragma message("dm9051: no SKB_PROT")
+	#endif
 #endif
 #if !defined(DMPLUG_WD) && defined(MAIN_DATA)
     #pragma message("dm9051: BD")
-#endif
-#if defined(DMPLUG_SKB_PROTECT) && defined(MAIN_DATA)
-    #pragma message("dm9051: SKB_PROT")
-#endif
-#if !defined(DMPLUG_SKB_PROTECT) && defined(MAIN_DATA)
-    #pragma message("dm9051: no SKB_PROT")
 #endif
 
 /* pragma, Extended support header files
@@ -554,7 +554,7 @@ struct board_info
 #define INFO_INT_CLKOUT(dev, db)
 #define INFO_INT_TWOSTEP(dev, db)
 #define INFO_WD(dev, db)       USER_CONFIG(dev, db, "dm9051: BD")
-#define INFO_SKB_PROT(dev, db) USER_CONFIG(dev, db, "dm9051: no SKB_PROT")
+#define INFO_SKB_PROT(dev, db)
 #define INFO_PTP(dev, db)
 #define INFO_PPS(dev, db)
 #define INFO_PTP2S(dev, db)
@@ -607,11 +607,14 @@ struct board_info
 #if defined(DMPLUG_WD)
     #undef INFO_WD
     #define INFO_WD(dev, db) USER_CONFIG(dev, db, "dm9051: WD")
-#endif
 
-#if defined(DMPLUG_SKB_PROTECT)
+	#if defined(DMPLUG_SKB_PROTECT)
     #undef INFO_SKB_PROT
     #define INFO_SKB_PROT(dev, db) USER_CONFIG(dev, db, "dm9051: WD SKB PROT")
+	#else
+    #undef INFO_SKB_PROT
+	#define INFO_SKB_PROT(dev, db) USER_CONFIG(dev, db, "dm9051: no SKB_PROT")
+	#endif
 #endif
 
 /* ptp, clkout, 2step */
