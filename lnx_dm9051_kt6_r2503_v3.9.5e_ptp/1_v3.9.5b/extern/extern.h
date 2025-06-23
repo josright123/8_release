@@ -3,6 +3,90 @@
  * Copyright (c) 2022 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
+#ifndef _EXTERN_EXTERN_H_
+#define _EXTERN_EXTERN_H_
+
+/*#include extern/extern.h */ //(extern/)
+/*#define DMPLUG_PTP */            //(ptp1588)
+/*#define DMPLUG_PPS_CLKOUT */     //(ptp1588 pps)
+/*#define DMPLUG_PTP_TWO_STEP */   //(ptp1588 two step)
+/*#define DMPLUG_PTP_SW */   		//(ptp1588 software)
+
+/* Capabilities:
+ *        hardware-transmit
+ *        hardware-receive
+ *        hardware-raw-clock
+ */
+//#define PLUG_PTP_1588
+#ifdef PLUG_PTP_1588
+    #define DMPLUG_PTP //(ptp 1588)
+
+    #define PLUG_PTP_PPS
+    #ifdef PLUG_PTP_PPS
+        #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
+    #endif
+
+    /* "dm9051 PTP HW TWO STEP", Always essential (Mandartory recommanded) */
+    #define PLUG_PTP_TWO_STEP //(always essential)(if not support, master NO follow up send)
+    #ifdef PLUG_PTP_TWO_STEP
+        #define DMPLUG_PTP_TWO_STEP //(HW Two step)
+    #endif
+#endif //(ptp 1588)
+
+/*Capabilities:
+ *        software-transmit
+ *        software-receive
+ *        software-system-clock
+ *PTP Hardware Clock: none
+ *Hardware Transmit Timestamp Modes: none
+ *Hardware Receive Filter Modes: none
+ */
+//#define PLUG_PTP_1588_SW
+#ifdef PLUG_PTP_1588_SW
+    #define DMPLUG_PTP_SW //(ptp 1588 S/W)
+#endif                    //(ptp 1588 S/W)
+
+/* pragma, Extended support header files
+ */
+#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
+    // #warning "dm9051 PTP"
+    #pragma message("dm9051: H/W PTP")
+#endif
+#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
+    // #warning "dm9051 PPS"
+    #pragma message("dm9051: H/W PPS")
+#endif
+#if defined(DMPLUG_PTP_TWO_STEP) && defined(MAIN_DATA)
+    // #warning "dm9051 PTP TWO STEP"
+    #pragma message("dm9051: H/W PTP TWO STEP")
+#endif
+
+#if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
+    #pragma message("dm9051: S/W PTP (TWO STEP)")
+#endif
+
+/* ptp, clkout, 2step */
+#if defined(DMPLUG_PTP)
+    #undef INFO_PTP
+    #define INFO_PTP(dev, db) USER_CONFIG(dev, db, "dm9051: H/W PTP")
+	
+	#if defined(DMPLUG_PPS_CLKOUT)
+    #undef INFO_PPS
+    #define INFO_PPS(dev, db) USER_CONFIG(dev, db, "dm9051: H/W PPS")
+	#endif
+	#if defined(DMPLUG_PTP_TWO_STEP)
+    #undef INFO_PTP2S
+    #define INFO_PTP2S(dev, db) USER_CONFIG(dev, db, "dm9051: H/W PTP TWO STEP")
+	#endif
+#endif
+
+#if defined(DMPLUG_PTP_SW)
+    #undef INFO_PTP_SW_2S
+    #define INFO_PTP_SW_2S(dev, db) USER_CONFIG(dev, db, "dm9051: S/W PTP (TWO STEP)")
+#endif
+
+#endif //_EXTERN_EXTERN_H_
+
 #ifndef _DM9051_EXTERN_H_
 #define _DM9051_EXTERN_H_
 /*#define DMCONF_BMCR_WR */ //(extern, bmcr-work around)
