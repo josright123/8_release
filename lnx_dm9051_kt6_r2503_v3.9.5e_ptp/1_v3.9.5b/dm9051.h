@@ -24,7 +24,7 @@
 
 /* Macro for already known platforms
  */
-#define PLUG_ENABLE_INT
+//#define PLUG_ENABLE_INT
 #ifdef PLUG_ENABLE_INT
     #define DMPLUG_INT //(INT39)
 
@@ -33,7 +33,7 @@
         #define INT_CLKOUT //(INT39_CLKOUT)
     #endif
 
-    #define PLUG_INT_2STEP
+    //#define PLUG_INT_2STEP
     #ifdef PLUG_INT_2STEP
         #define INT_TWO_STEP //(INT39_TWO_STEP)
     #endif
@@ -75,10 +75,10 @@
     #pragma message("dm9051: WD")
 
 	#if defined(DMPLUG_SKB_PROTECT) && defined(MAIN_DATA)
-		#pragma message("dm9051: WD SKB_PROT")
+		#pragma message("WD: SKB_PROT")
 	#endif
 	#if !defined(DMPLUG_SKB_PROTECT) && defined(MAIN_DATA)
-		#pragma message("dm9051: WD DOES NOT SKB_PROT")
+		#pragma message("WD: NO SKB_PROT")
 	#endif
 #endif
 #if !defined(DMPLUG_WD) && defined(MAIN_DATA)
@@ -466,39 +466,24 @@ struct board_info
 
 #if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
     #ifdef CONFIG_64BIT // 64-bit specific code
-    #pragma message("dm9051 @ __aarch64__")
+	#pragma message("platform: __aarch64__")
     #else
-        #warning "dm9051 @ __aarch64__"
-        #warning "dm9051 but is @ CONFIG_32BIT"
+        #warning "platform @ __aarch64__"
+        #warning "platform but is @ CONFIG_32BIT"
     #endif
 #elif (!defined(__x86_64__) && !defined(__aarch64__)) && defined(MAIN_DATA)
     #ifdef CONFIG_64BIT // 64-bit specific code
-        #warning "dm9051 @ __aarch32__"
-        #warning "dm9051 but is @ CONFIG_64BIT"
+        #warning "platform @ __aarch32__"
+        #warning "platform but is @ CONFIG_64BIT"
     #else
-    #pragma message("dm9051 @ __aarch32__")
+    #pragma message("platform: __aarch32__")
     #endif
 #endif //__x86_64__ || __aarch64__
 
-/* system */
-#if (defined(__x86_64__) || defined(__aarch64__))
-    //#define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "dm9051: __aarch64__")
-    #ifdef CONFIG_64BIT
-        //#define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
-    #else                                  // config !64-bit specific code
-		#undef INFO_CPU_MIS_CONF
-        #define INFO_CPU_MIS_CONF(dev, db) USER_CONFIG(dev, db, "dm9051: CONFIG_32BIT (kconfig) ?!")
-    #endif
-#elif (!defined(__x86_64__) && !defined(__aarch64__))
-	#undef INFO_CPU_BITS
-    #define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "dm9051: __aarch32__")
-    #ifdef CONFIG_64BIT // config 64-bit specific code
-		#undef INFO_CPU_MIS_CONF
-        #define INFO_CPU_MIS_CONF(dev, db) USER_CONFIG(dev, db, "dm9051: CONFIG_64BIT(kconfig) ?!")
-    #else
-        //#define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
-    #endif
-#endif //__x86_64__ || __aarch64__
+#if defined(MAIN_DATA)
+	#define LINUX_STRING "Linux: " UTS_RELEASE
+	#pragma message(LINUX_STRING)
+#endif //MAIN_DATA
 
 /* Helper functions */
 static inline struct board_info *to_dm9051_board(struct net_device *ndev) { return netdev_priv(ndev); }
@@ -522,28 +507,56 @@ static inline void MACRO_MSG_CONFIG(struct device *dev, struct board_info *db)
 	USER_CONFIG(dev, db, buff);
 }
 
+static inline void dm9051_tx_pad_wd(struct board_info *db, struct sk_buff *skb)
+{
+    if (skb->len & 1)
+        db->pad = 1;
+}
+
+static inline struct sk_buff *EXPAND_SKB_WD(struct sk_buff *skb)
+{
+    struct sk_buff *skb2 = skb_copy_expand(skb, 0, 1, GFP_ATOMIC);
+    if (skb2)
+    {
+        dev_kfree_skb(skb);
+        return skb2;
+    }
+    return skb;
+}
+
+static inline struct sk_buff *dm9051_chg_skb_wd(struct board_info *db, struct sk_buff *skb)
+{
+    if (db->pad)
+        skb = EXPAND_SKB_WD(skb);
+    return skb;
+}
+
+int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb);
+int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); // to used in the plug section
+int dm9051_phyread(void *context, unsigned int reg, unsigned int *val);
+int dm9051_ncr_poll(struct board_info *db);
+int dm9051_all_start_intr(struct board_info *db);
+int dm9051_subconcl_and_rerxctrl(struct board_info *db);
+int dm9051_loop_rx(struct board_info *db);
+int dm9051_loop_tx(struct board_info *db);
+
+#if 0
 // static void USER_CONFIG(struct device *dev, struct board_info *db, char *str); //implement in dm9051.c
 unsigned int SHOW_BMSR(struct board_info *db);
 void dm9051_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
 
 int get_dts_irqf(struct board_info *db);
 
-int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb);
-int dm9051_set_reg(struct board_info *db, unsigned int reg, unsigned int val); // to used in the plug section
-int dm9051_phyread(void *context, unsigned int reg, unsigned int *val);
 int dm9051_read_mem(struct board_info *db, unsigned int reg, void *buff, size_t len);
 int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff, size_t len);
 int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen);
 
-int dm9051_ncr_poll(struct board_info *db);
 int dm9051_nsr_poll(struct board_info *db);
 int dm9051_all_upfcr(struct board_info *db);
 
 /* init functions */
 // int dm9051_all_reinit(struct board_info *db);
 int dm9051_all_start(struct board_info *db);
-int dm9051_all_start_intr(struct board_info *db);
-int dm9051_subconcl_and_rerxctrl(struct board_info *db);
 
 int dm9051_read_mem_rxb(struct board_info *db, unsigned int reg, void *buff, size_t len);
 int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *buff, size_t crlen);
@@ -558,11 +571,10 @@ int  rx_head_break(struct board_info *db);
 int  trap_clr(struct board_info *db);
 int  trap_rxb(struct board_info *db, unsigned int *prxbyte);
 int  dm9051_mem_tx(struct board_info *db, u8 *p);
-int  dm9051_loop_rx(struct board_info *db);
-int  dm9051_loop_tx(struct board_info *db);
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
+#endif
 
 	enum
 	{
@@ -587,12 +599,21 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 			u32   rx_blk;
 		} align;
 	};
+
+	#ifdef MAIN_DATA
 	const struct plat_cnf_info plat_align_mode = {
 		.test_info = "Test in rpi5 bcm2712",
 		//.skb_wb_mode = SKB_WB_ON, //SKB_WB_OFF, //SKB_WB_ON,
 		.checksuming = DEFAULT_CHECKSUM_OFF,
 		.align       = {.burst_mode_info = "Alignment", .burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
 	};
+	const struct plat_cnf_info plat_misc_mode = {
+		.test_info = "Test in processor Cortex-A",
+		//.skb_wb_mode = SKB_WB_OFF,
+		.checksuming = DEFAULT_CHECKSUM_OFF,
+		.align       = {.burst_mode_info = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
+	};
+	#endif
 
 	/* Param structures
 	 */
@@ -619,6 +640,49 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 	#endif // MAIN_DATA
 
 /* main */
+/* macro fakes
+ */
+#define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "platform: __aarch64__")
+#define INFO_KERNEL_VER(dev, db) USER_CONFIG(dev, db, "Linux: " UTS_RELEASE)
+#define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
+#define INFO_INT(dev, db) USER_CONFIG(dev, db, "dm9051: POL")
+#define INFO_INT_CLKOUT(dev, db)
+#define INFO_INT_TWOSTEP(dev, db)
+#define INFO_WD(dev, db)       USER_CONFIG(dev, db, "dm9051: BD")
+#define INFO_SKB_PROT(dev, db)
+#define INFO_MI_FIX(dev, db)
+#define INFO_LOG(dev, db)
+#define INFO_BMCR_WR(dev, db)
+#define INFO_MRR_WR(dev, db)
+#define INFO_BUSWORK(dev, db)
+#define INFO_CONTI(dev, db)
+#define INFO_LPBK_TST(dev, db)
+#define INFO_PTP(dev, db)
+#define INFO_PPS(dev, db)
+#define INFO_PTP2S(dev, db)
+#define INFO_PTP_SW_2S(dev, db)
+#define INFO_MSG_ENABLE(dev, db)	MACRO_MSG_CONFIG(dev, db)
+
+/* system */
+#if (defined(__x86_64__) || defined(__aarch64__))
+    //#define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "platform: __aarch64__")
+    #ifdef CONFIG_64BIT
+        //#define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
+    #else                                  // config !64-bit specific code
+		#undef INFO_CPU_MIS_CONF
+        #define INFO_CPU_MIS_CONF(dev, db) USER_CONFIG(dev, db, "platform: CONFIG_32BIT (kconfig) ?!")
+    #endif
+#elif (!defined(__x86_64__) && !defined(__aarch64__))
+	#undef INFO_CPU_BITS
+    #define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "platform: __aarch32__")
+    #ifdef CONFIG_64BIT // config 64-bit specific code
+		#undef INFO_CPU_MIS_CONF
+        #define INFO_CPU_MIS_CONF(dev, db) USER_CONFIG(dev, db, "platform: CONFIG_64BIT(kconfig) ?!")
+    #else
+        //#define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
+    #endif
+#endif //__x86_64__ || __aarch64__
+
 #if defined(DMPLUG_INT)
     #undef INFO_INT
     #define INFO_INT(dev, db) USER_CONFIG(dev, db, "dm9051: INT")
@@ -640,10 +704,10 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 
 	#if defined(DMPLUG_SKB_PROTECT)
     #undef INFO_SKB_PROT
-    #define INFO_SKB_PROT(dev, db) USER_CONFIG(dev, db, "dm9051: WD SKB PROT")
+    #define INFO_SKB_PROT(dev, db) USER_CONFIG(dev, db, "WD: SKB PROT")
 	#else
     #undef INFO_SKB_PROT
-    #define INFO_SKB_PROT(dev, db) USER_CONFIG(dev, db, "dm9051: no SKB_PROT")
+    #define INFO_SKB_PROT(dev, db) USER_CONFIG(dev, db, "WD: no SKB_PROT")
 	#endif
 #endif
 
@@ -651,6 +715,118 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
     #undef INFO_MI_FIX
     #define INFO_MI_FIX(dev, db) USER_CONFIG(dev, db, "dm9051: MI_FIX")
 #endif
+
+/* int fakes */
+#define DM9051_STOP_FREEIRQ(b)   // empty
+#define DM9051_STOP_CANCELDLY2(b)// empty
+#define DM9051_PROBE_DLYSETUP(b) // empty
+/* fake clkout */
+#define INT_SET_CLKOUT(db)       0 // empty(NoError)
+
+/* poll fakes */
+/* Optional functions declaration const */
+enum dm_req_not_support
+{
+	VOID_REQUEST_FUNCTION  = -9,
+	NOT_REQUEST_SUPPORTTED = 0,
+};
+enum dm_req_support
+{
+	REQUEST_SUPPORTTED = 1,
+};
+#define dm9051_int2_supp()       NOT_REQUEST_SUPPORTTED
+#define dm9051_int2_irq(d, h)    VOID_REQUEST_FUNCTION
+#define dm9051_poll_supp()       NOT_REQUEST_SUPPORTTED
+#define dm9051_poll_sch(d)       VOID_REQUEST_FUNCTION
+
+/* wd fakes */
+#define BOUND_CONF_BIT           MBNDRY_BYTE
+#define PAD_LEN(len)             len
+#define PAD_TX(b, s)             // empty
+#define CHG_SKB_TX(b, s)         // empty
+
+/* mi fix fakes */
+#define MI_MUTEX_LOCK(b)         // empty
+#define MI_MUTEX_UNLOCK(b)       // empty
+
+/* MCO, re-direct, Verification */
+#define MCO                      //(MainCoerce)
+
+	#if defined(MCO) && defined(DMPLUG_INT)
+		#if defined(INT_TWO_STEP)
+			#undef DM9051_PROBE_DLYSETUP
+			#define DM9051_PROBE_DLYSETUP(b) PROBE_INT2_DLY_SETUP(b)
+			#undef DM9051_STOP_CANCELDLY2
+			#define DM9051_STOP_CANCELDLY2(db) cancel_delayed_work_sync(&db->irq_servicep) // of dm9051_thread_irq_free(ndev)
+		#endif
+		#undef DM9051_STOP_FREEIRQ
+		#define DM9051_STOP_FREEIRQ(db) dm9051_thread_irq_free(db->ndev) // dm9051_free_irqworks(db);
+	#endif
+
+	#if defined(MCO) && !defined(DMPLUG_INT)
+		#undef DM9051_PROBE_DLYSETUP
+		#define DM9051_PROBE_DLYSETUP(b) PROBE_POLL_SETUP(b)
+		#undef DM9051_STOP_FREEIRQ
+		#define DM9051_STOP_FREEIRQ(db) cancel_delayed_work_sync(&db->irq_workp) // dm9051_free_irqworks(db)
+	#endif
+
+	#if defined(MCO) && defined(INT_CLKOUT) && defined(MAIN_DATA)
+		#undef INT_SET_CLKOUT
+		#define INT_SET_CLKOUT(db) dm9051_int_clkout(struct board_info *db)
+	int dm9051_int_clkout(struct board_info *db); //in "dm9051.c"
+	#endif
+
+	#if defined(MCO) && defined(INT_TWO_STEP) /* && defined(MAIN_DATA)*/
+		#undef dm9051_int2_supp
+		#undef dm9051_int2_irq
+		#define dm9051_int2_supp()    REQUEST_SUPPORTTED
+		#define dm9051_int2_irq(d, h) DM9051_INT2_REQUEST(d, h)
+
+	void PROBE_INT2_DLY_SETUP(struct board_info *db);
+	void dm9051_rx_irq_servicep(struct work_struct *work);
+
+	irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw); //of "dm9051_int2.c"
+
+	int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
+	#endif
+
+	#if defined(MCO) && !defined(DMPLUG_INT) && defined(MAIN_DATA)
+		#undef dm9051_poll_supp
+		#undef dm9051_poll_sch
+		#define dm9051_poll_supp() REQUEST_SUPPORTTED
+		#define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
+
+	void dm9051_threaded_poll(struct work_struct *work); // dm9051_poll_servicep()
+	void PROBE_POLL_SETUP(struct board_info *db);
+	void OPEN_POLL_SCHED(struct board_info *db);
+	int  DM9051_POLL_SCHED(struct board_info *db);
+	#endif
+
+	#if defined(MCO) && defined(DMPLUG_WD)
+		#undef BOUND_CONF_BIT
+		#define BOUND_CONF_BIT MBNDRY_WORD
+
+		#undef PAD_LEN
+		#define PAD_LEN(len) (len & 1) ? len + 1 : len
+
+		#undef PAD_TX
+		#define PAD_TX(b, s) dm9051_tx_pad_wd(b, s)
+		//void dm9051_tx_pad_xx(struct board_info *db, struct sk_buff *skb); //of "dm9051_wd,c"
+
+		#if defined(DMPLUG_SKB_PROTECT)
+			#undef CHG_SKB_TX
+			#define CHG_SKB_TX(b, s) s = dm9051_chg_skb_wd(b, s)
+			//struct sk_buff *dm9051_chg_skb_xx(struct board_info *db, struct sk_buff *skb); //of "dm9051_wd,c"
+		#endif
+	#endif
+	
+/* mi fixed */
+	#if defined(DMPLUG_MI_FIX)
+	#undef MI_MUTEX_LOCK
+	#define MI_MUTEX_LOCK(b)		mutex_lock(&b->spi_lockm)
+	#undef MI_MUTEX_UNLOCK
+	#define MI_MUTEX_UNLOCK(b)		mutex_unlock(&b->spi_lockm)
+	#endif
 
 #if 0
 
@@ -680,87 +856,15 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 	// #define VOID_REQUEST_FUNCTION		-9
 	// #define REQUEST_SUPPORTTED		1 //REQUEST_SUPPORTTED (1)
 
-	/* MCO, re-direct, Verification */
-	#define MCO                      //(MainCoerce)
-
 	// #define TX_PAD(b,s)				dm9051_tx_data_len(b,s) //~wd, i.e. bd (byte mode)
-	// #define TX_SEND(b,s)			dm9051_mode_tx1(b,s)
-
-	#if defined(MCO) && defined(DMPLUG_INT)
-		#if defined(INT_TWO_STEP)
-			#undef DM9051_PROBE_DLYSETUP
-			#define DM9051_PROBE_DLYSETUP(b) PROBE_INT2_DLY_SETUP(b)
-			#undef DM9051_STOP_CANCELDLY2
-			#define DM9051_STOP_CANCELDLY2(db) cancel_delayed_work_sync(&db->irq_servicep) // of dm9051_thread_irq_free(ndev)
-		#endif
-		#undef DM9051_STOP_FREEIRQ
-		#define DM9051_STOP_FREEIRQ(db) dm9051_thread_irq_free(db->ndev) // dm9051_free_irqworks(db);
-	#endif
-
-	#if defined(MCO) && !defined(DMPLUG_INT)
-		#undef DM9051_PROBE_DLYSETUP
-		#define DM9051_PROBE_DLYSETUP(b) PROBE_POLL_SETUP(b)
-		#undef DM9051_STOP_FREEIRQ
-		#define DM9051_STOP_FREEIRQ(db) cancel_delayed_work_sync(&db->irq_workp) // dm9051_free_irqworks(db)
-	#endif
-
-	#if defined(MCO) && defined(INT_TWO_STEP) /* && defined(MAIN_DATA)*/
-		#undef dm9051_int2_supp
-		#undef dm9051_int2_irq
-		#define dm9051_int2_supp()    REQUEST_SUPPORTTED
-		#define dm9051_int2_irq(d, h) DM9051_INT2_REQUEST(d, h)
-
-	void PROBE_INT2_DLY_SETUP(struct board_info *db);
-	void dm9051_rx_irq_servicep(struct work_struct *work);
-
-	irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw);
-
-	int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
-	#endif
-
-	#if defined(MCO) && !defined(DMPLUG_INT) && defined(MAIN_DATA)
-		#undef dm9051_poll_supp
-		#undef dm9051_poll_sch
-		#define dm9051_poll_supp() REQUEST_SUPPORTTED
-		#define dm9051_poll_sch(d) DM9051_POLL_SCHED(d)
-
-	void dm9051_threaded_poll(struct work_struct *work); // dm9051_poll_servicep()
-	void PROBE_POLL_SETUP(struct board_info *db);
-	void OPEN_POLL_SCHED(struct board_info *db);
-	int  DM9051_POLL_SCHED(struct board_info *db);
-	#endif
-
-	#if defined(MCO) && defined(INT_CLKOUT) && defined(MAIN_DATA)
-		#undef INT_SET_CLKOUT
-		#define INT_SET_CLKOUT(db) dm9051_int_clkout(struct board_info *db)
-	int dm9051_int_clkout(struct board_info *db);
-	#endif
-
-	#if defined(MCO) && defined(DMPLUG_WD)
-		#undef BOUND_CONF_BIT
-		#define BOUND_CONF_BIT MBNDRY_WORD
-
-		#undef PAD_LEN
-		#define PAD_LEN(len) (len & 1) ? len + 1 : len
-
-		#undef PAD_TX
-		#define PAD_TX(b, s) dm9051_tx_pad(b, s)
-		void dm9051_tx_pad(struct board_info *db, struct sk_buff *skb);
-
-		#if defined(DMPLUG_SKB_PROTECT)
-			#undef CHG_SKB_TX
-			#define CHG_SKB_TX(b, s) s = dm9051_chg_skb(b, s)
-			struct sk_buff *dm9051_chg_skb(struct board_info *db, struct sk_buff *skb);
-		#endif
-
-	// #undef MODE_TX
-	// #define MODE_TX(b,s)					dm9051_mode_tx2(b,s) //wd
-	// int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb);
-
 	// #undef TX_PAD
 	// #define TX_PAD(b,s)							dm9051_expand_skb_txreq(b,s) //wd
+	// #undef MODE_TX
+	// #define MODE_TX(b,s)					dm9051_mode_tx2(b,s) //wd
+	// #define TX_SEND(b,s)			dm9051_mode_tx1(b,s)
+
 	// struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb);
-	#endif
+	// int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb);
 
 	/* ptp sw */
 	#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
@@ -807,13 +911,6 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 		return 0;
 	}
 	int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
-	/* mi fixed */
-	#if defined(DMPLUG_MI_FIX)
-	#undef MI_MUTEX_LOCK
-	#define MI_MUTEX_LOCK(b)		mutex_lock(&b->spi_lockm)
-	#undef MI_MUTEX_UNLOCK
-	#define MI_MUTEX_UNLOCK(b)		mutex_unlock(&b->spi_lockm)
-	#endif
 	/* ptp sw */
 	#if defined(DMPLUG_PTP_SW)
 		/* re-direct ptp sw */

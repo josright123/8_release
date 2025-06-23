@@ -146,8 +146,8 @@
 #undef BMSR_OPERATION_CLEAR
 #define BMSR_OPERATION_CLEAR(b) dm9051_bmsr_init(b)
 
-#undef PHY_READ
-#define PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
+#undef MDIO_PHY_READ
+#define MDIO_PHY_READ(d, n, av) dm9051_phyread_nt_bmsr(d, n, av)
 #endif
 
 #if defined(ECO) && defined(DMPLUG_MRR_WR) && defined(MAIN_DATA)

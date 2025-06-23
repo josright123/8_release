@@ -21,38 +21,12 @@
 #include <linux/types.h>
 #include <linux/of.h>
 #include <linux/version.h>
-
-/* macro fakes
- */
-#define INFO_CPU_BITS(dev, db) USER_CONFIG(dev, db, "dm9051: __aarch64__")
-#define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
-#define INFO_INT(dev, db) USER_CONFIG(dev, db, "dm9051: POL")
-#define INFO_INT_CLKOUT(dev, db)
-#define INFO_INT_TWOSTEP(dev, db)
-#define INFO_WD(dev, db)       USER_CONFIG(dev, db, "dm9051: BD")
-#define INFO_SKB_PROT(dev, db)
-#define INFO_MI_FIX(dev, db)
-#define INFO_LOG(dev, db)
-#define INFO_BMCR_WR(dev, db)
-#define INFO_MRR_WR(dev, db)
-#define INFO_BUSWORK(dev, db)
-#define INFO_CONTI(dev, db)
-#define INFO_LPBK_TST(dev, db)
-#define INFO_PTP(dev, db)
-#define INFO_PPS(dev, db)
-#define INFO_PTP2S(dev, db)
-#define INFO_PTP_SW_2S(dev, db)
-#define INFO_MSG_ENABLE(dev, db)	MACRO_MSG_CONFIG(dev, db)
-
 #define MAIN_DATA
 #include "dm9051.h"
 /*#include extern/extern.h */ //(extern/)
 /*#include plug/plug.h */ //(plug/)
 /*#include extern/dm9051_ptp1.h */ //(extern/) //(0.1 ptpc )
 
-	/* mi fix */
-	#define MI_MUTEX_LOCK(b)
-	#define MI_MUTEX_UNLOCK(b)
 	/* raw fake encrypt */
 	#define BUS_SETUP(db)            0 // empty(NoError)
 	#define BUS_OPS(db, buff, crlen)   // empty
@@ -75,41 +49,14 @@
 	#define monitor_rxb0(b, rb)
 	/* raw(fake) bmsr_wr */
 	#define BMSR_OPERATION_CLEAR(b)
-	#define PHY_READ(d, n, av) dm9051_phyread(d, n, av)
+	#define INTERN_PHY_READ(d, n, av) dm9051_phyread(d, n, av)
+	#define MDIO_PHY_READ(d, n, av) dm9051_phyread(d, n, av)
 	#define LINKCHG_UPSTART(b) dm9051_all_upfcr(b)
 
-	/* fake int */
-	#define DM9051_STOP_FREEIRQ(b)   // empty
-	#define DM9051_STOP_CANCELDLY2(b)// empty
-	#define DM9051_PROBE_DLYSETUP(b) // empty
-
-	/* fake int */
-	/* poll fake */
-	/* Optional functions declaration const */
-	enum dm_req_not_support
-	{
-		VOID_REQUEST_FUNCTION  = -9,
-		NOT_REQUEST_SUPPORTTED = 0,
-	};
-	enum dm_req_support
-	{
-		REQUEST_SUPPORTTED = 1,
-	};
-	#define dm9051_int2_supp()       NOT_REQUEST_SUPPORTTED
-	#define dm9051_int2_irq(d, h)    VOID_REQUEST_FUNCTION
-	#define dm9051_poll_supp()       NOT_REQUEST_SUPPORTTED
-	#define dm9051_poll_sch(d)       VOID_REQUEST_FUNCTION
-
-	/* fake clkout */
-	#define INT_SET_CLKOUT(db)       0 // empty(NoError)
 	/* fake raw rx mode */
-	#define BOUND_CONF_BIT           MBNDRY_BYTE
 	#define SET_RCR(b)               dm9051_set_rcr(b)
-	#define PAD_LEN(len)             len
 	/* fake raw tx mode */
 	#define LEN_TX(b, s)             dm9051_tx_len(b, s)
-	#define PAD_TX(b, s)             // empty
-	#define CHG_SKB_TX(b, s)         // empty
 	#define MODE_TX(b, s)            dm9051_mode_tx(b, s) //~wd, i.e. bd (byte mode)
 	#define SINGLE_TX(b, s)          dm9051_single_tx(b, s)
 
@@ -145,7 +92,7 @@
 	// #define DMPLUG_PTP_TX_PRE(b,s)
 	// #define DMPLUG_TX_EMIT_TS(b,s)
 
-const struct plat_cnf_info *plat_cnf = &plat_align_mode; /* Driver configuration */
+const struct plat_cnf_info *plat_cnf = &plat_misc_mode; //'&plat_align_mode'; /* Driver configuration */
 
 #define DM9051_INTR_BACKUP //
 #define DM9051_NORM_BACKUP_TX // 
@@ -176,6 +123,7 @@ static inline int SHOW_ALL_USER_CONFIG(char *head, struct device *dev, struct bo
 	INFO_LPBK_TST(dev, db);
 	INFO_CPU_BITS(dev, db);
 	INFO_CPU_MIS_CONF(dev, db);
+	INFO_KERNEL_VER(dev, db);
 	INFO_MSG_ENABLE(dev, db); //msg_enable
 	return db->ucfg_count;
 }
@@ -280,7 +228,7 @@ unsigned int SHOW_BMSR(struct board_info *db)
 {
 	unsigned int val;
 
-	dm9051_phyread(db, MII_BMSR, &val); /*.dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
+	INTERN_PHY_READ(db, MII_BMSR, &val); /*.dm9051_phyread_headlog("bmsr", db, MII_BMSR);*/
 	netif_warn(db, link, db->ndev, "bmsr %04x\n", val);
 	return val;
 }
@@ -655,7 +603,6 @@ static int dm9051_enable_interrupt(struct board_info *db)
 	return dm9051_set_reg(db, DM9051_IMR, db->imr_all); /* enable int */
 }
 
-//.inline dm9051_stop_mrcmd
 static int dm9051_clear_interrupt(struct board_info *db)
 {
 	return dm9051_update_bits(db, DM9051_ISR, ISR_CLR_INT, ISR_CLR_INT);
@@ -800,7 +747,7 @@ static int dm9051_mdio_read(struct mii_bus *bus, int addr, int regnum)
 	if (addr == DM9051_PHY_ADDR) {
 		int ret;
 		mutex_lock(&db->spi_lockm); //mdio read
-		ret = PHY_READ(db, regnum, &val);
+		ret = MDIO_PHY_READ(db, regnum, &val);
 		mutex_unlock(&db->spi_lockm); //mdio read
 		if (ret)
 			return ret;
@@ -1183,7 +1130,7 @@ static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
 	//char user_config_strings[][ETH_GSTRING_LEN]; //USER_CONFIG, 'ETH_GSTRING_LEN' is 32
 
 	if (sget == ETH_SS_STATS) {
-		uc = SHOW_ALL_USER_CONFIG("ethtool_stats", NULL, db);
+		uc = SHOW_ALL_USER_CONFIG("ethtool", NULL, db);
 		memcpy(data, db->user_config_strings, uc * ETH_GSTRING_LEN);
 		data += uc * ETH_GSTRING_LEN;
 
