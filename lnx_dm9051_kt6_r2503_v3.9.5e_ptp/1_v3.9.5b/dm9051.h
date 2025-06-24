@@ -21,6 +21,7 @@
 /*#define DMPLUG_WD */          //(wd mode)
 /*#define DMPLUG_SKB_PROTECT */ //(wd mode skb protect)
 /*#define DMPLUG_MI_FIX */   		//(driver config)
+/*#define DMPLUG_PTP_SW */   		//(ptp1588 software)
 
 /* Macro for already known platforms
  */
@@ -55,6 +56,19 @@
     #define DMPLUG_MI_FIX	//(driver config)
 #endif                    	//(driver config)
 
+/*Capabilities:
+ *        software-transmit
+ *        software-receive
+ *        software-system-clock
+ *PTP Hardware Clock: none
+ *Hardware Transmit Timestamp Modes: none
+ *Hardware Receive Filter Modes: none
+ */
+#define PLUG_PTP_1588_SW
+#ifdef PLUG_PTP_1588_SW
+    #define DMPLUG_PTP_SW //(ptp 1588 S/W)
+#endif                    //(ptp 1588 S/W)
+
 /* pragma
  */
 #if defined(DMPLUG_INT) && defined(MAIN_DATA)
@@ -87,6 +101,10 @@
 
 #if defined(DMPLUG_MI_FIX) && defined(MAIN_DATA)
     #pragma message("dm9051: MI_FIX")
+#endif
+
+#if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
+    #pragma message("dm9051: S/W PTP (TWO STEP)")
 #endif
 
 /* Device identification
@@ -716,6 +734,11 @@ irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
     #define INFO_MI_FIX(dev, db) USER_CONFIG(dev, db, "dm9051: MI_FIX")
 #endif
 
+#if defined(DMPLUG_PTP_SW)
+    #undef INFO_PTP_SW_2S
+    #define INFO_PTP_SW_2S(dev, db) USER_CONFIG(dev, db, "dm9051: S/W PTP (TWO STEP)")
+#endif
+
 /* int fakes */
 #define DM9051_STOP_FREEIRQ(b)   // empty
 #define DM9051_STOP_CANCELDLY2(b)// empty
@@ -748,6 +771,18 @@ enum dm_req_support
 /* mi fix fakes */
 #define MI_MUTEX_LOCK(b)         // empty
 #define MI_MUTEX_UNLOCK(b)       // empty
+
+/* fakes (ptp sw) */
+#define PTP_VER_SOFTWARE(b)			// empty (impl in dm9051_log.c)
+#define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)
+
+/* final global fakes (ptp) */
+/* In struct board_info; */
+#define INIT_RCR(b)					b->rctl.rcr_all = (RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN)
+
+/* fakes and ptp sw */
+#define PTP_ETHTOOL_INFO(s)
+#define PTP_NETDEV_IOCTL(s)
 
 /* MCO, re-direct, Verification */
 #define MCO                      //(MainCoerce)
@@ -828,6 +863,68 @@ enum dm_req_support
 	#define MI_MUTEX_UNLOCK(b)		mutex_unlock(&b->spi_lockm)
 	#endif
 
+	/* ptp sw */
+	#if defined(DMPLUG_PTP_SW)
+		/* re-direct ptp sw */
+		#undef PTP_VER_SOFTWARE
+		#define PTP_VER_SOFTWARE(b) ptp_ver_software(b) /* impl in dm9051_log.c */
+		#undef DMPLUG_PTP_TX_TIMESTAMPING_SW
+		#define DMPLUG_PTP_TX_TIMESTAMPING_SW(s) dm9051_ptp_tx_swtstamp(s)
+	#endif
+
+/* ~(ptp sw ||) final global ptp */
+	#if defined(DMPLUG_PTP) /* || defined(_DMPLUG_PTP_SW)*/
+		#undef INIT_RCR
+		#define INIT_RCR(b)           	  b->rctl.rcr_all = (RCR_ALL | RCR_DIS_LONG | RCR_RXEN) //ptp_init_rcr(d)
+	#endif
+
+	/* ptp and ptp sw */
+	#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+		#undef PTP_ETHTOOL_INFO
+		#define PTP_ETHTOOL_INFO(s) s = dm9051_ts_info,
+		#undef PTP_NETDEV_IOCTL
+		#define PTP_NETDEV_IOCTL(s) s = dm9051_ptp_netdev_ioctl,
+	#endif
+
+	/* ethtool_ops
+	 * netdev_ops
+	 */
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+	static inline int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
+	#else
+	static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
+	#endif
+	{
+		struct board_info *db  = netdev_priv(net_dev);
+		ptp_board_info_t  *pbi = &db->pbi;
+
+		// Spenser - get phc_index
+		// info->phc_index = -1;
+		info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
+
+		info->so_timestamping = 0;
+	#if 1
+		#if defined(DMPLUG_PTP_SW)
+		/* .software ts */
+		info->so_timestamping |= SOF_TIMESTAMPING_TX_SOFTWARE | SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_SOFTWARE;
+		#endif
+	#endif
+	#if defined(DMPLUG_PTP)
+		info->so_timestamping |=
+			SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE;
+	#endif
+
+	#if defined(DMPLUG_PTP)
+		info->tx_types = BIT(HWTSTAMP_TX_ONESTEP_SYNC) | BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
+	#endif
+
+	#if defined(DMPLUG_PTP)
+		info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
+	#endif
+		return 0;
+	}
+	int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd); /* implement in "extern/dm9051_ptp1.c" */
+
 #if 0
 
 	#ifdef MAIN_DATA
@@ -866,64 +963,6 @@ enum dm_req_support
 	// struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb);
 	// int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb);
 
-	/* ptp sw */
-	#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-		#undef PTP_ETHTOOL_INFO
-		#define PTP_ETHTOOL_INFO(s) s = dm9051_ts_info,
-		#undef PTP_NETDEV_IOCTL
-		#define PTP_NETDEV_IOCTL(s) s = dm9051_ptp_netdev_ioctl,
-	#endif
-	/* ethtool_ops
-	 * netdev_ops
-	 */
-	#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
-	static inline int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
-	#else
-	static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
-	#endif
-	{
-		struct board_info *db  = netdev_priv(net_dev);
-		ptp_board_info_t  *pbi = &db->pbi;
-
-		// Spenser - get phc_index
-		// info->phc_index = -1;
-		info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
-
-		info->so_timestamping = 0;
-	#if 1
-		#if defined(DMPLUG_PTP_SW)
-		/* .software ts */
-		info->so_timestamping |= SOF_TIMESTAMPING_TX_SOFTWARE | SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_SOFTWARE;
-		#endif
-	#endif
-	#if defined(DMPLUG_PTP)
-		info->so_timestamping |=
-			SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE;
-	#endif
-
-	#if defined(DMPLUG_PTP)
-		info->tx_types = BIT(HWTSTAMP_TX_ONESTEP_SYNC) | BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
-	#endif
-
-	#if defined(DMPLUG_PTP)
-		info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
-	#endif
-		return 0;
-	}
-	int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
-	/* ptp sw */
-	#if defined(DMPLUG_PTP_SW)
-		/* re-direct ptp sw */
-		#undef PTP_VER_SOFTWARE
-		#define PTP_VER_SOFTWARE(b) ptp_ver_software(b)
-		#undef DMPLUG_PTP_TX_TIMESTAMPING_SW
-		#define DMPLUG_PTP_TX_TIMESTAMPING_SW(s) dm9051_ptp_tx_swtstamp(s)
-	#endif
-	/* ptp sw || ptp */
-	#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-		#undef INIT_RCR
-		#define INIT_RCR(b)           	  b->rctl.rcr_all = (RCR_ALL | RCR_DIS_LONG | RCR_RXEN) //ptp_init_rcr(d)
-	#endif
 	/* ptp */
 	#if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1) (re-direct ptpc) */
 		#undef PTP_VER

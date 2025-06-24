@@ -10,7 +10,6 @@
 /*#define DMPLUG_PTP */            //(ptp1588)
 /*#define DMPLUG_PPS_CLKOUT */     //(ptp1588 pps)
 /*#define DMPLUG_PTP_TWO_STEP */   //(ptp1588 two step)
-/*#define DMPLUG_PTP_SW */   		//(ptp1588 software)
 
 /* Capabilities:
  *        hardware-transmit
@@ -33,19 +32,6 @@
     #endif
 #endif //(ptp 1588)
 
-/*Capabilities:
- *        software-transmit
- *        software-receive
- *        software-system-clock
- *PTP Hardware Clock: none
- *Hardware Transmit Timestamp Modes: none
- *Hardware Receive Filter Modes: none
- */
-//#define PLUG_PTP_1588_SW
-#ifdef PLUG_PTP_1588_SW
-    #define DMPLUG_PTP_SW //(ptp 1588 S/W)
-#endif                    //(ptp 1588 S/W)
-
 /* pragma, Extended support header files
  */
 #if defined(DMPLUG_PTP) && defined(MAIN_DATA)
@@ -61,10 +47,6 @@
     #pragma message("dm9051: H/W PTP TWO STEP")
 #endif
 
-#if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
-    #pragma message("dm9051: S/W PTP (TWO STEP)")
-#endif
-
 /* ptp, clkout, 2step */
 #if defined(DMPLUG_PTP)
     #undef INFO_PTP
@@ -78,11 +60,6 @@
     #undef INFO_PTP2S
     #define INFO_PTP2S(dev, db) USER_CONFIG(dev, db, "dm9051: H/W PTP TWO STEP")
 	#endif
-#endif
-
-#if defined(DMPLUG_PTP_SW)
-    #undef INFO_PTP_SW_2S
-    #define INFO_PTP_SW_2S(dev, db) USER_CONFIG(dev, db, "dm9051: S/W PTP (TWO STEP)")
 #endif
 
 #endif //_EXTERN_EXTERN_H_

@@ -30,15 +30,6 @@
 //#include "extern.h"
 #include "dm9051_ptp1.h" /* 0.1 ptpc */
 
-#ifdef DMPLUG_PTP_SW
-void dm9051_ptp_tx_swtstamp(struct sk_buff *skb) //SKBTX_SW_TSTAMP
-{
-	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) {
-		skb_tx_timestamp(skb); // Add SW_TSTAMP
-	}
-}
-#endif
-
 #ifdef DMPLUG_PTP
 int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm)
 {
