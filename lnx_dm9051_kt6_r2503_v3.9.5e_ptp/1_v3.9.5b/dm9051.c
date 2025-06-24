@@ -39,7 +39,7 @@
 	#define SHOW_DEVLOG_XMIT_THRD0(b)
 	#define SHOW_DEVLOG_XMIT_THRD(b)
 	#define SHOW_DEVLOG_XMIT_IN(b)
-	#define SHOW_DEVLOG_TCR_WR(b)
+	//#define SHOW_DEVLOG_TCR_WR(b)
 	#define SHOW_PLAT_MODE(d)
 	#define SHOW_MAC(b, a)
 	#define SHOW_MONITOR_RXC(b, n)
@@ -55,31 +55,11 @@
 
 	/* fake raw rx mode */
 	#define SET_RCR(b)               dm9051_set_rcr(b)
-	/* fake raw tx mode */
-	#define LEN_TX(b, s)             dm9051_tx_len(b, s)
-	#define MODE_TX(b, s)            dm9051_mode_tx(b, s) //~wd, i.e. bd (byte mode)
-	#define SINGLE_TX(b, s)          dm9051_single_tx(b, s)
 
 	/* ptp/ macro fakes
 	 * extern/ macro fakes
 	 */
-	#define PTP_VER(b)
-
-	#define PTP_SETUP(b) b->pbi.ptp_enable = 0 // dm9051_operation_clear_extern(b)
-	#define PTP_CHECKSUM_LIMIT(b, nd)
-	// #define PTP_NEW(d)				0
-	#define PTP_INIT(d)
-	#define PTP_END(d)
-	#define PTP_STATUS_BITS(b)         RSR_ERR_BITS
-	#define PTP_CONSTRAIN(n, f) 		f
-	#define PTP_AT_RATE(b)
-
-	/* ptp2 */
-	#define DMPLUG_RX_TS_MEM(b) 0
-	#define DMPLUG_RX_HW_TS_SKB(b, s)
-	#define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s)
-	#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
-
+	
 	// #define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	//0
 	// #define DMPLUG_PTP_TX_PRE(b,s)
 	// #define DMPLUG_TX_EMIT_TS(b,s)
@@ -232,6 +212,22 @@ void SHOW_ETH_BMSR(struct board_info *db)
 	db->st_bmsr1 = SHOW_BMSR(db);
 	db->st_bmsr2 = SHOW_BMSR(db);
 }
+
+#ifdef DMPLUG_PTP_SW
+void ptp_ver_software(struct board_info *db)
+{
+	dev_info(&db->spidev->dev, "DMPLUG PTP Software Version\n");
+}
+#endif
+
+#ifdef DMPLUG_PTP_SW
+void dm9051_ptp_tx_swtstamp(struct sk_buff *skb) //SKBTX_SW_TSTAMP (on 'dm9051_start_xmit')
+{
+	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) {
+		skb_tx_timestamp(skb); // Add SW_TSTAMP
+	}
+}
+#endif
 
 int get_dts_irqf(struct board_info *db)
 {
@@ -1496,10 +1492,7 @@ int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t featu
 
 int rx_head_break(struct board_info *db)
 {
-	//u8 err_bits = RSR_ERR_BITS;
-	//#ifdef DMPLUG_PTP
-	//err_bits = ptp_status_bits(db);
-	//#endif
+	//u8 err_bits = RSR_ERR_BITS; #ifdef _DMPLUG_PTP err_bits = ptp_status_bits(db); #endif
 	u8 err_bits = PTP_STATUS_BITS(db); /* 7 rxhead ptpc, when REG60H.D[0]=0, PTP Function enable, or REG61H.D[0]=1, and D[1]=0, then re-defined RSR */
 	int rxlen = le16_to_cpu(db->rxhdr.rxlen);
 	if (db->rxhdr.status & err_bits || rxlen > DM9051_PKT_MAX) {
@@ -1687,8 +1680,20 @@ int dm9051_mode_tx(struct board_info *db, struct sk_buff *skb)
 int dm9051_single_tx(struct board_info *db, struct sk_buff *skb)
 {
 	int ret;
+
 	//DMPLUG_PTP_TX_IN_PROGRESS(db, skb); /* 6 tx ptpc */ //tom tell, 20250522 //Or using for two step ?
 	//DMPLUG_PTP_TX_PRE(db, skb); /* 6 tx ptpc */
+#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+//	dm9051_ptp_tx_in_progress(db, skb); //DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for two step ?
+//	if (db->pbi.ptp_skp_hw_tstamp == 1) {
+//		netif_err(db, drv, db->ndev, "%s: non-ptp mode but sending a ptp frame\n",
+//			  __func__);
+//	}
+	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)
+		netif_err(db, drv, db->ndev, "%s: non-hw-ptp mode, but sending a hw ptp tstamp frame\n",
+			  __func__);
+#endif //defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+
 	LEN_TX(db, skb);
 	PAD_TX(db, skb);
 	CHG_SKB_TX(db, skb);
@@ -1899,22 +1904,6 @@ void dm9051_thread_irq_free(struct net_device *ndev)
 	DM9051_STOP_CANCELDLY2(db);
 	free_irq(db->spidev->irq, db);
 	netif_err(db, intr, ndev, "_[stop] remove: free irq %d\n", db->spidev->irq);
-}
-#endif
-
-#ifdef DMPLUG_PTP_SW
-void ptp_ver_software(struct board_info *db)
-{
-	dev_info(&db->spidev->dev, "DMPLUG PTP Software Version\n");
-}
-#endif
-
-#ifdef DMPLUG_PTP_SW
-void dm9051_ptp_tx_swtstamp(struct sk_buff *skb) //SKBTX_SW_TSTAMP
-{
-	if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP) {
-		skb_tx_timestamp(skb); // Add SW_TSTAMP
-	}
 }
 #endif
 
@@ -2325,7 +2314,7 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 		return phy_mii_ioctl(ndev->phydev, rq, cmd); //'rq' is ifr
 	}
 }
-#endif
+#endif //defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
 
 static struct net_device_stats *dm9051_get_stats(struct net_device *ndev)
 {

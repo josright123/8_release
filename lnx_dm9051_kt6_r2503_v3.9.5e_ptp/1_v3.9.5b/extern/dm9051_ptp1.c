@@ -62,65 +62,27 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
 }
 #endif
 
-/* ethtool_ops
- * tell timestamp info and types */
+int slave_get_ptpFrame = 109;
+//extern u8 *gpacket_data;
+//extern int gpacket_len;
 
-//#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
-//int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
-//#else
-//int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
-//#endif
-//{
-//	struct board_info *db = netdev_priv(net_dev);
-//	ptp_board_info_t *pbi = &db->pbi;
-//
-////Spenser - get phc_index
-//	//info->phc_index = -1;
-//	info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
-
-//	info->so_timestamping =
-//#if 1
-//#if 0
-//		/* .software ts */
-//		SOF_TIMESTAMPING_TX_SOFTWARE |
-//		SOF_TIMESTAMPING_RX_SOFTWARE |
-//		SOF_TIMESTAMPING_SOFTWARE |
-//#endif
-//#endif
-//		SOF_TIMESTAMPING_TX_HARDWARE |
-//		SOF_TIMESTAMPING_RX_HARDWARE |
-//		SOF_TIMESTAMPING_RAW_HARDWARE;
-
-//	info->tx_types =
-//		BIT(HWTSTAMP_TX_ONESTEP_SYNC) |
-//		BIT(HWTSTAMP_TX_OFF) |
-//		BIT(HWTSTAMP_TX_ON);
-
-//	info->rx_filters =
-//		BIT(HWTSTAMP_FILTER_NONE) |
-//		BIT(HWTSTAMP_FILTER_ALL);
-
-
-//	return 0;
-//}
-
-#if defined(DMPLUG_PTP) /* || defined(DMPLUG_PTP_SW) */
-netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev,
-	netdev_features_t features)
+struct ptp_header *dm9051_rx_ptp_hdr_monitor(struct board_info *db)
 {
-	struct board_info *db = netdev_priv(ndev);
+	ptp_board_info_t *pbi = &db->pbi;
 
-	if (db->pbi.ptp_enable) {
-		if (features & (NETIF_F_HW_CSUM | NETIF_F_RXCSUM))
-			netif_crit(db, hw, db->ndev, "dm9051a: while ptp_enable, checksum offload is NOT allow!!\n");
-		features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM);
-	}
-
-	return features;
+	return pbi->ptp_hdr_rx;
 }
-#endif
 
-#ifdef DMPLUG_PTP
+u8 ptp_status_bits(struct board_info *db)
+{
+	return RSR_ERR_BITS & ~RSR_PTP_BITS;
+}
+
+int is_ptp_rxts_en(struct board_info *db)
+{
+	return (db->rxhdr.status & RSR_RXTS_EN) ? 1 : 0; //if T1/T4, // Is it inserted Timestamp?
+}
+
 /* Sync
  * Delay Request
  * Peer Delay Request
@@ -150,7 +112,6 @@ int is_peer_delayresp_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_PDELAY_RESP_pri) ? 1 : 0;
 }
-
 struct ptp_header *get_ptp_header(struct sk_buff *skb)
 {
 	u8 *p = skb->data;
@@ -240,25 +201,14 @@ int dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 	return 0;
 }
 
-int slave_get_ptpFrame = 109;
-
-extern u8 *gpacket_data;
-extern int gpacket_len;
-
-struct ptp_header *dm9051_rx_ptp_hdr_monitor(struct board_info *db)
-{
-	ptp_board_info_t *pbi = &db->pbi;
-
-	return pbi->ptp_hdr_rx;
-}
-
+#if defined(DMPLUG_PTP)
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 {
 	ptp_board_info_t *pbi = &db->pbi;
 	struct ptp_header *ptp_hdr;
 	
-	gpacket_data = skb->data;
-	gpacket_len = skb->len;
+	//gpacket_data = skb->data;
+	//gpacket_len = skb->len;
 	
 	pbi->ptp_hdr_rx = ptp_hdr = get_ptp_header(skb);
 	if (ptp_hdr) { //is_ptp_packet(skb->data)
@@ -362,7 +312,67 @@ void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb)
 		}
 	}
 }
+#endif
 
+/* ethtool_ops
+ * tell timestamp info and types */
+
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)
+//int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
+//#else
+//int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
+//#endif
+//{
+//	struct board_info *db = netdev_priv(net_dev);
+//	ptp_board_info_t *pbi = &db->pbi;
+//
+////Spenser - get phc_index
+//	//info->phc_index = -1;
+//	info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
+
+//	info->so_timestamping =
+//#if 1
+//#if 0
+//		/* .software ts */
+//		SOF_TIMESTAMPING_TX_SOFTWARE |
+//		SOF_TIMESTAMPING_RX_SOFTWARE |
+//		SOF_TIMESTAMPING_SOFTWARE |
+//#endif
+//#endif
+//		SOF_TIMESTAMPING_TX_HARDWARE |
+//		SOF_TIMESTAMPING_RX_HARDWARE |
+//		SOF_TIMESTAMPING_RAW_HARDWARE;
+
+//	info->tx_types =
+//		BIT(HWTSTAMP_TX_ONESTEP_SYNC) |
+//		BIT(HWTSTAMP_TX_OFF) |
+//		BIT(HWTSTAMP_TX_ON);
+
+//	info->rx_filters =
+//		BIT(HWTSTAMP_FILTER_NONE) |
+//		BIT(HWTSTAMP_FILTER_ALL);
+
+
+//	return 0;
+//}
+
+#if defined(DMPLUG_PTP) /* || defined(_DMPLUG_PTP_SW) */
+netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev,
+	netdev_features_t features)
+{
+	struct board_info *db = netdev_priv(ndev);
+
+	if (db->pbi.ptp_enable) {
+		if (features & (NETIF_F_HW_CSUM | NETIF_F_RXCSUM))
+			netif_crit(db, hw, db->ndev, "dm9051a: while ptp_enable, checksum offload is NOT allow!!\n");
+		features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM);
+	}
+
+	return features;
+}
+#endif
+
+#ifdef DMPLUG_PTP
 void dm9051_ptp_rxc_from_master(struct board_info *db)
 {
 	do {
@@ -412,16 +422,6 @@ void ptp_checksum_limit(struct board_info *db, struct net_device *ndev)
 //	db->rctl.rcr_all |= RCR_ALL;
 //#endif
 //}
-
-u8 ptp_status_bits(struct board_info *db)
-{
-	return RSR_ERR_BITS & ~RSR_PTP_BITS;
-}
-
-int is_ptp_rxts_en(struct board_info *db)
-{
-	return (db->rxhdr.status & RSR_RXTS_EN) ? 1 : 0; //if T1/T4, // Is it inserted Timestamp?
-}
 #endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, ptp1"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");

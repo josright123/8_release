@@ -9,8 +9,7 @@
 // #include <linux/ptp_classify.h>
 // #include <linux/ip.h>
 // #include <linux/udp.h>
-
-// #ifdef DMPLUG_PTP .. #endif
+// #ifdef _DMPLUG_PTP .. #endif
 
 /*
  * ptp 1588:
