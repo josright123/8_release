@@ -69,6 +69,12 @@ msg:
 rmmsg:
 	sudo dmesg -c
 
+j:
+	journalctl --vacuum-time=2weeks
+
+T:
+	ethtool -T eth1
+
 t:
 	vcgencmd measure_temp
 	vcgencmd measure_clock arm
