@@ -64,7 +64,7 @@
  *Hardware Transmit Timestamp Modes: none
  *Hardware Receive Filter Modes: none
  */
-#define PLUG_PTP_1588_SW
+//#define PLUG_PTP_1588_SW
 #ifdef PLUG_PTP_1588_SW
     #define DMPLUG_PTP_SW //(ptp 1588 S/W)
 #endif                    //(ptp 1588 S/W)
@@ -895,9 +895,6 @@ enum dm_req_support
 	static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
 	#endif
 	{
-		struct board_info *db  = netdev_priv(net_dev);
-		ptp_board_info_t  *pbi = &db->pbi;
-
 		info->so_timestamping = 0;
 
 		#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
@@ -927,8 +924,12 @@ enum dm_req_support
 		#endif
 
 		#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-		info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
-		//info->phc_index = -1; // Spenser - get phc_index
+		do {
+			struct board_info *db  = netdev_priv(net_dev);
+			ptp_board_info_t  *pbi = &db->pbi;
+			info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
+			//info->phc_index = -1; // Spenser - get phc_index
+		} while(0);
 		#endif
 
 		return 0;
