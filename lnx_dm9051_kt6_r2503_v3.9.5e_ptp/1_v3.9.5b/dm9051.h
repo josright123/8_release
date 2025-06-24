@@ -104,7 +104,7 @@
 #endif
 
 #if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
-    #pragma message("dm9051: S/W PTP (TWO STEP)")
+    #pragma message("dm9051: PTP (S/W TWO STEP)")
 #endif
 
 /* Device identification
@@ -883,7 +883,7 @@ enum dm_req_support
 		#undef PTP_ETHTOOL_INFO
 		#define PTP_ETHTOOL_INFO(s) s = dm9051_ts_info,
 		#undef PTP_NETDEV_IOCTL
-		#define PTP_NETDEV_IOCTL(s) s = dm9051_ptp_netdev_ioctl,
+		#define PTP_NETDEV_IOCTL(s) s = dm9051_eth_ioctl,
 	#endif
 
 	/* ethtool_ops
@@ -898,35 +898,44 @@ enum dm_req_support
 		struct board_info *db  = netdev_priv(net_dev);
 		ptp_board_info_t  *pbi = &db->pbi;
 
-		// Spenser - get phc_index
-		// info->phc_index = -1;
-		info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
-
 		info->so_timestamping = 0;
-	#if 1
-		#if defined(DMPLUG_PTP_SW)
-		/* .software ts */
-		info->so_timestamping |= SOF_TIMESTAMPING_TX_SOFTWARE | SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_SOFTWARE;
+
+		#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+		info->tx_types = BIT(HWTSTAMP_TX_OFF) |
+						 BIT(HWTSTAMP_TX_ON);
+		info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) |
+						   BIT(HWTSTAMP_FILTER_ALL);
 		#endif
-	#endif
-	#if defined(DMPLUG_PTP)
+
+		#if defined(DMPLUG_PTP_SW)
+		info->so_timestamping |= 
+			SOF_TIMESTAMPING_TX_SOFTWARE |
+			SOF_TIMESTAMPING_RX_SOFTWARE |
+			SOF_TIMESTAMPING_SOFTWARE; /* .software ts */
+		#endif
+
+		#if defined(DMPLUG_PTP)
 		info->so_timestamping |=
-			SOF_TIMESTAMPING_TX_HARDWARE | SOF_TIMESTAMPING_RX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE;
-	#endif
+			SOF_TIMESTAMPING_TX_HARDWARE |
+			SOF_TIMESTAMPING_RX_HARDWARE |
+			SOF_TIMESTAMPING_RAW_HARDWARE;
+		#endif
 
-	#if defined(DMPLUG_PTP)
-		info->tx_types = BIT(HWTSTAMP_TX_ONESTEP_SYNC) | BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
-	#endif
+		#if defined(DMPLUG_PTP)
+		info->tx_types |=
+			BIT(HWTSTAMP_TX_ONESTEP_SYNC);
+		#endif
 
-	#if defined(DMPLUG_PTP)
-		info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
-	#endif
+		#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+		info->phc_index = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
+		//info->phc_index = -1; // Spenser - get phc_index
+		#endif
+
 		return 0;
 	}
-	int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd); /* implement in "extern/dm9051_ptp1.c" */
+	int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd); /* implement in "extern/dm9051_ptp1.c" */
 
 #if 0
-
 	#ifdef MAIN_DATA
 	enum
 	{
@@ -982,8 +991,8 @@ enum dm_req_support
 		#define PTP_STATUS_BITS(b)        ptp_status_bits(db)
 		#define PTP_AT_RATE(b)            on_core_init_ptp_rate(b)
 
-		#undef PTP_NETDEV_CONSTRAIN
-		#define PTP_NETDEV_CONSTRAIN(n, f) dm9051_ptp_fix_features(n, f)
+		#undef PTP_CONSTRAIN
+		#define PTP_CONSTRAIN(n, f) dm9051_ptp_fix_features(n, f)
 		#undef DMPLUG_RX_TS_MEM
 		#undef DMPLUG_RX_HW_TS_SKB
 		#define DMPLUG_RX_TS_MEM(b)       dm9051_read_ptp_tstamp_mem(b)

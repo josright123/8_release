@@ -71,7 +71,7 @@
 	#define PTP_INIT(d)
 	#define PTP_END(d)
 	#define PTP_STATUS_BITS(b)         RSR_ERR_BITS
-	#define PTP_NETDEV_CONSTRAIN(n, f) f
+	#define PTP_CONSTRAIN(n, f) 		f
 	#define PTP_AT_RATE(b)
 
 	/* ptp2 */
@@ -2095,13 +2095,13 @@ static int dm9051_set_mac_address(struct net_device *ndev, void *p)
 	return ret;
 }
 
-static netdev_features_t dm9051_ndo_fix_features(struct net_device *netdev,
+static netdev_features_t dm9051_fix_features(struct net_device *ndev,
 	netdev_features_t features)
 {
-	return PTP_NETDEV_CONSTRAIN(netdev, features);
+	return PTP_CONSTRAIN(ndev, features);
 }
 
-static int dm9051_ndo_set_features(struct net_device *ndev,
+static int dm9051_set_features(struct net_device *ndev,
 				   netdev_features_t features)
 {
 	struct board_info *db = to_dm9051_board(ndev);
@@ -2270,29 +2270,24 @@ static int lan743x_ptp_set_ts_ioctl(struct net_device *netdev, struct ifreq *ifr
 //		break;
 //	}
 
-//	if (!ret) {
+//	netif_info(db, hw, db->ndev, "_lan743x_ptp_ioctl = flag %d, tx_typ %d, rx_fltr %d\n",
+//		   config.flags,
+//		   config.tx_type,
+//		   config.rx_filter);
+
 	/* copy to db _tstamp_config */
 	memcpy(&pbi->tstamp_config, &config, sizeof(pbi->tstamp_config));
-
-//	netif_info(db, hw, db->ndev, "_lan743x_ptp_ioctl = flag %d, tx_typ %d, rx_fltr %d\n",
-//		   pbi->tstamp_config.flags,
-//		   pbi->tstamp_config.tx_type,
-//		   pbi->tstamp_config.rx_filter);
 
 	/* copy to user */
 	return copy_to_user(ifr->ifr_data, &config, sizeof(config)) ?
 	       -EFAULT : 0;
-//	}
-//	return ret;
 }
 
 /* netdev_ops
  * tell support ptp */
-int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
+int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 {
-	//struct board_info *db = to_dm9051_board(ndev);
-	//struct hwtstamp_config config;
-	struct board_info *db = netdev_priv(ndev);
+	struct board_info *db = to_dm9051_board(ndev);
 	ptp_board_info_t *pbi = &db->pbi;
 	int ret;
 
@@ -2301,8 +2296,7 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 
 	switch (cmd) {
 	case SIOCGHWTSTAMP:
-		//printk("Process SIOCGHWTSTAMP\n");
-		//db->ptp_on = 1;
+		//struct hwtstamp_config config;
 		//return dm9051_ptp_get_ts_config(ndev, rq);
 		ret = lan_ptp_get_ts_ioctl(ndev, rq);
 		if (all_know_allow_show)
@@ -2312,8 +2306,6 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 		       pbi->tstamp_config.rx_filter);
 		return ret;
 	case SIOCSHWTSTAMP:
-		//printk("Process SIOCSHWTSTAMP\n");
-		//db->ptp_on = 1;
 		//return dm9051_ptp_set_ts_config(ndev, rq);
 		ret = lan743x_ptp_set_ts_ioctl(ndev, rq, cmd);
 		if (all_know_allow_show)
@@ -2329,7 +2321,6 @@ int dm9051_ptp_netdev_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 		printk("dm9051_netdev_ioctl SIOCBONDINFOQUERY = cmd 0x%X. NOT support\n", cmd);
 		return -EOPNOTSUPP;
 	default:
-		//break;
 		printk("dm9051_netdev_ioctl phy_mii_ioctl, cmd = 0x%X\n", cmd);
 		return phy_mii_ioctl(ndev->phydev, rq, cmd); //'rq' is ifr
 	}
@@ -2352,8 +2343,8 @@ static const struct net_device_ops dm9051_netdev_ops = {
 	.ndo_set_rx_mode = dm9051_set_rx_mode,
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_set_mac_address = dm9051_set_mac_address,
-	.ndo_fix_features	= dm9051_ndo_fix_features,
-	.ndo_set_features = dm9051_ndo_set_features,
+	.ndo_fix_features	= dm9051_fix_features,
+	.ndo_set_features = dm9051_set_features,
 	.ndo_get_stats = dm9051_get_stats,
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5,10,11)
 	PTP_NETDEV_IOCTL(.ndo_do_ioctl) /* 5 ptpc */ //_15888_
