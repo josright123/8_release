@@ -424,7 +424,7 @@ struct board_info
     unsigned int n_automdix;
     unsigned int stop_automdix_flag;
 
-    char automdix_log[3][AMDIX_LOG_BUFSIZE]; // u16 automdix_flag[3];
+    char automdix_log[3][AMDIX_LOG_BUFSIZE];
 
     /* 1 ptpc */
     struct ptp_board_info pbi; //=struct ptp_board_info pbi;
@@ -660,6 +660,10 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
 
 /* Extended support header files
  * #include "extern/extern.h"
+ */
+
+/* Extended support header files
+ * #include "plug/plug.h"
  */
 
 /* ethtool_ops

@@ -23,37 +23,33 @@
 #include <linux/version.h>
 #define MAIN_DATA
 #include "dm9051.h"
-/*#include plug/plug.h */          //(plug/)
-/*#include extern/dm9051_ptp1.h */ //(extern/) //0.1 ptpc
 
 /* raw fake encrypt */
-#define BUS_SETUP(db)            0 // empty(NoError)
-#define BUS_OPS(db, buff, crlen)
-/* raw fake loop_test */
-#define dmplug_loop_test(b)      0
-//[fake]
+//#define BUS_SETUP(db)            0 // empty(NoError)
+#define BUS_SETUP1(f, b, r)
+#define BUS_OPS1(f, b, bf, l)
+#define dmplug_loop_test(b)        0
 #define SHOW_BEGIN_LOG(d, b)
 #define SHOW_LOG_REFER_BEGIN(b)
 #define SHOW_DEVLOG_MODE(d)
 #define SHOW_DEVLOG_XMIT_THRD0(b)
 #define SHOW_DEVLOG_XMIT_THRD(b)
 #define SHOW_DEVLOG_XMIT_IN(b)
-// #define SHOW_DEVLOG_TCR_WR(b)
 #define SHOW_PLAT_MODE(d)
 #define SHOW_MAC(b, a)
 #define SHOW_MONITOR_RXC(b, n)
-#define DMPLUG_LOG_RXPTR(h, b) // #define dm9051_headlog_regs(h, b, r1, r2)
-#define DMPLUG_LOG_PHY(b)      // #define dm9051_phyread_headlog(h, b, r)	(void)0
+#define DMPLUG_LOG_RXPTR(h, b)     // #define dm9051_headlog_regs(h, b, r1, r2)
+#define DMPLUG_LOG_PHY(b)          // #define dm9051_phyread_headlog(h, b, r)	(void)0
 #define dm9051_dump_data1(b, p, l)
 #define monitor_rxb0(b, rb)
-/* raw(fake) bmsr_wr */
+// #define SHOW_DEVLOG_TCR_WR(b)
+/* raw(fake) phy */
 #define BMSR_OPERATION_CLEAR(b)
-#define INTERN_PHY_READ(d, n, av) dm9051_phyread(d, n, av)
-#define MDIO_PHY_READ(d, n, av)   dm9051_phyread(d, n, av)
-#define LINKCHG_UPSTART(b)        dm9051_all_upfcr(b)
-
+#define INTERN_PHY_READ(d, n, av)  dm9051_phyread(d, n, av)
+#define MDIO_PHY_READ(d, n, av)    dm9051_phyread(d, n, av)
+#define LINKCHG_UPSTART(b)         dm9051_all_upfcr(b)
 /* fake raw rx mode */
-#define SET_RCR(b)                dm9051_set_rcr(b)
+#define SET_RCR(b)                 dm9051_set_rcr(b)
 
 /* ptp/ macro fakes
  * extern/ macro fakes
@@ -371,7 +367,7 @@ int dm9051_write_mem(struct board_info *db, unsigned int reg, const void *buff, 
 
 int dm9051_write_mem_cache(struct board_info *db, u8 *buff, unsigned int crlen)
 {
-    BUS_OPS(db, buff, crlen);
+    BUS_OPS1(bus_ops, db, buff, crlen);
     return dm9051_write_mem(db, DM_SPI_MWCMD, buff, crlen); //'!wb'
 }
 
@@ -423,7 +419,7 @@ int dm9051_read_mem_cache(struct board_info *db, unsigned int reg, u8 *buff, siz
 {
     int ret = dm9051_read_mem(db, reg, buff, crlen);
     if (ret == 0)
-        BUS_OPS(db, buff, crlen);
+        BUS_OPS1(bus_ops, db, buff, crlen);
     return ret;
 }
 
@@ -534,9 +530,9 @@ static int dm9051_set_recv(struct board_info *db)
 
 static int dm9051_core_reset(struct board_info *db)
 {
-    int ret = BUS_SETUP(db); /* customization */
-    if (ret)
-        return ret;
+    int ret;
+
+    BUS_SETUP1(bus_setup, db, ret);
 
     ret = regmap_write(db->regmap_dm, DM9051_MBNDRY, BOUND_CONF_BIT); /* MemBound */
     if (ret)

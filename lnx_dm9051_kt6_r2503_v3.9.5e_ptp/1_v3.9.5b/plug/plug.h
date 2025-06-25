@@ -59,11 +59,20 @@
 
 //[rsrv, overlay]
 #if defined(PCO) && defined(DMPLUG_CRYPT) && defined(MAIN_DATA)
-//overlay by plug/
-#undef BUS_SETUP
-#define BUS_SETUP(db) bus_setup(struct board_info *db)
-#undef BUS_OPS
-#define BUS_OPS(db, buff, crlen) bus_ops(struct board_info *db, u8 *buff, unsigned int crlen)
+//#undef BUS_SETUP
+//#define BUS_SETUP(db) bus_setup(struct board_info *db)
+#undef BUS_SETUP1
+#define BUS_SETUP1(f, b, r) \
+    do { \
+        if (f) { \
+            r = f(b); /* customization */ \
+            if (r) \
+                return r; \
+        } \
+    } while (0)
+
+#undef BUS_OPS1
+#define BUS_OPS1(f, b, bf, l) f(b, bf, l)
 
 //implement in plug/
 int bus_setup(struct board_info *db);
