@@ -14,28 +14,28 @@
 /* pragma
  */
 #if defined(DMPLUG_PTP) && defined(MAIN_DATA)
-    #pragma message("dm9051: H/W PTP")
-#endif
-#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
-    #pragma message("dm9051: H/W PPS")
+    #pragma message("dm9051: PTP (H/W ONE STEP)")
 #endif
 #if defined(DMPLUG_PTP_TWO_STEP) && defined(MAIN_DATA)
-    #pragma message("dm9051: H/W PTP TWO STEP")
+    #pragma message("dm9051: PTP (H/W TWO STEP)")
+#endif
+#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
+    #pragma message("dm9051: PTP (H/W PPS)")
 #endif
 
 /* ptp, clkout, 2step
  */
 #if defined(DMPLUG_PTP)
     #undef INFO_PTP
-    #define INFO_PTP(dev, db) USER_CONFIG(dev, db, "dm9051: H/W PTP")
+    #define INFO_PTP(dev, db) USER_CONFIG(dev, db, "dm9051: PTP (H/W ONE STEP)")
 	
-	#if defined(DMPLUG_PPS_CLKOUT)
-    #undef INFO_PPS
-    #define INFO_PPS(dev, db) USER_CONFIG(dev, db, "dm9051: H/W PPS")
-	#endif
 	#if defined(DMPLUG_PTP_TWO_STEP)
     #undef INFO_PTP2S
-    #define INFO_PTP2S(dev, db) USER_CONFIG(dev, db, "dm9051: H/W PTP TWO STEP")
+    #define INFO_PTP2S(dev, db) USER_CONFIG(dev, db, "dm9051: PTP (H/W TWO STEP)")
+	#endif
+	#if defined(DMPLUG_PPS_CLKOUT)
+    #undef INFO_PPS
+    #define INFO_PPS(dev, db) USER_CONFIG(dev, db, "dm9051: PTP (H/W PPS)")
 	#endif
 #endif
 

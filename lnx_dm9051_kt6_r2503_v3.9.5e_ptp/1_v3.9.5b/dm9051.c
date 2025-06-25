@@ -81,10 +81,10 @@ static inline int SHOW_ALL_USER_CONFIG(char *head, struct device *dev, struct bo
 	INFO_INT_TWOSTEP(dev, db);
 	INFO_WD(dev, db);
 	INFO_SKB_PROT(dev, db);
-	INFO_PTP(dev, db);
-	INFO_PPS(dev, db);
-	INFO_PTP2S(dev, db);
 	INFO_PTP_SW_2S(dev, db);
+	INFO_PTP(dev, db);
+	INFO_PTP2S(dev, db);
+	INFO_PPS(dev, db);
 	INFO_MI_FIX(dev, db);
 	INFO_LOG(dev, db);
 	INFO_BMCR_WR(dev, db);
