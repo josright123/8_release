@@ -71,12 +71,11 @@ enum
 };
 struct plat_cnf_info
 {
-    char *test_info;
-    // int skb_wb_mode;
+    char *test_device;
     int checksuming;
     struct align_config
     {
-        char *burst_mode_info;
+        char *mode;
         int   burst_mode;
         u32   tx_blk;
         u32   rx_blk;
@@ -85,16 +84,16 @@ struct plat_cnf_info
 
 #ifdef MAIN_DATA
 const struct plat_cnf_info plat_align_mode = {
-    .test_info = "Test in rpi5 bcm2712",
+    .test_device = "rpi5 bcm2712",
     //.skb_wb_mode = SKB_WB_ON, //SKB_WB_OFF, //SKB_WB_ON,
     .checksuming = DEFAULT_CHECKSUM_OFF,
-    .align       = {.burst_mode_info = "Alignment", .burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
+    .align       = {.mode = "Alignment", .burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
 };
 const struct plat_cnf_info plat_misc_mode = {
-    .test_info = "Test in processor Cortex-A",
+    .test_device = "Dev Cortex-A",
     //.skb_wb_mode = SKB_WB_OFF,
     .checksuming = DEFAULT_CHECKSUM_OFF,
-    .align       = {.burst_mode_info = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
+    .align       = {.mode = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 };
 #endif
 
@@ -135,17 +134,17 @@ const struct param_config *param = &param_conf;
 #if 0
     #ifdef MAIN_DATA
 	const struct plat_cnf_info plat_burst_mode = {
-		.test_info = "Test in rpi4 bcm2711",
+		.test_device = "rpi4 bcm2711",
 		//.skb_wb_mode = SKB_WB_ON,
 		.checksuming = DEFAULT_CHECKSUM_OFF,
-		.align       = {.burst_mode_info = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
+		.align       = {.mode = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 	};
 
 	const struct plat_cnf_info plat_misc_mode = {
-		.test_info = "Test in processor Cortex-A",
+		.test_device = "processor Cortex-A",
 		//.skb_wb_mode = SKB_WB_OFF,
 		.checksuming = DEFAULT_CHECKSUM_OFF,
-		.align       = {.burst_mode_info = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
+		.align       = {.mode = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 	};
     #endif // MAIN_DATA
 

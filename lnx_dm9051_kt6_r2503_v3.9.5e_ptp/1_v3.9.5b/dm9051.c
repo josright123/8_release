@@ -132,6 +132,15 @@ static void SHOW_OPEN(struct board_info *db)
     /* amdix_log_reset(db); */ //(to be determined)
 }
 
+static void SHOW_PLAT_CONF(struct board_info *db)
+{
+    netif_crit(db, hw, db->ndev, "plat_cnf->test_device: %s", plat_cnf->test_device);
+    netif_crit(db, hw, db->ndev, "plat_cnf->checksuming: %d", plat_cnf->checksuming);
+    netif_crit(db, hw, db->ndev, "plat_cnf->align.mode: %s", plat_cnf->align.mode);
+    netif_crit(db, hw, db->ndev, "plat_cnf->align.txsize: %d", plat_cnf->align.tx_blk);
+    netif_crit(db, hw, db->ndev, "plat_cnf->align.rxsize: %d", plat_cnf->align.rx_blk);
+}
+
 static void SHOW_RESTART_SHOW_STATIISTIC(struct board_info *db)
 {
     netif_warn(db, rx_status, db->ndev, "List: rxstatus_Er & rxlen_Er %d, RST_c %d, RST_up %d\n", //'netif_crit'
@@ -189,6 +198,7 @@ void SHOW_ETH_MAC(struct board_info *db)
 {
     struct net_device *ndev = db->ndev;
 
+    printk("\n");
     netif_warn(db, hw, db->ndev, "MAC %02x %02x %02x %02x %02x %02x", ndev->dev_addr[0], ndev->dev_addr[1],
                ndev->dev_addr[2], ndev->dev_addr[3], ndev->dev_addr[4], ndev->dev_addr[5]);
 }
@@ -204,8 +214,6 @@ unsigned int SHOW_BMSR(struct board_info *db)
 
 void SHOW_ETH_BMSR(struct board_info *db)
 {
-    printk("\n");
-    SHOW_ETH_MAC(db);
     db->st_bmsr1 = SHOW_BMSR(db);
     db->st_bmsr2 = SHOW_BMSR(db);
 }
@@ -1086,7 +1094,15 @@ static int dm9051_set_pauseparam(struct net_device *ndev, struct ethtool_pausepa
 // const
 static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
     "rx_packets", "tx_packets", "rx_bytes",         "tx_bytes",           "rx_errors",          "tx_errors",
-    "fifo_rst",   "up_rst",     "dump MAC address", "dump BMSR register", "dump BMSR register",
+    "fifo_rst",   "up_rst",
+	"dump MAC address", //[8]
+	"dump TST info", //[9]
+	"dump Checksuming", //[9]
+	"dump ALIGN mode", //[9]
+	"dump TX BLK", //[9]
+	"dump RX BLK", //[9]
+	"dump BMSR register", //[14]
+	"dump BMSR register", //[15]
 };
 
 static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
@@ -1101,11 +1117,18 @@ static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
         memcpy(data, db->user_config_strings, uc * ETH_GSTRING_LEN);
         data += uc * ETH_GSTRING_LEN;
 
+        SHOW_ETH_MAC(db);
+        SHOW_PLAT_CONF(db);
         SHOW_ETH_BMSR(db);
         sprintf(dm9051_stats_strings[8], "MAC %02x %02x %02x %02x %02x %02x =", ndev->dev_addr[0], ndev->dev_addr[1],
                 ndev->dev_addr[2], ndev->dev_addr[3], ndev->dev_addr[4], ndev->dev_addr[5]);
-        sprintf(dm9051_stats_strings[9], "BMSR %04x =", db->st_bmsr1);
-        sprintf(dm9051_stats_strings[10], "BMSR %04x =", db->st_bmsr2);
+        sprintf(dm9051_stats_strings[9], "test device: %s =", plat_cnf->test_device); // "Dev Cortex-A" or "processor Cortex-A"
+        sprintf(dm9051_stats_strings[10], "checksuming"); 
+        sprintf(dm9051_stats_strings[11], "align.mode: %s =", plat_cnf->align.mode); // "Burst"
+        sprintf(dm9051_stats_strings[12], "align.txsize");
+        sprintf(dm9051_stats_strings[13], "align.rxsize");
+        sprintf(dm9051_stats_strings[14], "BMSR %04x =", db->st_bmsr1);
+        sprintf(dm9051_stats_strings[15], "BMSR %04x =", db->st_bmsr2);
         memcpy(data, dm9051_stats_strings, sizeof(dm9051_stats_strings));
     }
 }
@@ -1133,8 +1156,13 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev, struct ethtool_sta
     data[db->ucfg_count + 6] = db->bc.fifo_rst_counter;
     data[db->ucfg_count + 7] = db->bc.up_rst_counter;
     data[db->ucfg_count + 8] = 1;
-    data[db->ucfg_count + 9] = db->st_bmsr1; //_SHOW_BMSR(db);
-    data[db->ucfg_count + 10] = db->st_bmsr2; //_SHOW_BMSR(db);
+    data[db->ucfg_count + 9] = 1;
+    data[db->ucfg_count + 10] = plat_cnf->checksuming;
+    data[db->ucfg_count + 11] = 1;
+    data[db->ucfg_count + 12] = plat_cnf->align.tx_blk;
+    data[db->ucfg_count + 13] = plat_cnf->align.rx_blk;
+    data[db->ucfg_count + 14] = db->st_bmsr1; //_SHOW_BMSR(db);
+    data[db->ucfg_count + 15] = db->st_bmsr2; //_SHOW_BMSR(db);
 
     SHOW_XMIT_ANALYSIS(db);
 
