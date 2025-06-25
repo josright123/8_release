@@ -39,45 +39,66 @@
 	#endif
 #endif
 
-	/* ptp */
-	#if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1) (re-direct ptpc) */
-		#undef PTP_VER
-		#undef PTP_SETUP
-		#undef PTP_CHECKSUM_LIMIT
-		// #undef PTP_NEW
-		#undef PTP_INIT
-		#undef PTP_END
-		#undef PTP_STATUS_BITS
-		#undef PTP_AT_RATE
-		#define PTP_VER(b)                ptp_ver(b)
-		#define PTP_SETUP(b)              ptp_operation_extern(b)
-		#define PTP_CHECKSUM_LIMIT(b, nd) ptp_checksum_limit(b, nd)
-		// #define PTP_NEW(d)			  ptp_new(d)
-		#define PTP_INIT(d)               ptp_init(d)
-		#define PTP_END(d)                ptp_end(d)
-		#define PTP_STATUS_BITS(b)        ptp_status_bits(db)
-		#define PTP_AT_RATE(b)            	on_core_init_ptp_rate(b)
+/* ptp implementation
+ */
 
-		#undef PTP_CONSTRAIN
-		#define PTP_CONSTRAIN(n, f) 		dm9051_ptp_fix_features(n, f)
-		#undef DMPLUG_RX_TS_MEM
-		#undef DMPLUG_RX_HW_TS_SKB
-		#define DMPLUG_RX_TS_MEM(b)       dm9051_read_ptp_tstamp_mem(b)
-		#define DMPLUG_RX_HW_TS_SKB(b, s) dm9051_ptp_rx_hwtstamp(b, s)
-		#undef DMPLUG_SHOW_ptp_rx_packet_monitor
-		#define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s) dm9051_ptp_rx_packet_monitor(b, s)
-		#undef DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER
-		#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b) dm9051_ptp_rxc_from_master(b)
-		#undef SINGLE_TX // udef
-		#define SINGLE_TX(b, s) dm9051_ptp_single_tx(b, s)
-		// #undef DMPLUG_PTP_TX_IN_PROGRESS
-		// #undef DMPLUG_PTP_TX_PRE
-		// #undef DMPLUG_TX_EMIT_TS
-		// #define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	dm9051_ptp_tx_in_progress(b,s)
-		// #define DMPLUG_PTP_TX_PRE(b,s)			dm9051_ptp_tcr_2wr(b,s)
-		// #define DMPLUG_TX_EMIT_TS(b,s)			dm9051_ptp_txreq_hwtstamp(b,s)
-	#endif
+/* ptp */
+int  dm9051_get_clk_ts(struct board_info *db);
+void on_core_init_ptp_rate(struct board_info *db);
 
+void ptp_ver(struct board_info *db);
+void ptp_operation_extern(struct board_info *db);
+void ptp_checksum_limit(struct board_info *db, struct net_device *ndev);
+void ptp_init(struct board_info *db);
+void ptp_end(struct board_info *db);
+u8   ptp_status_bits(struct board_info *db);
+void dm9051_ptp_rxc_from_master(struct board_info *db);
+int  dm9051_read_ptp_tstamp_mem(struct board_info *db);
+void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
+int  dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb);
+int  dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb);
+netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev, netdev_features_t features);
+
+/* ptp casted, used in 'dm9051.c'
+ */
+#if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1) (re-direct ptpc) */
+	#undef PTP_VER
+	#undef PTP_SETUP
+	#undef PTP_CHECKSUM_LIMIT
+	// #undef PTP_NEW
+	#undef PTP_INIT
+	#undef PTP_END
+	#undef PTP_STATUS_BITS
+	#undef PTP_AT_RATE
+	#define PTP_VER(b)                ptp_ver(b)
+	#define PTP_SETUP(b)              ptp_operation_extern(b)
+	#define PTP_CHECKSUM_LIMIT(b, nd) ptp_checksum_limit(b, nd)
+	// #define PTP_NEW(d)			  ptp_new(d)
+	#define PTP_INIT(d)               ptp_init(d)
+	#define PTP_END(d)                ptp_end(d)
+	#define PTP_STATUS_BITS(b)        ptp_status_bits(db)
+	#define PTP_AT_RATE(b)            	on_core_init_ptp_rate(b)
+
+	#undef PTP_CONSTRAIN
+	#define PTP_CONSTRAIN(n, f) 		dm9051_ptp_fix_features(n, f)
+	#undef DMPLUG_RX_TS_MEM
+	#undef DMPLUG_RX_HW_TS_SKB
+	#define DMPLUG_RX_TS_MEM(b)       dm9051_read_ptp_tstamp_mem(b)
+	#define DMPLUG_RX_HW_TS_SKB(b, s) dm9051_ptp_rx_hwtstamp(b, s)
+	#undef DMPLUG_SHOW_ptp_rx_packet_monitor
+	#define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s) dm9051_ptp_rx_packet_monitor(b, s)
+	#undef DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER
+	#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b) dm9051_ptp_rxc_from_master(b)
+	#undef SINGLE_TX // udef
+	#define SINGLE_TX(b, s) dm9051_ptp_single_tx(b, s)
+	// #undef DMPLUG_PTP_TX_IN_PROGRESS
+	// #undef DMPLUG_PTP_TX_PRE
+	// #undef DMPLUG_TX_EMIT_TS
+	// #define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	dm9051_ptp_tx_in_progress(b,s)
+	// #define DMPLUG_PTP_TX_PRE(b,s)			dm9051_ptp_tcr_2wr(b,s)
+	// #define DMPLUG_TX_EMIT_TS(b,s)			dm9051_ptp_txreq_hwtstamp(b,s)
+#endif
 
 /* ~(ptp sw ||) final global ptp */
 	#if defined(DMPLUG_PTP) /* || defined(_DMPLUG_PTP_SW)*/

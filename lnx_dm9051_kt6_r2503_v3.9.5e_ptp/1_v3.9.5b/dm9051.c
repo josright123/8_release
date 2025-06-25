@@ -24,11 +24,11 @@
 #define MAIN_DATA
 #include "dm9051.h"
 
-/* raw fake encrypt */
-//#define BUS_SETUP(db)            0 // empty(NoError)
-#define BUS_SETUP1(f, b, r)
+/* raw (fake) */
+#define BUS_SETUP1(f, b, r)        //#define BUS_SETUP(db) 0 // empty(NoError)
 #define BUS_OPS1(f, b, bf, l)
 #define dmplug_loop_test(b)        0
+#define dm9051_dump_data1(b, p, l)
 #define SHOW_BEGIN_LOG(d, b)
 #define SHOW_LOG_REFER_BEGIN(b)
 #define SHOW_DEVLOG_MODE(d)
@@ -40,16 +40,13 @@
 #define SHOW_MONITOR_RXC(b, n)
 #define DMPLUG_LOG_RXPTR(h, b)     // #define dm9051_headlog_regs(h, b, r1, r2)
 #define DMPLUG_LOG_PHY(b)          // #define dm9051_phyread_headlog(h, b, r)	(void)0
-#define dm9051_dump_data1(b, p, l)
 #define monitor_rxb0(b, rb)
-// #define SHOW_DEVLOG_TCR_WR(b)
-/* raw(fake) phy */
 #define BMSR_OPERATION_CLEAR(b)
+/* raw (fake) */
+#define SET_RCR(b)                 dm9051_set_rcr(b)
 #define INTERN_PHY_READ(d, n, av)  dm9051_phyread(d, n, av)
 #define MDIO_PHY_READ(d, n, av)    dm9051_phyread(d, n, av)
 #define LINKCHG_UPSTART(b)         dm9051_all_upfcr(b)
-/* fake raw rx mode */
-#define SET_RCR(b)                 dm9051_set_rcr(b)
 
 /* ptp/ macro fakes
  * extern/ macro fakes
@@ -1708,14 +1705,7 @@ int dm9051_single_tx(struct board_info *db, struct sk_buff *skb)
 {
     int ret;
 
-    // DMPLUG_PTP_TX_IN_PROGRESS(db, skb); /* 6 tx ptpc */ //tom tell, 20250522 //Or using for two step ?
-    // DMPLUG_PTP_TX_PRE(db, skb); /* 6 tx ptpc */
     #if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-    //	dm9051_ptp_tx_in_progress(db, skb); //DMPLUG_PTP_TX_IN_PROGRESS(db, skb); //tom tell, 20250522 //Or using for
-    //two step ? 	if (db->pbi.ptp_skp_hw_tstamp == 1) { 		netif_err(db, drv, db->ndev, "%s: non-ptp mode but sending a ptp
-    //frame\n",
-    //			  __func__);
-    //	}
     if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)
         netif_err(db, drv, db->ndev, "%s: non-hw-ptp mode, but sending a hw ptp tstamp frame\n", __func__);
     #endif // defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
@@ -1724,10 +1714,6 @@ int dm9051_single_tx(struct board_info *db, struct sk_buff *skb)
     PAD_TX(db, skb);
     CHG_SKB_TX(db, skb);
     ret = MODE_TX(db, skb);
-    // if (!ret) {
-    //	DMPLUG_TX_EMIT_TS(db, skb); /* 6.1 tx ptpc */
-    //	SHOW_DEVLOG_TCR_WR(db);
-    // }
     dev_kfree_skb(skb);
     return ret;
 }

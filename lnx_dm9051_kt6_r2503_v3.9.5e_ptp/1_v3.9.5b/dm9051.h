@@ -480,6 +480,12 @@ static inline struct sk_buff *dm9051_chg_skb_wd(struct board_info *db, struct sk
 // #include "dm9051_main_data.h"
 // #endif
 
+//#if defined(_DMPLUG_LOG) || 1
+/* Consider: Put into dm9051.c */
+/* From dm9051_log.c to dm9051.c: directly use: allow */
+void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
+//#endif
+
 int get_dts_irqf(struct board_info *db);
 irqreturn_t dm9051_rx_threaded_plat(int voidirq, void *pw);
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb);
@@ -583,24 +589,9 @@ enum dm_req_support
 /* fakes dm9051_log */
 #define SHOW_DEVLOG_TCR_WR(b)
 
-/* ptp */
-int  dm9051_get_clk_ts(struct board_info *db);
-void on_core_init_ptp_rate(struct board_info *db);
-
-void ptp_ver(struct board_info *db);
-void ptp_operation_extern(struct board_info *db);
-void ptp_checksum_limit(struct board_info *db, struct net_device *ndev);
-void ptp_init(struct board_info *db);
-void ptp_end(struct board_info *db);
-u8   ptp_status_bits(struct board_info *db);
-void dm9051_ptp_rxc_from_master(struct board_info *db);
-int  dm9051_read_ptp_tstamp_mem(struct board_info *db);
-void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
-void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
-int  dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb);
-int  dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb);
-netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev, netdev_features_t features);
-
+/* ptp raw used in 'dm9051.c'
+ */
+ 
 /* ptp */
 #define PTP_VER(b)
 #define PTP_SETUP(b)                b->pbi.ptp_enable = 0 // dm9051_operation_clear_extern(b)
@@ -619,13 +610,13 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
 #define DMPLUG_RX_TS_MEM(b)         0
 #define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s)
 #define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
-
 #define DMPLUG_RX_HW_TS_SKB(b, s)
 #define SINGLE_TX(b, s)             dm9051_single_tx(b, s)
 
 /*#define DMPLUG_PTP */          //(ptp1588)
 /*#define DMPLUG_PPS_CLKOUT */   //(ptp1588 pps)
 /*#define DMPLUG_PTP_TWO_STEP */ //(ptp1588 two step)
+/*#define DMPLUG_LOG */          //(extern, debug log)
 
 /* Capabilities:
  *        hardware-transmit
@@ -648,6 +639,11 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
     #endif
 #endif //(ptp)
 
+//#define PLUG_LOG
+#ifdef PLUG_LOG
+#define DMPLUG_LOG //(extern, debug log, extra-print-log for detail observation!)
+#endif
+
 /* main data */
 #if defined(MAIN_DATA)
     #include "dm9051_main_data.h"
@@ -658,9 +654,10 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
     #include "extern/dm9051_ptp1.h"
 #endif
 
-/* Extended support header files
- * #include "extern/extern.h"
- */
+/* Extended support header files */
+#if defined(DMPLUG_LOG)
+    #include "extern/extern.h"
+#endif
 
 /* Extended support header files
  * #include "plug/plug.h"
@@ -712,6 +709,30 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
 #endif
 
     return 0;
+}
+
+void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051_dump_data1
+{
+	int i, j, rowsize = 32;
+	int splen; //index of start row
+	int rlen; //remain/row length
+	char line[120];
+
+	netif_info(db, pktdata, db->ndev, "%s\n", db->bc.head);
+	for (i = 0; i < packet_len; i += rlen) {
+		//rlen = print_line(packet_data+i, min(rowsize, skb->len - i)); ...
+		rlen =  packet_len - i;
+		if (rlen >= rowsize) rlen = rowsize;
+
+		splen = 0;
+		splen += sprintf(line + splen, " %3d", i);
+		for (j = 0; j < rlen; j++) {
+			if (!(j % 8)) splen += sprintf(line + splen, " ");
+			if (!(j % 16)) splen += sprintf(line + splen, " ");
+			splen += sprintf(line + splen, " %02x", packet_data[i + j]);
+		}
+		netif_info(db, pktdata, db->ndev, "%s\n", line);
+	}
 }
 
 #endif /* _DM9051_H_ */

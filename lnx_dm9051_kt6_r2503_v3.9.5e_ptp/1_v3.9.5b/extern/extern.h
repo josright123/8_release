@@ -3,58 +3,23 @@
  * Copyright (c) 2022 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
- 
-#ifndef _EXTERN_EXTERN_H_
-#define _EXTERN_EXTERN_H_
-/*#define DMPLUG_PTP */            //(ptp1588)
-/*#define DMPLUG_PPS_CLKOUT */     //(ptp1588 pps)
-/*#define DMPLUG_PTP_TWO_STEP */   //(ptp1588 two step)
-//#define PLUG_PTP_1588
-//#ifdef PLUG_PTP_1588
-//    #define DMPLUG_PTP //(ptp 1588)
-
-//    #define PLUG_PTP_PPS
-//    #ifdef PLUG_PTP_PPS
-//        #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
-//    #endif
-
-//    #define PLUG_PTP_TWO_STEP //(always essential)(if not support, master NO follow up send)
-//    #ifdef PLUG_PTP_TWO_STEP
-//        #define DMPLUG_PTP_TWO_STEP //(HW Two step)
-//    #endif
-//#endif //(ptp 1588)
-//#if defined(DMPLUG_PTP) && defined(MAIN_DATA)
-//    // #warning "dm9051 PTP"
-//    #pragma message("dm9051: H/W PTP")
-//#endif
-//#if defined(DMPLUG_PPS_CLKOUT) && defined(MAIN_DATA)
-//    // #warning "dm9051 PPS"
-//    #pragma message("dm9051: H/W PPS")
-//#endif
-//#if defined(DMPLUG_PTP_TWO_STEP) && defined(MAIN_DATA)
-//    // #warning "dm9051 PTP TWO STEP"
-//    #pragma message("dm9051: H/W PTP TWO STEP")
-//#endif
-//#if defined(DMPLUG_PTP)
-//    #undef INFO_PTP
-//    #define INFO_PTP(dev, db) USER_CONFIG(dev, db, "dm9051: H/W PTP")
-//	
-//	#if defined(DMPLUG_PPS_CLKOUT)
-//    #undef INFO_PPS
-//    #define INFO_PPS(dev, db) USER_CONFIG(dev, db, "dm9051: H/W PPS")
-//	#endif
-//	#if defined(DMPLUG_PTP_TWO_STEP)
-//    #undef INFO_PTP2S
-//    #define INFO_PTP2S(dev, db) USER_CONFIG(dev, db, "dm9051: H/W PTP TWO STEP")
-//	#endif
-//#endif
-#endif //_EXTERN_EXTERN_H_
-
 #ifndef _DM9051_EXTERN_H_
 #define _DM9051_EXTERN_H_
+
+// #ifdef _DMPLUG_LOG .. #endif
+/* pragma
+ */
+#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
+#pragma message("EXTERN-DEBUG: LOG")
+#endif
+
+#if defined(DMPLUG_LOG)
+#undef INFO_LOG
+#define INFO_LOG(dev, db)					USER_CONFIG(dev, db, "EXTERN-DEBUG, LOG")
+#endif
+
 /*#define DMCONF_BMCR_WR */ //(extern, bmcr-work around)
 /*#define DMPLUG_MRR_WR */ //(extern, mrr-work around, when link change to up)
-/*#define DMPLUG_LOG */ //(extern, debug log)
 
 //#define PLUG_BMCR
 #ifdef PLUG_BMCR
@@ -66,11 +31,6 @@
 #define DMPLUG_MRR_WR //(extern, mrr-work around)
 #endif
 
-//#define PLUG_LOG
-#ifdef PLUG_LOG
-#define DMPLUG_LOG //(extern, debug log, extra-print-log for detail observation!)
-#endif
-
 /* pragma
  */
 #if defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
@@ -78,10 +38,6 @@
 #endif
 #if defined(DMPLUG_MRR_WR) && defined(MAIN_DATA)
 #pragma message("EXTERN-WORKROUND: MRR_WR")
-#endif
-
-#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
-#pragma message("EXTERN-DEBUG: LOG")
 #endif
 
 /* USER_CONFIG, show for starting
@@ -94,11 +50,6 @@
 #if defined(DMPLUG_MRR_WR)
 #undef INFO_MRR_WR
 #define INFO_MRR_WR(dev, db) 				USER_CONFIG(dev, db, "EXTERN-WORKROUND: MRR_WR")
-#endif
-
-#if defined(DMPLUG_LOG)
-#undef INFO_LOG
-#define INFO_LOG(dev, db)					USER_CONFIG(dev, db, "EXTERN-DEBUG, LOG")
 #endif
 
 /* ECO, */
@@ -179,10 +130,5 @@ void dm9051_log_phy(struct board_info *db); //static int show_log_phy(char *head
 
 void show_rxb(struct board_info *db, unsigned int rxbyte);
 #endif
-
-/* directly use : allow */
-//#if defined(DMPLUG_LOG) || 1
-//void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
-//#endif
 
 #endif //_DM9051_EXTERN_H_

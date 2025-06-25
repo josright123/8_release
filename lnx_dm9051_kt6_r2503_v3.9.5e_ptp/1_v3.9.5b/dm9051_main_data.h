@@ -171,12 +171,6 @@ const struct param_config *param = &param_conf;
 	// void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb);
 	// void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb);
 	// void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
-
-    #if defined(DMPLUG_LOG) || 1
-	/* Consider: Put into dm9051.c */
-	/* of dm9051_log.c: directly use : allow */
-	void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
-    #endif
 #endif
 
 /* system */
