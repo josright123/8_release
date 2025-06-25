@@ -26,9 +26,7 @@
 
 //#include "dm9051_ptpd.h"
 #include "../dm9051.h"
-/*#include extern/extern.h */ //(extern/)
-//#include "extern.h"
-#include "dm9051_ptp1.h" /* 0.1 ptpc */
+//#include "dm9051_ptp1.h" /* 0.1 ptpc */
 
 #ifdef DMPLUG_PTP
 int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm)

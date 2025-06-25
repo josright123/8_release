@@ -23,7 +23,6 @@
 #include <linux/version.h>
 #define MAIN_DATA
 #include "dm9051.h"
-/*#include extern/extern.h */ //(extern/)
 /*#include plug/plug.h */ //(plug/)
 /*#include extern/dm9051_ptp1.h */ //(extern/) //(0.1 ptpc )
 
