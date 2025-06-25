@@ -64,7 +64,7 @@
  *Hardware Transmit Timestamp Modes: none
  *Hardware Receive Filter Modes: none
  */
-#define PLUG_PTP_1588_SW
+//#define PLUG_PTP_1588_SW
 #ifdef PLUG_PTP_1588_SW
     #define DMPLUG_PTP_SW //(ptp S/W)
 #endif                    //(ptp S/W)
@@ -643,7 +643,7 @@ enum dm_req_support
  *        hardware-receive
  *        hardware-raw-clock
  */
-#define PLUG_PTP_1588
+//#define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
     #define DMPLUG_PTP //(ptp)
 
