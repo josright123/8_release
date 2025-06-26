@@ -537,6 +537,7 @@ void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 #define INFO_SKB_PROT(dev, db)
 #define INFO_MI_FIX(dev, db)
 #define INFO_LOG(dev, db)
+#define INFO_MSG_DBGRXC(dev, db)
 #define INFO_BMCR_WR(dev, db)
 #define INFO_MRR_WR(dev, db)
 #define INFO_BUSWORK(dev, db)
@@ -645,8 +646,6 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
 #define PLUG_LOG
 #ifdef PLUG_LOG
 #define DMPLUG_LOG //(extern, debug log, extra-print-log for detail observation!)
-
-#define DMPLUG_LOG_RXC   3
 #endif
 
 /* main data */

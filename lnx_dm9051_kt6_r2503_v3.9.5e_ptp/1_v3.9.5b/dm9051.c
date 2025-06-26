@@ -79,6 +79,7 @@ static inline int SHOW_ALL_USER_CONFIG(char *head, struct device *dev, struct bo
     INFO_PPS(dev, db);
     INFO_MI_FIX(dev, db);
     INFO_LOG(dev, db);
+    INFO_MSG_DBGRXC(dev, db); // msg_enable
     INFO_BMCR_WR(dev, db);
     INFO_MRR_WR(dev, db);
     INFO_BUSWORK(dev, db);
