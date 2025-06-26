@@ -237,7 +237,7 @@ int dm9051_single_rx(struct board_info *db)
 		return ret;
 	}
 
-	//DMPLUG_SHOW_ptp_rx_packet_monitor(db, skb);
+	//_DMPLUG_SHOW_ptp_rx_packet_monitor(db, skb);
 #ifdef DMPLUG_PTP
 	if (pbi->ptp_enable) {
 		if (is_ptp_rxts_en(db)) {	// Inserted Timestamp

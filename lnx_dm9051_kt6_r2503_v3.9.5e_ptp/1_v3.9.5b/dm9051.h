@@ -609,10 +609,12 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
 
 /* ptp2 */
 #define DMPLUG_RX_TS_MEM(b)         0
-#define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s)
 #define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
 #define DMPLUG_RX_HW_TS_SKB(b, s)
 #define SINGLE_TX(b, s)             dm9051_single_tx(b, s)
+
+#define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s)
+#define LOG_RX_PACKET_DUMP(b, s)
 
 /*#define DMPLUG_PTP */          //(ptp1588)
 /*#define DMPLUG_PPS_CLKOUT */   //(ptp1588 pps)
@@ -735,6 +737,15 @@ static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_
 			splen += sprintf(line + splen, " %02x", packet_data[i + j]);
 		}
 		netif_info(db, pktdata, db->ndev, "%s\n", line);
+	}
+}
+
+static inline void dm9051_rx_packet_dump(struct board_info *db, struct sk_buff *skb)
+{
+	if (db->ndev->stats.rx_packets < DMPLUG_LOG_RXC) { //test
+		sprintf(db->bc.head, "rx_packet %ld, len %d", db->ndev->stats.rx_packets, skb->len);
+		dump_data(db, skb->data, skb->len);
+		//dm9051_dump_data1(db, skb->data, skb->len);
 	}
 }
 

@@ -1626,11 +1626,7 @@ int dm9051_loop_rx(struct board_info *db)
         }
 
         DMPLUG_SHOW_ptp_rx_packet_monitor(db, skb); /* 7.2dbg ptpc */
-
-		if (db->ndev->stats.rx_packets < DMPLUG_LOG_RXC) { //test
-			sprintf(db->bc.head, "rx_packet %ld, len %d", db->ndev->stats.rx_packets, skb->len);
-			dm9051_dump_data1(db, skb->data, skb->len);
-		}
+		LOG_RX_PACKET_DUMP(db, skb); /* log */
 
         skb->protocol = eth_type_trans(skb, db->ndev);
 
