@@ -58,7 +58,13 @@ flowchart TD
 - `PLUG_ENABLE_WD` 相關區塊：啟用 Watchdog（WD）模式，並可選擇啟用 skb 保護（SKB_PROTECT）。
 - `PLUG_MI_FIX` 相關區塊：啟用驅動修正（driver config）。
 - `PLUG_PTP_1588_SW` 相關區塊：啟用 PTP 1588 軟體時間戳功能（預設註解掉）。
-- 註解區塊說明本驅動僅支援軟體層的傳送、接收與系統時鐘，不支援硬體 PTP 時鐘與硬體時間戳。
+   (本區塊驅動僅支援軟體層的傳送、接收與系統時鐘，不支援硬體 PTP 時鐘與硬體時間戳。)
+- PLUG_LOG 相關區塊：除錯日誌功能。
+   (DMPLUG_LOG會在後續條件編譯中被用來決定是否包含除錯相關的程式碼或外部檔案如 dump.h。)
+- PLUG_PTP_1588 相關區塊： 啟用 PTP 1588 硬體時間戳功能 (預設被註解)。
+- 在此區塊內進一步定義 `PLUG_PTP_TWO_STEP`，這是 PTP 兩步同步模式，註解說明這是 always essential（必要功能），如果不支援，PTP master 不會發送 follow up。
+- 若 `PLUG_PTP_TWO_STEP` 被啟用，則定義 `DMPLUG_PTP_TWO_STEP`，代表支援硬體兩步同步。
+- 另外還有 `PLUG_PTP_PPS`（預設註解），若啟用則定義 `DMPLUG_PPS_CLKOUT`，代表支援 PPS（Pulse Per Second）時脈輸出。
 
 總結來說，這段代碼的目的是讓驅動程式能夠根據不同需求，靈活地啟用或關閉特定功能，方便維護與使用。
 ## 3. **Key Data Structures**
