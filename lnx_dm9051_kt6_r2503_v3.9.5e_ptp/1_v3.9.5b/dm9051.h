@@ -617,10 +617,15 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
 #define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s)
 #define LOG_RX_PACKET_DUMP(b, s)
 
+/*#define DMPLUG_LOG */          //(debug dump data)
 /*#define DMPLUG_PTP */          //(ptp1588)
 /*#define DMPLUG_PPS_CLKOUT */   //(ptp1588 pps)
 /*#define DMPLUG_PTP_TWO_STEP */ //(ptp1588 two step)
-/*#define DMPLUG_LOG */          //(extern, debug log)
+
+#define PLUG_LOG
+#ifdef PLUG_LOG
+    #define DMPLUG_LOG //(extern, debug log, extra-print-log for detail observation!)
+#endif
 
 /* Capabilities:
  *        hardware-transmit
@@ -631,8 +636,7 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
 #ifdef PLUG_PTP_1588
     #define DMPLUG_PTP        //(ptp)
 
-    /* "dm9051 PTP HW TWO STEP", Always essential (Mandartory recommanded) */
-    #define PLUG_PTP_TWO_STEP //(always essential)(if not support, master NO follow up send)
+    #define PLUG_PTP_TWO_STEP //(always essential mandartory)(if not support, master NO follow up send)
     #ifdef PLUG_PTP_TWO_STEP
         #define DMPLUG_PTP_TWO_STEP //(HW Two step)
     #endif
@@ -643,39 +647,15 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
     #endif
 #endif //(ptp)
 
-#define PLUG_LOG
-#ifdef PLUG_LOG
-#define DMPLUG_LOG //(extern, debug log, extra-print-log for detail observation!)
-#endif
-
-/* main data */
+/* main data
+ */
 #if defined(MAIN_DATA)
     #include "dm9051_main_data.h"
 #endif
 
-/* Extended support header files */
+/* log */
 #if defined(DMPLUG_LOG)
-	/* =#include "extern/dump.h"
-	 * pragma
-	 */
-	#define DMPLUG_LOG_RXC 3
-
-	#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
-		#pragma message("dm9051-DBG: LOG")
-	#endif
-
-	#if defined(DMPLUG_LOG)
-		#undef INFO_LOG
-		#define INFO_LOG(dev, db) USER_CONFIG(dev, db, "dm9051-DBG: LOG")
-		#undef INFO_MSG_DBGRXC
-		#define INFO_MSG_DBGRXC(dev, db) macro_msg_dbgrxc(dev, db)
-	#endif
-
-	#undef dm9051_dump_data1
-	#define dm9051_dump_data1(b, p, n) dump_data(b, p, n)
-
-	#undef LOG_RX_PACKET_DUMP
-	#define LOG_RX_PACKET_DUMP(b, s) dm9051_rx_packet_dump(b, s)
+	#include "extern/dump.h"
 #endif
 
 /* ptp */

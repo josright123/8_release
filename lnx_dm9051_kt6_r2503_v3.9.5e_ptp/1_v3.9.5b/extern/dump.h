@@ -8,21 +8,23 @@
 
 /* pragma
  */
-//#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
-//    #pragma message("dm9051-DBG: LOG")
-//#endif
+#define DMPLUG_LOG_RXC 3
 
-//#if defined(DMPLUG_LOG)
-//    #undef INFO_LOG
-//    #define INFO_LOG(dev, db) USER_CONFIG(dev, db, "dm9051-DBG: LOG")
-//	#undef INFO_MSG_DBGRXC
-//	#define INFO_MSG_DBGRXC(dev, db) macro_msg_dbgrxc(dev, db)
-//#endif
+#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
+	#pragma message("dm9051-DBG: LOG")
+#endif
 
-//#undef dm9051_dump_data1
-//#define dm9051_dump_data1(b, p, n) dump_data(b, p, n)
+#if defined(DMPLUG_LOG)
+	#undef INFO_LOG
+	#define INFO_LOG(dev, db) USER_CONFIG(dev, db, "dm9051-DBG: LOG")
+	#undef INFO_MSG_DBGRXC
+	#define INFO_MSG_DBGRXC(dev, db) macro_msg_dbgrxc(dev, db)
+#endif
 
-//#undef LOG_RX_PACKET_DUMP
-//#define LOG_RX_PACKET_DUMP(b, s) dm9051_rx_packet_dump(b, s)
+#undef dm9051_dump_data1
+#define dm9051_dump_data1(b, p, n) dump_data(b, p, n)
+
+#undef LOG_RX_PACKET_DUMP
+#define LOG_RX_PACKET_DUMP(b, s) dm9051_rx_packet_dump(b, s)
 
 #endif //_DM9051_DUMP_H_
