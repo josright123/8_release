@@ -1,0 +1,23 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2022 Davicom Semiconductor,Inc.
+ * Davicom DM9051 SPI Fast Ethernet Linux driver
+ */
+#ifndef _DM9051_DUMP_H_
+#define _DM9051_DUMP_H_
+
+/* pragma
+ */
+#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
+#pragma message("EXTERN-DEBUG: LOG")
+#endif
+
+#if defined(DMPLUG_LOG)
+#undef INFO_LOG
+#define INFO_LOG(dev, db)					USER_CONFIG(dev, db, "EXTERN-DEBUG: LOG")
+#endif
+
+#undef dm9051_dump_data1
+#define dm9051_dump_data1(b,p,n) dump_data(b,p,n)
+
+#endif //_DM9051_DUMP_H_

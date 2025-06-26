@@ -483,7 +483,7 @@ static inline struct sk_buff *dm9051_chg_skb_wd(struct board_info *db, struct sk
 //#if defined(_DMPLUG_LOG) || 1
 /* Consider: Put into dm9051.c */
 /* From dm9051_log.c to dm9051.c: directly use: allow */
-//static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
+//static inline void _dump_data(struct board_info *db, u8 *packet_data, int packet_len);
 //#endif
 
 int get_dts_irqf(struct board_info *db);
@@ -546,6 +546,7 @@ void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 #define INFO_PPS(dev, db)
 #define INFO_PTP2S(dev, db)
 #define INFO_PTP_SW_2S(dev, db)
+#define dm9051_dump_data1(b, p, l)
 /* int fakes */
 #define DM9051_STOP_FREEIRQ(b)    // empty
 #define DM9051_STOP_CANCELDLY2(b) // empty
@@ -639,9 +640,11 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
     #endif
 #endif //(ptp)
 
-//#define PLUG_LOG
+#define PLUG_LOG
 #ifdef PLUG_LOG
 #define DMPLUG_LOG //(extern, debug log, extra-print-log for detail observation!)
+
+#define DMPLUG_LOG_RXC   3
 #endif
 
 /* main data */
@@ -649,14 +652,14 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
     #include "dm9051_main_data.h"
 #endif
 
+/* Extended support header files */
+#if defined(DMPLUG_LOG)
+    #include "extern/dump.h"
+#endif
+
 /* ptp */
 #if defined(DMPLUG_PTP)
     #include "extern/dm9051_ptp1.h"
-#endif
-
-/* Extended support header files */
-#if defined(DMPLUG_LOG)
-    #include "extern/extern.h"
 #endif
 
 /* Extended support header files
@@ -711,7 +714,7 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
     return 0;
 }
 
-static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051_dump_data1
+static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //._dm9051_dump_data1
 {
 	int i, j, rowsize = 32;
 	int splen; //index of start row

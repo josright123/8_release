@@ -100,7 +100,7 @@ static void dm9051_phyread_bmsr_loop(struct board_info *db, unsigned int reg, un
 
 	//return ret;
 }
-void dump_data_001(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051_dump_data1
+static void dump_data_001(struct board_info *db, u8 *packet_data, int packet_len) //._dm9051_dump_data1
 {
 	int i, j, rowsize = 32;
 	int splen; //index of start row

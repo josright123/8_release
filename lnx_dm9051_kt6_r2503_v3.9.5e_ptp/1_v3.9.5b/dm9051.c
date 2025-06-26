@@ -28,7 +28,6 @@
 #define BUS_SETUP1(f, b, r)        //#define BUS_SETUP(db) 0 // empty(NoError)
 #define BUS_OPS1(f, b, bf, l)
 #define dmplug_loop_test(b)        0
-#define dm9051_dump_data1(b, p, l)
 #define SHOW_BEGIN_LOG(d, b)
 #define SHOW_LOG_REFER_BEGIN(b)
 #define SHOW_DEVLOG_MODE(d)
@@ -128,10 +127,10 @@ static void SHOW_OPEN(struct board_info *db)
 static void SHOW_PLAT_CONF(struct board_info *db)
 {
     netif_crit(db, hw, db->ndev, "plat_cnf->test_device: %s", plat_cnf->test_device);
-    netif_crit(db, hw, db->ndev, "plat_cnf->checksuming: %d", plat_cnf->checksuming);
     netif_crit(db, hw, db->ndev, "plat_cnf->align.mode: %s", plat_cnf->align.mode);
     netif_crit(db, hw, db->ndev, "plat_cnf->align.txsize: %d", plat_cnf->align.tx_blk);
     netif_crit(db, hw, db->ndev, "plat_cnf->align.rxsize: %d", plat_cnf->align.rx_blk);
+    netif_crit(db, hw, db->ndev, "plat_cnf->checksuming: %d", plat_cnf->checksuming);
 }
 
 static void SHOW_RESTART_SHOW_STATIISTIC(struct board_info *db)
@@ -1089,11 +1088,11 @@ static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
     "rx_packets", "tx_packets", "rx_bytes",         "tx_bytes",           "rx_errors",          "tx_errors",
     "fifo_rst",   "up_rst",
 	"dump MAC address", //[8]
-	"dump TST info", //[9]
-	"dump Checksuming", //[9]
-	"dump ALIGN mode", //[9]
+	"dump Test Device", //[9]
+	"dump ALIGN Mode", //[9]
 	"dump TX BLK", //[9]
 	"dump RX BLK", //[9]
+	"dump Checksuming", //[9]
 	"dump BMSR register", //[14]
 	"dump BMSR register", //[15]
 };
@@ -1101,14 +1100,13 @@ static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
 static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
 {
     struct board_info *db = to_dm9051_board(ndev);
-    int uc;
     // char user_config_strings[][ETH_GSTRING_LEN]; //USER_CONFIG, 'ETH_GSTRING_LEN' is 32
 
     if (sget == ETH_SS_STATS)
     {
-        uc = SHOW_ALL_USER_CONFIG("ethtool", NULL, db);
-        memcpy(data, db->user_config_strings, uc * ETH_GSTRING_LEN);
-        data += uc * ETH_GSTRING_LEN;
+		SHOW_ALL_USER_CONFIG("ethtool", NULL, db); //int uc = db->ucfg_count
+        memcpy(data, db->user_config_strings, db->ucfg_count * ETH_GSTRING_LEN);
+        data += db->ucfg_count * ETH_GSTRING_LEN;
 
         SHOW_ETH_MAC(db);
         SHOW_PLAT_CONF(db);
@@ -1116,10 +1114,10 @@ static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
         sprintf(dm9051_stats_strings[8], "MAC %02x %02x %02x %02x %02x %02x =", ndev->dev_addr[0], ndev->dev_addr[1],
                 ndev->dev_addr[2], ndev->dev_addr[3], ndev->dev_addr[4], ndev->dev_addr[5]);
         sprintf(dm9051_stats_strings[9], "test device: %s =", plat_cnf->test_device); // "Dev Cortex-A" or "processor Cortex-A"
-        sprintf(dm9051_stats_strings[10], "checksuming"); 
-        sprintf(dm9051_stats_strings[11], "align.mode: %s =", plat_cnf->align.mode); // "Burst"
-        sprintf(dm9051_stats_strings[12], "align.txsize");
-        sprintf(dm9051_stats_strings[13], "align.rxsize");
+        sprintf(dm9051_stats_strings[10], "align.mode: %s =", plat_cnf->align.mode); // "Burst"
+        sprintf(dm9051_stats_strings[11], "align.txsize");
+        sprintf(dm9051_stats_strings[12], "align.rxsize");
+        sprintf(dm9051_stats_strings[13], "checksuming");
         sprintf(dm9051_stats_strings[14], "BMSR %04x =", db->st_bmsr1);
         sprintf(dm9051_stats_strings[15], "BMSR %04x =", db->st_bmsr2);
         memcpy(data, dm9051_stats_strings, sizeof(dm9051_stats_strings));
@@ -1150,10 +1148,10 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev, struct ethtool_sta
     data[db->ucfg_count + 7] = db->bc.up_rst_counter;
     data[db->ucfg_count + 8] = 1;
     data[db->ucfg_count + 9] = 1;
-    data[db->ucfg_count + 10] = plat_cnf->checksuming;
-    data[db->ucfg_count + 11] = 1;
-    data[db->ucfg_count + 12] = plat_cnf->align.tx_blk;
-    data[db->ucfg_count + 13] = plat_cnf->align.rx_blk;
+    data[db->ucfg_count + 10] = 1;
+    data[db->ucfg_count + 11] = plat_cnf->align.tx_blk;
+    data[db->ucfg_count + 12] = plat_cnf->align.rx_blk;
+    data[db->ucfg_count + 13] = plat_cnf->checksuming;
     data[db->ucfg_count + 14] = db->st_bmsr1; //_SHOW_BMSR(db);
     data[db->ucfg_count + 15] = db->st_bmsr2; //_SHOW_BMSR(db);
 
@@ -1628,6 +1626,11 @@ int dm9051_loop_rx(struct board_info *db)
         }
 
         DMPLUG_SHOW_ptp_rx_packet_monitor(db, skb); /* 7.2dbg ptpc */
+
+		if (db->ndev->stats.rx_packets < DMPLUG_LOG_RXC) { //test
+			sprintf(db->bc.head, "rx_packet %ld, len %d", db->ndev->stats.rx_packets, skb->len);
+			dm9051_dump_data1(db, skb->data, skb->len);
+		}
 
         skb->protocol = eth_type_trans(skb, db->ndev);
 

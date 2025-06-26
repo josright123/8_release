@@ -7,17 +7,6 @@
 #define _DM9051_EXTERN_H_
 
 // #ifdef _DMPLUG_LOG .. #endif
-/* pragma
- */
-#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
-#pragma message("EXTERN-DEBUG: LOG")
-#endif
-
-#if defined(DMPLUG_LOG)
-#undef INFO_LOG
-#define INFO_LOG(dev, db)					USER_CONFIG(dev, db, "EXTERN-DEBUG, LOG")
-#endif
-
 /*#define DMCONF_BMCR_WR */ //(extern, bmcr-work around)
 /*#define DMPLUG_MRR_WR */ //(extern, mrr-work around, when link change to up)
 
@@ -92,7 +81,6 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 #undef DMPLUG_LOG_RXPTR //#undef dm9051_headlog_regs
 #undef DMPLUG_LOG_PHY //#undef dm9051_phyread_headlog
 
-#undef dm9051_dump_data1
 #undef monitor_rxb0
 
 #define SHOW_BEGIN_LOG(d,b) show_dev_begin(d,b)
@@ -111,7 +99,6 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 #define DMPLUG_LOG_RXPTR(h,b) dm9051_log_rxptr(h,b) //#define dm9051_headlog_regs(h,b,r1,r2) 
 #define DMPLUG_LOG_PHY(b) dm9051_log_phy(b) //#define dm9051_phyread_headlog(h,b,r) show_log_phy(h,b,r)
 
-#define dm9051_dump_data1(b,p,n) dump_data(b,p,n)
 #define monitor_rxb0(b,rb) show_rxb(b,rb)
 
 void show_dev_begin(struct device *dev, struct board_info *db);

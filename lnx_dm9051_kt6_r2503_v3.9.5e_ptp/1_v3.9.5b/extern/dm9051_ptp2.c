@@ -849,7 +849,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 
 							/* Slave test when if no master emit sync */
 							//if (1) {
-							//	dump_data(db, gpacket_data, gpacket_len); //dump_data(), used directly.
+							//	dm9051_dump_data1(db, gpacket_data, gpacket_len);
 							//}
 
 						}
