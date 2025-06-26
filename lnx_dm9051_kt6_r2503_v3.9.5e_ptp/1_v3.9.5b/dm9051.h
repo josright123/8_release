@@ -655,7 +655,27 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
 
 /* Extended support header files */
 #if defined(DMPLUG_LOG)
-    #include "extern/dump.h"
+	/* =#include "extern/dump.h"
+	 * pragma
+	 */
+	#define DMPLUG_LOG_RXC 3
+
+	#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
+		#pragma message("dm9051-DBG: LOG")
+	#endif
+
+	#if defined(DMPLUG_LOG)
+		#undef INFO_LOG
+		#define INFO_LOG(dev, db) USER_CONFIG(dev, db, "dm9051-DBG: LOG")
+		#undef INFO_MSG_DBGRXC
+		#define INFO_MSG_DBGRXC(dev, db) macro_msg_dbgrxc(dev, db)
+	#endif
+
+	#undef dm9051_dump_data1
+	#define dm9051_dump_data1(b, p, n) dump_data(b, p, n)
+
+	#undef LOG_RX_PACKET_DUMP
+	#define LOG_RX_PACKET_DUMP(b, s) dm9051_rx_packet_dump(b, s)
 #endif
 
 /* ptp */
@@ -713,6 +733,14 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
 #endif
 
     return 0;
+}
+
+static inline void macro_msg_dbgrxc(struct device *dev, struct board_info *db)
+{
+    char buff[32];
+
+    sprintf(buff, "dm9051-DBGRXC: %d", DMPLUG_LOG_RXC);
+    USER_CONFIG(dev, db, buff);
 }
 
 static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //._dm9051_dump_data1
