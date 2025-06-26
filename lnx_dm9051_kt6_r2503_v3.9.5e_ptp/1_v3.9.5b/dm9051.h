@@ -483,7 +483,7 @@ static inline struct sk_buff *dm9051_chg_skb_wd(struct board_info *db, struct sk
 //#if defined(_DMPLUG_LOG) || 1
 /* Consider: Put into dm9051.c */
 /* From dm9051_log.c to dm9051.c: directly use: allow */
-void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
+//static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_len);
 //#endif
 
 int get_dts_irqf(struct board_info *db);
@@ -711,7 +711,7 @@ static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_i
     return 0;
 }
 
-void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051_dump_data1
+static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //.dm9051_dump_data1
 {
 	int i, j, rowsize = 32;
 	int splen; //index of start row
