@@ -8,8 +8,6 @@
 
 /* pragma
  */
-#define DMPLUG_LOG_RXC 3
-
 #if defined(DMPLUG_LOG) && defined(MAIN_DATA)
 	#pragma message("dm9051-DBG: LOG")
 #endif

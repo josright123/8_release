@@ -28,6 +28,88 @@
 #include "../dm9051.h"
 //#include "dm9051_ptp1.h" /* 0.1 ptpc */
 
+/*
+ * ptp 1588:
+ */
+#define DM9051_1588_ST_GPIO          0x60
+#define DM9051_1588_CLK_CTRL         0x61
+#define DM9051_1588_GP_TXRX_CTRL     0x62
+// #define DM9051_1588_TX_CONF 0x63
+#define DM9051_1588_1_STEP_CHK       0x63
+#define DM9051_1588_RX_CONF1         0x64
+// #define DM9051_1588_RX_CONF2 0x65
+#define DM9051_1588_1_STEP_ADDR      0x65
+// #define DM9051_1588_RX_CONF3 0x66
+#define DM9051_1588_1_STEP_ADDR_CHK  0x66
+#define DM9051_1588_CLK_P            0x67
+#define DM9051_1588_TS               0x68
+// #define DM9051_1588_AUTO 0x69
+#define DM9051_1588_MNTR             0x69
+#define DM9051_1588_GPIO_CONF        0x6A
+#define DM9051_1588_GPIO_TE_CONF     0x6B
+#define DM9051_1588_GPIO_TA_L        0x6C
+#define DM9051_1588_GPIO_TA_H        0x6D
+#define DM9051_1588_GPIO_DTA_L       0x6E
+#define DM9051_1588_GPIO_DTA_H       0x6F
+
+// 02H TX Control Reg
+#define TCR_TSEN_CAP                 TCR_RSV_BIT7
+#define TCR_TS1STEP_EMIT             TCR_DIS_JABBER_TIMER
+
+// 61H Clock Control Reg
+#define DM9051_CCR_IDX_RST           BIT(7)
+#define DM9051_CCR_RATE_CTL          BIT(6)
+#define DM9051_CCR_PTP_RATE          BIT(5)
+#define DM9051_CCR_PTP_ADD           BIT(4)
+#define DM9051_CCR_PTP_WRITE         BIT(3)
+#define DM9051_CCR_PTP_READ          BIT(2)
+#define DM9051_CCR_PTP_DIS           BIT(1)
+#define DM9051_CCR_PTP_EN            BIT(0)
+
+// 64H
+#define DM9051A_RC_SLAVE             BIT(7)
+#define DM9051A_RC_RX_EN             BIT(4)
+#define DM9051A_RC_RX2_EN            BIT(3)
+#define DM9051A_RC_FLTR_MASK         0x3
+#define DM9051A_RC_FLTR_ALL_PKTS     0
+#define DM9051A_RC_FLTR_MCAST_PKTS   1
+#define DM9051A_RC_FLTR_DA           2
+#define DM9051A_RC_FLTR_DA_SPICIFIED 3
+
+#define DM9051_1588_TS_BULK_SIZE     8
+
+/* 0.1 ptpc */
+// bits defines
+// 06H RX Status Reg
+// BIT(5),PTP use the same bit, timestamp is available
+// BIT(3),PTP use the same bit, this is odd parity rx TimeStamp
+// BIT(2),PTP use the same bit: 1 => 8-bytes, 0 => 4-bytes, for timestamp length
+#define RSR_RXTS_EN                           BIT(5)
+#define RSR_RXTS_PARITY                       BIT(3)
+#define RSR_RXTS_LEN                          BIT(2)
+#define RSR_PTP_BITS                          (RSR_RXTS_EN | RSR_RXTS_PARITY | RSR_RXTS_LEN)
+
+/* PTP message type classification */
+enum ptp_sync_type
+{
+    PTP_ONE_STEP = 1, /* One-step sync message */
+    PTP_TWO_STEP = 2, /* Two-step sync message */
+};
+
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5, 10, 11)
+    /* PTP header flag fields */
+    #define PTP_FLAG_TWOSTEP BIT(1)
+#endif
+
+u8 ptp_status_bits(struct board_info *db)
+{
+	return RSR_ERR_BITS & ~RSR_PTP_BITS;
+}
+int is_ptp_rxts_en(struct board_info *db)
+{
+	return (db->rxhdr.status & RSR_RXTS_EN) ? 1 : 0; //if T1/T4, // Is it inserted Timestamp?
+}
+
 #ifdef DMPLUG_PTP
 int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm)
 {
@@ -515,7 +597,7 @@ static void dm9051_ptp_tx_hwtstamp(struct board_info *db, struct sk_buff *skb)
 	ns = ns_lo;
 	ns |= ns_hi  << 16;
 
-	if (db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_SYNC_pri && delayRespSent == 0) {
+	if (is_ptp_sync_packet(db->pbi.ptp_tx_msgtype) && delayRespSent == 0) {
 		printk("Master %u s\n", sec);
 	}
 	if (is_peer_delayresp_packet(db->pbi.ptp_tx_msgtype)) {
@@ -570,6 +652,186 @@ void on_core_init_ptp_rate(struct board_info *db)
 	}
 }
 
+extern int slave_get_ptpFrame;
+
+static u64 rx_extract_ts(u8 *rxTSbyte)
+{
+	//u8 temp[12];
+	u16 ns_hi, ns_lo, s_hi, s_lo;
+	//u32 prttsyn_stat, hi, lo,
+	u32 sec;
+	u64 ns;
+
+#if 0
+	printk(" REAL RX TSTAMP hwtstamp= %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n",
+	       rxTSbyte[0], rxTSbyte[1], rxTSbyte[2], rxTSbyte[3], rxTSbyte[4], rxTSbyte[5], rxTSbyte[6], rxTSbyte[7]);
+#endif
+
+	//dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x02); //Read RX Time Stamp Clock Register offset 0x62, value 0x02
+
+	ns_lo = rxTSbyte[7] | (rxTSbyte[6] << 8);
+	ns_hi = rxTSbyte[5] | (rxTSbyte[4] << 8);
+
+	s_lo = rxTSbyte[3] | (rxTSbyte[2] << 8);
+	s_hi = rxTSbyte[1] | (rxTSbyte[0] << 8);
+
+	sec = s_lo;
+	sec |= s_hi << 16;
+
+	ns = ns_lo;
+	ns |= ns_hi  << 16;
+	
+	//.printk("Slave(%d)-DM9051A ...extract_ts  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
+
+	ns += ((u64)sec) * 1000000000ULL;
+	//printk("_dm9051_ptp_rx_hwtstamp ns_lo=%x, ns_hi=%x s_lo=%x s_hi=%x \r\n", ns_lo, ns_hi, s_lo, s_hi);
+	return ns;
+}
+
+u8 *gpacket_data;
+int gpacket_len;
+
+void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
+{
+	ptp_board_info_t *pbi = &db->pbi;
+
+#if 0
+	/* Use: enum hwtstamp_rx_filters
+	 */
+	/* Even S/W TSTAMP, on (H/W TSTAMP) do , will be not hurt !!
+	 */
+	if (pbi->tstamp_config.rx_filter &
+	    (HWTSTAMP_FILTER_PTP_V2_EVENT | HWTSTAMP_FILTER_ALL)) {
+		.................... //can do
+	}
+#endif
+#if 0
+	/* Even S/W TSTAMP, do shhwtstamps->hwtstamp = ns_to_ktime(ns); (H/W TSTAMP) will be not hurt !!
+	 */
+	if (!pbi->tstamp_config.rx_filter) //[wait further test..]
+		return;
+#endif
+
+#if 1 //[wait further test..]
+	//[Now]
+	if (is_ptp_rxts_en(db)) //if T1/T4, // Is it inserted Timestamp? //[wait further test..]
+#endif
+	{
+		//So when NOT T1/T4, we can skip tell tstamp (just an empty (virtual) one)
+
+#if 0
+			= original.dm9051_ptp_rx_hwtstamp(db, skb); //_15888_,
+#endif
+		if (dm9051_rx_ptp_hdr_monitor(db)) {
+			/* following, with netif_rx(skb),
+			 * slave4l can parse the T1 and/or T4 rx tstamp from master
+			 */
+			if (pbi->ptp_on) { //NOT by db->ptp-enable
+				//printk("==> dm9051_ptp_rx_hwtstamp in\r\n");
+				/* Since we cannot turn off the Rx timestamp logic if the device is
+				 * doing Tx timestamping, check if Rx timestamping is configured.
+				 */
+				u64 ns;
+
+				if (slave_get_ptpFrame || is_peer_delayreq_packet(pbi->ptp_rx_msgtype)) {
+					u8 *rxTSbyte = pbi->rxTSbyte;
+					u16 ns_hi, ns_lo, s_hi, s_lo;
+					u32 sec;
+					//u64 ns;
+
+					ns_lo = rxTSbyte[7] | (rxTSbyte[6] << 8); //pbi->rxTSbyte[7] | (pbi->rxTSbyte[6] << 8);
+					ns_hi = rxTSbyte[5] | (rxTSbyte[4] << 8); //pbi->rxTSbyte[5] | (pbi->rxTSbyte[4] << 8);
+
+					s_lo = rxTSbyte[3] | (rxTSbyte[2] << 8); //pbi->rxTSbyte[3] | (pbi->rxTSbyte[2] << 8);
+					s_hi = rxTSbyte[1] | (rxTSbyte[0] << 8); //pbi->rxTSbyte[1] | (pbi->rxTSbyte[0] << 8);
+
+					sec = s_lo;
+					sec |= s_hi << 16;
+
+					ns = ns_lo;
+					ns |= ns_hi  << 16;
+
+					#if 0 //chk OK
+					if (is_peer_delayreq_packet(pbi->ptp_rx_msgtype)) 
+						printk("Peer get-pdly_Req.sec.ns: (frame %d) ts bytes %d: %u sec\n", 
+							pbi->total_ptp_frames, pbi->ptp_ts_bytes, sec);
+					#endif
+					if (slave_get_ptpFrame) {
+						//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %" PRIu64 " ns\n", sec, ns);
+						//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
+						if (is_ptp_sync_packet(pbi->ptp_rx_msgtype)) {
+							printk("Slave %u s\n", sec);
+
+							/* Slave test when if no master emit sync */
+							//if (1) {
+							//	dm9051_dump_data1(db, gpacket_data, gpacket_len);
+							//}
+
+						}
+						else if (is_peer_delayreq_packet(pbi->ptp_rx_msgtype) ||
+								is_peer_delayresp_packet(pbi->ptp_rx_msgtype) ||
+								is_peer_delayresp_followup_packet(pbi->ptp_rx_msgtype))
+							; //skip
+						else
+							printk("Slave(!) rx msgtype %u, %u s\n", pbi->ptp_rx_msgtype, sec);
+						slave_get_ptpFrame--;
+					}
+				}
+
+				ns = rx_extract_ts(pbi->rxTSbyte);
+				/* Use skb_hwtstamps(skb) get 'skb_shared_hwtstamps' and then copy to ->hwtstamp
+				 * We can also use skb_complete_rx_timestamp() to make the same result.
+				 */
+				do {
+					struct skb_shared_hwtstamps *shhwtstamps =
+						skb_hwtstamps(skb); //for pass T2 the HW rx tstamp
+					memset(shhwtstamps, 0, sizeof(*shhwtstamps));
+					shhwtstamps->hwtstamp = ns_to_ktime(ns);
+				} while (0);
+
+				//printk("Report RX Timestamp to skb = %lld\n", shhwtstamps->hwtstamp);
+				//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x08); //Clear RX Time Stamp Clock Register offset 0x60, value 0x08
+				//printk("<== dm9051_ptp_rx_hwtstamp out\r\n");
+			}
+		} //dm9051_rx_ptp_hdr_monitor
+	}
+}
+
+/* receive rx_tstamp */
+int dm9051_read_ptp_tstamp_mem(struct board_info *db)
+{
+	ptp_board_info_t *pbi = &db->pbi;
+
+	//_15888_
+	//if (db->ptp_on) { //Even NOT ptp_on, need do.
+	pbi->ptp_ts_bytes = 0;
+	if (pbi->ptp_enable) {
+		if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
+			int ret;
+			//printk("Had RX Timestamp... rxstatus = 0x%x\n", db->rxhdr.status);
+			if (db->rxhdr.status & RSR_RXTS_LEN) {	// 8 bytes Timestamp
+				ret = dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 8);
+				if (ret) {
+					netif_err(db, hw, db->ndev, "Read TimeStamp8 error: %02x\n", ret);
+					return ret;
+				}
+				pbi->ptp_ts_bytes = 8;
+			} else {	// 4 bytes Timestamp
+				/* 4bytes, dm9051a NOT supported, Will only support for OASPI function chip.
+				 */
+				ret = dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 4);
+				if (ret) {
+					netif_err(db, hw, db->ndev, "Read TimeStamp4 error: %02x\n", ret);
+					return ret;
+				}
+				pbi->ptp_ts_bytes = 4;
+			}
+		}
+	}
+	//}
+	return 0;
+}
+
 // SKBTX_HW_TSTAMP = 1 << 0,
 // SKBTX_SW_TSTAMP = 1 << 1,
 // SKBTX_IN_PROGRESS = 1 << 2,
@@ -603,7 +865,7 @@ static void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb
 			return;
 		if (b_ptphdr && is_peer_delayresp_packet(db->pbi.ptp_tx_msgtype)) //YES, this way. peer_delayresp the NOT with SKBTX_HW_TSTAMP bit.
 			return;
-		if (b_ptphdr && db->pbi.ptp_tx_msgtype == PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP_pri) //YES,
+		if (b_ptphdr && is_peer_delayresp_followup_packet(db->pbi.ptp_tx_msgtype)) //YES,
 			return;
 		if (b_ptphdr) {
 			printk("TX b_ptphdr packet SKBTX_IN_PROGRESS() - msgType %u, NOT set tx_in_progress ?\n", db->pbi.ptp_tx_msgtype); //what 'ptp_tx_msgtype'
@@ -735,186 +997,6 @@ int dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb)
 	}
 	dev_kfree_skb(skb);
 	return ret;
-}
-
-extern int slave_get_ptpFrame;
-
-static u64 rx_extract_ts(u8 *rxTSbyte)
-{
-	//u8 temp[12];
-	u16 ns_hi, ns_lo, s_hi, s_lo;
-	//u32 prttsyn_stat, hi, lo,
-	u32 sec;
-	u64 ns;
-
-#if 0
-	printk(" REAL RX TSTAMP hwtstamp= %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n",
-	       rxTSbyte[0], rxTSbyte[1], rxTSbyte[2], rxTSbyte[3], rxTSbyte[4], rxTSbyte[5], rxTSbyte[6], rxTSbyte[7]);
-#endif
-
-	//dm9051_set_reg(db, DM9051_1588_GP_TXRX_CTRL, 0x02); //Read RX Time Stamp Clock Register offset 0x62, value 0x02
-
-	ns_lo = rxTSbyte[7] | (rxTSbyte[6] << 8);
-	ns_hi = rxTSbyte[5] | (rxTSbyte[4] << 8);
-
-	s_lo = rxTSbyte[3] | (rxTSbyte[2] << 8);
-	s_hi = rxTSbyte[1] | (rxTSbyte[0] << 8);
-
-	sec = s_lo;
-	sec |= s_hi << 16;
-
-	ns = ns_lo;
-	ns |= ns_hi  << 16;
-	
-	//.printk("Slave(%d)-DM9051A ...extract_ts  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
-
-	ns += ((u64)sec) * 1000000000ULL;
-	//printk("_dm9051_ptp_rx_hwtstamp ns_lo=%x, ns_hi=%x s_lo=%x s_hi=%x \r\n", ns_lo, ns_hi, s_lo, s_hi);
-	return ns;
-}
-
-u8 *gpacket_data;
-int gpacket_len;
-
-void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb)
-{
-	ptp_board_info_t *pbi = &db->pbi;
-
-#if 0
-	/* Use: enum hwtstamp_rx_filters
-	 */
-	/* Even S/W TSTAMP, on (H/W TSTAMP) do , will be not hurt !!
-	 */
-	if (pbi->tstamp_config.rx_filter &
-	    (HWTSTAMP_FILTER_PTP_V2_EVENT | HWTSTAMP_FILTER_ALL)) {
-		.................... //can do
-	}
-#endif
-#if 0
-	/* Even S/W TSTAMP, do shhwtstamps->hwtstamp = ns_to_ktime(ns); (H/W TSTAMP) will be not hurt !!
-	 */
-	if (!pbi->tstamp_config.rx_filter) //[wait further test..]
-		return;
-#endif
-
-#if 1 //[wait further test..]
-	//[Now]
-	if (is_ptp_rxts_en(db)) //if T1/T4, // Is it inserted Timestamp? //[wait further test..]
-#endif
-	{
-		//So when NOT T1/T4, we can skip tell tstamp (just an empty (virtual) one)
-
-#if 0
-			= original.dm9051_ptp_rx_hwtstamp(db, skb); //_15888_,
-#endif
-		if (dm9051_rx_ptp_hdr_monitor(db)) {
-			/* following, with netif_rx(skb),
-			 * slave4l can parse the T1 and/or T4 rx tstamp from master
-			 */
-			if (pbi->ptp_on) { //NOT by db->ptp-enable
-				//printk("==> dm9051_ptp_rx_hwtstamp in\r\n");
-				/* Since we cannot turn off the Rx timestamp logic if the device is
-				 * doing Tx timestamping, check if Rx timestamping is configured.
-				 */
-				u64 ns;
-
-				if (slave_get_ptpFrame || is_peer_delayreq_packet(pbi->ptp_rx_msgtype)) {
-					u8 *rxTSbyte = pbi->rxTSbyte;
-					u16 ns_hi, ns_lo, s_hi, s_lo;
-					u32 sec;
-					//u64 ns;
-
-					ns_lo = rxTSbyte[7] | (rxTSbyte[6] << 8); //pbi->rxTSbyte[7] | (pbi->rxTSbyte[6] << 8);
-					ns_hi = rxTSbyte[5] | (rxTSbyte[4] << 8); //pbi->rxTSbyte[5] | (pbi->rxTSbyte[4] << 8);
-
-					s_lo = rxTSbyte[3] | (rxTSbyte[2] << 8); //pbi->rxTSbyte[3] | (pbi->rxTSbyte[2] << 8);
-					s_hi = rxTSbyte[1] | (rxTSbyte[0] << 8); //pbi->rxTSbyte[1] | (pbi->rxTSbyte[0] << 8);
-
-					sec = s_lo;
-					sec |= s_hi << 16;
-
-					ns = ns_lo;
-					ns |= ns_hi  << 16;
-
-					#if 0 //chk OK
-					if (is_peer_delayreq_packet(pbi->ptp_rx_msgtype)) 
-						printk("Peer get-pdly_Req.sec.ns: (frame %d) ts bytes %d: %u sec\n", 
-							pbi->total_ptp_frames, pbi->ptp_ts_bytes, sec);
-					#endif
-					if (slave_get_ptpFrame) {
-						//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %" PRIu64 " ns\n", sec, ns);
-						//printk("Slave(%d)-DM9051A ...ptp_rxts_en  %llu s, %llu ns\n", slave_get_ptpFrame, sec, ns);
-						if (is_ptp_sync_packet(pbi->ptp_rx_msgtype)) {
-							printk("Slave %u s\n", sec);
-
-							/* Slave test when if no master emit sync */
-							//if (1) {
-							//	dm9051_dump_data1(db, gpacket_data, gpacket_len);
-							//}
-
-						}
-						else if (pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_REQ_pri ||
-								pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_RESP_pri ||
-								pbi->ptp_rx_msgtype == PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP_pri)
-							; //skip
-						else
-							printk("Slave(!) rx msgtype %u, %u s\n", pbi->ptp_rx_msgtype, sec);
-						slave_get_ptpFrame--;
-					}
-				}
-
-				ns = rx_extract_ts(pbi->rxTSbyte);
-				/* Use skb_hwtstamps(skb) get 'skb_shared_hwtstamps' and then copy to ->hwtstamp
-				 * We can also use skb_complete_rx_timestamp() to make the same result.
-				 */
-				do {
-					struct skb_shared_hwtstamps *shhwtstamps =
-						skb_hwtstamps(skb); //for pass T2 the HW rx tstamp
-					memset(shhwtstamps, 0, sizeof(*shhwtstamps));
-					shhwtstamps->hwtstamp = ns_to_ktime(ns);
-				} while (0);
-
-				//printk("Report RX Timestamp to skb = %lld\n", shhwtstamps->hwtstamp);
-				//dm9051_set_reg(db, DM9051_1588_ST_GPIO, 0x08); //Clear RX Time Stamp Clock Register offset 0x60, value 0x08
-				//printk("<== dm9051_ptp_rx_hwtstamp out\r\n");
-			}
-		} //dm9051_rx_ptp_hdr_monitor
-	}
-}
-
-/* receive rx_tstamp */
-int dm9051_read_ptp_tstamp_mem(struct board_info *db)
-{
-	ptp_board_info_t *pbi = &db->pbi;
-
-	//_15888_
-	//if (db->ptp_on) { //Even NOT ptp_on, need do.
-	pbi->ptp_ts_bytes = 0;
-	if (pbi->ptp_enable) {
-		if (is_ptp_rxts_en(db)) {	// Inserted Timestamp
-			int ret;
-			//printk("Had RX Timestamp... rxstatus = 0x%x\n", db->rxhdr.status);
-			if (db->rxhdr.status & RSR_RXTS_LEN) {	// 8 bytes Timestamp
-				ret = dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 8);
-				if (ret) {
-					netif_err(db, hw, db->ndev, "Read TimeStamp8 error: %02x\n", ret);
-					return ret;
-				}
-				pbi->ptp_ts_bytes = 8;
-			} else {	// 4 bytes Timestamp
-				/* 4bytes, dm9051a NOT supported, Will only support for OASPI function chip.
-				 */
-				ret = dm9051_read_mem(db, DM_SPI_MRCMD, pbi->rxTSbyte, 4);
-				if (ret) {
-					netif_err(db, hw, db->ndev, "Read TimeStamp4 error: %02x\n", ret);
-					return ret;
-				}
-				pbi->ptp_ts_bytes = 4;
-			}
-		}
-	}
-	//}
-	return 0;
 }
 
 static void dm9051_ptp_register(struct board_info *db)

@@ -231,6 +231,7 @@
 #define SCAN_BH(dw)            ((dw & GENMASK(15, 8)) >> 8)
 #define DM_RXHDR_SIZE          sizeof(struct dm9051_rxhdr)
 #define TIMES_TO_RST           10
+#define DMPLUG_LOG_RXC         3
 
 #define MAX_USR_CONFIG         20 // check grow develop of SHOW_ALL_USER_CONFIG()
 #define AMDIX_LOG_BUFSIZE      72
@@ -547,7 +548,7 @@ void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
  *        hardware-receive
  *        hardware-raw-clock
  */
-// #define PLUG_PTP_1588
+#define PLUG_PTP_1588
 #ifdef PLUG_PTP_1588
     #define DMPLUG_PTP        //(ptp)
 
@@ -556,11 +557,43 @@ void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
         #define DMPLUG_PTP_TWO_STEP //(HW Two step)
     #endif
 
-    // #define PLUG_PTP_PPS
+    #define PLUG_PTP_PPS
     #ifdef PLUG_PTP_PPS
         #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
     #endif
 #endif //(ptp)
+
+/* ptp implementation
+ */
+int  dm9051_get_clk_ts(struct board_info *db);
+void on_core_init_ptp_rate(struct board_info *db);
+
+void ptp_ver(struct board_info *db);
+void ptp_operation_extern(struct board_info *db);
+void ptp_checksum_limit(struct board_info *db, struct net_device *ndev);
+void ptp_init(struct board_info *db);
+void ptp_end(struct board_info *db);
+u8   ptp_status_bits(struct board_info *db);
+void dm9051_ptp_rxc_from_master(struct board_info *db);
+int  dm9051_read_ptp_tstamp_mem(struct board_info *db);
+void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
+void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
+int  dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb);
+int  dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb);
+netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev, netdev_features_t features);
+
+int is_ptp_announce_packet(u8 msgtype);
+int is_ptp_sync_packet(u8 msgtype);
+int is_ptp_delayreq_packet(u8 msgtype);
+int is_ptp_delayresp_packet(u8 msgtype);
+int is_peer_delayreq_packet(u8 msgtype);
+int is_peer_delayresp_packet(u8 msgtype);
+int is_peer_delayresp_followup_packet(u8 msgtype);
+int is_ptp_rxts_en(struct board_info *db);
+
+struct ptp_header *get_ptp_header(struct sk_buff *skb);
+u8  get_ptp_message_type005(struct ptp_header *ptp_hdr);
+struct ptp_header *dm9051_rx_ptp_hdr_monitor(struct board_info *db);
 
 /* log */
 #if defined(DMPLUG_LOG)
@@ -569,7 +602,8 @@ void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 
 /* ptp */
 #if defined(DMPLUG_PTP)
-    #include "extern/dm9051_ptp1.h"
+    #include "extern/dm9051_ptp_impl.h"
+    //#include "extern/dm9051_ptp1.h"
 #endif
 
 /* Extended support header files

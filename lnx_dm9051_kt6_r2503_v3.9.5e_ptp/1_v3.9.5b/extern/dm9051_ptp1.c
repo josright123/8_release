@@ -29,6 +29,31 @@
 #include "../dm9051.h"
 //#include "dm9051_ptp1.h" /* 0.1 ptpc */
 
+/* PTP message type constants */
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5, 10, 11)
+    #define PTP_MSGTYPE_SYNC      0x0
+    #define PTP_MSGTYPE_DELAY_REQ 0x1
+#endif
+
+#define PTP_MSGTYPE_SYNC_pri                  0x0
+#define PTP_MSGTYPE_DELAY_REQ_pri             0x1
+#define PTP_MSGTYPE_PDELAY_REQ_pri            0x2 // #define PTP_MSGTYPE_PDELAY_REQ     0x2
+#define PTP_MSGTYPE_PDELAY_RESP_pri           0x3 // #define PTP_MSGTYPE_PDELAY_RESP    0x3
+#define PTP_MSGTYPE_DELAY_RESP_pri            0x9
+#define PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP_pri 0xA
+
+#define PTP_MSGTYPE_FOLLOW_UP                 0x8
+#define PTP_MSGTYPE_DELAY_RESP                0x9
+#define PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP     0xA
+#define PTP_MSGTYPE_ANNOUNCE                  0xB
+#define PTP_MSGTYPE_SIGNALING                 0xC
+#define PTP_MSGTYPE_MANAGEMENT                0xD
+
+// PTP FIELD
+#define PTP_ETHERTYPE                         0x88F7 // Layer 2 PTP
+#define PTP_EVENT_PORT                        319    // UDP PTP EVENT
+#define PTP_GENERAL_PORT                      320    // UDP PTP GENERAL
+
 #define DMCONF_DIV_HLPR_32 //(32-bit division helper, __aeabi_ldivmod())
 
 #ifdef DMCONF_DIV_HLPR_32
@@ -147,6 +172,10 @@ int is_peer_delayreq_packet(u8 msgtype)
 int is_peer_delayresp_packet(u8 msgtype)
 {
 	return (msgtype == PTP_MSGTYPE_PDELAY_RESP_pri) ? 1 : 0;
+}
+int is_peer_delayresp_followup_packet(u8 msgtype)
+{
+	return (msgtype == PTP_MSGTYPE_PDELAY_RESP_FOLLOW_UP_pri) ? 1 : 0;
 }
 
 struct ptp_header *get_ptp_header(struct sk_buff *skb)
@@ -411,15 +440,6 @@ void ptp_checksum_limit(struct board_info *db, struct net_device *ndev)
 //#endif
 //}
 
-u8 ptp_status_bits(struct board_info *db)
-{
-	return RSR_ERR_BITS & ~RSR_PTP_BITS;
-}
-
-int is_ptp_rxts_en(struct board_info *db)
-{
-	return (db->rxhdr.status & RSR_RXTS_EN) ? 1 : 0; //if T1/T4, // Is it inserted Timestamp?
-}
 #endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, ptp1"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");

@@ -3,14 +3,9 @@
  * Copyright (c) 2022 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
-#ifndef _DM9051_PTPC_H_
-#define _DM9051_PTPC_H_
-// #include <linux/ptp_clock_kernel.h>
-// #include <linux/ptp_classify.h>
-// #include <linux/ip.h>
-// #include <linux/udp.h>
+#ifndef _DM9051_PTP_IMPL_H_
+#define _DM9051_PTP_IMPL_H_
 
-// #ifdef _DMPLUG_PTP .. #endif
 /* pragma
  */
 #if defined(DMPLUG_PTP) && defined(MAIN_DATA)
@@ -23,7 +18,7 @@
     #pragma message("dm9051: PTP (H/W PPS)")
 #endif
 
-/* ptp, clkout, 2step
+/* ptp
  */
 #if defined(DMPLUG_PTP)
     #undef INFO_PTP
@@ -38,27 +33,6 @@
     #define INFO_PPS(dev, db) USER_CONFIG(dev, db, "dm9051: PTP (H/W PPS)")
 	#endif
 #endif
-
-/* ptp implementation
- */
-
-/* ptp */
-int  dm9051_get_clk_ts(struct board_info *db);
-void on_core_init_ptp_rate(struct board_info *db);
-
-void ptp_ver(struct board_info *db);
-void ptp_operation_extern(struct board_info *db);
-void ptp_checksum_limit(struct board_info *db, struct net_device *ndev);
-void ptp_init(struct board_info *db);
-void ptp_end(struct board_info *db);
-u8   ptp_status_bits(struct board_info *db);
-void dm9051_ptp_rxc_from_master(struct board_info *db);
-int  dm9051_read_ptp_tstamp_mem(struct board_info *db);
-void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
-void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
-int  dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb);
-int  dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb);
-netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev, netdev_features_t features);
 
 /* ptp casted, used in 'dm9051.c'
  */
@@ -101,32 +75,28 @@ netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev, netdev_featur
 #endif
 
 /* ~(ptp sw ||) final global ptp */
-	#if defined(DMPLUG_PTP) /* || defined(_DMPLUG_PTP_SW)*/
-		#undef INIT_RCR
-		#define INIT_RCR(b)           	  b->rctl.rcr_all = (RCR_ALL | RCR_DIS_LONG | RCR_RXEN) //ptp_init_rcr(d)
-	#endif
+#if defined(DMPLUG_PTP) /* || defined(_DMPLUG_PTP_SW)*/
+	#undef INIT_RCR
+	#define INIT_RCR(b)           	  b->rctl.rcr_all = (RCR_ALL | RCR_DIS_LONG | RCR_RXEN) //ptp_init_rcr(d)
+#endif
 
-/* PTP message type classification */
-enum ptp_sync_type
-{
-    // PTP_NOT_PTP = 0,      /* Not a PTP packet or no timestamp involved */
-    PTP_ONE_STEP = 1, /* One-step sync message */
-    PTP_TWO_STEP = 2, /* Two-step sync message */
-};
+/* pragma
+ */
+//#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
+//	#pragma message("dm9051-DBG: LOG")
+//#endif
 
-int is_ptp_rxts_en(struct board_info *db);
-struct ptp_header *get_ptp_header(struct sk_buff *skb);
-u8  get_ptp_message_type005(struct ptp_header *ptp_hdr);
-struct ptp_header *dm9051_rx_ptp_hdr_monitor(struct board_info *db);
+//#if defined(DMPLUG_LOG)
+//	#undef INFO_LOG
+//	#define INFO_LOG(dev, db) USER_CONFIG(dev, db, "dm9051-DBG: LOG")
+//	#undef INFO_MSG_DBGRXC
+//	#define INFO_MSG_DBGRXC(dev, db) macro_msg_dbgrxc(dev, db)
+//#endif
 
-int is_ptp_announce_packet(u8 msgtype);
-int is_ptp_sync_packet(u8 msgtype);
-int is_ptp_delayreq_packet(u8 msgtype);
-int is_ptp_delayresp_packet(u8 msgtype);
-int is_peer_delayreq_packet(u8 msgtype);
-int is_peer_delayresp_packet(u8 msgtype);
+//#undef dm9051_dump_data1
+//#define dm9051_dump_data1(b, p, n) dump_data(b, p, n)
 
-// typedef struct ptp_board_info {
-// } ptp_board_info_t;
+//#undef LOG_RX_PACKET_DUMP
+//#define LOG_RX_PACKET_DUMP(b, s) dm9051_rx_packet_dump(b, s)
 
-#endif //_DM9051_PTPC_H_
+#endif //_DM9051_PTP_IMPL_H_
