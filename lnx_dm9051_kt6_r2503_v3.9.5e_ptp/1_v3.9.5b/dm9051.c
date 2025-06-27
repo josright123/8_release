@@ -24,6 +24,12 @@
 #define MAIN_DATA
 #include "dm9051.h"
 
+/* ----------------------------------
+ * Tempatory NOT coerced to supperted 
+ * Template Block.
+ * ----------------------------------
+ */
+ 
 /* raw (fake) */
 #define BUS_SETUP1(f, b, r)        //#define BUS_SETUP(db) 0 // empty(NoError)
 #define BUS_OPS1(f, b, bf, l)

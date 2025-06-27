@@ -1,4 +1,8 @@
-// "dm9051_main_data.h"
+/* "dm9051_main_data.h"
+ * main data
+ */
+//#if defined(MAIN_DATA)
+//#endif // MAIN_DATA
 
 /* pragma
  */
@@ -95,7 +99,7 @@ const struct plat_cnf_info plat_misc_mode = {
     .checksuming = DEFAULT_CHECKSUM_OFF,
     .align       = {.mode = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 };
-#endif
+#endif // MAIN_DATA
 
 /* Param structures
  */
@@ -116,6 +120,7 @@ struct param_config
     int force_monitor_tx_timeout;
     u64 tx_timeout_us;
 };
+
 /* Driver configuration structure
  */
 #ifdef MAIN_DATA
@@ -162,15 +167,15 @@ const struct param_config *param = &param_conf;
 	// struct sk_buff *dm9051_expand_skb_txreq(struct board_info *db, struct sk_buff *skb);
 	// int dm9051_mode_tx2(struct board_info *db, struct sk_buff *skb);
 
-	void ptp_ver_software(struct board_info *db);
-	void dm9051_ptp_tx_swtstamp(struct sk_buff *skb);
-
 	// int ptp_new(struct board_info *db);
 	//void ptp_init_rcr(struct board_info *db);
 
 	// void dm9051_ptp_tx_in_progress(struct board_info *db, struct sk_buff *skb);
 	// void dm9051_ptp_tcr_2wr(struct board_info *db, struct sk_buff *skb);
 	// void dm9051_ptp_txreq_hwtstamp(struct board_info *db, struct sk_buff *skb);
+
+	void ptp_ver_software(struct board_info *db);
+	void dm9051_ptp_tx_swtstamp(struct sk_buff *skb);
 #endif
 
 /* system */
@@ -327,3 +332,97 @@ int  DM9051_POLL_SCHED(struct board_info *db);
     #undef PTP_NETDEV_IOCTL
     #define PTP_NETDEV_IOCTL(s) s = dm9051_eth_ioctl,
 #endif
+
+/* ----------------------
+ * Inline function Block.
+ * ----------------------
+ */
+ 
+/* ethtool_ops
+ * netdev_ops
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+static inline int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
+#else
+static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
+#endif
+{
+    info->so_timestamping = 0;
+
+#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+    info->tx_types   = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
+    info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
+#endif
+
+#if defined(DMPLUG_PTP_SW)
+    info->so_timestamping |=
+        SOF_TIMESTAMPING_TX_SOFTWARE |
+        SOF_TIMESTAMPING_RX_SOFTWARE |
+        SOF_TIMESTAMPING_SOFTWARE; /* .software ts */
+#endif
+
+#if defined(DMPLUG_PTP)
+    info->so_timestamping |=
+        SOF_TIMESTAMPING_TX_HARDWARE |
+        SOF_TIMESTAMPING_RX_HARDWARE |
+        SOF_TIMESTAMPING_RAW_HARDWARE;
+#endif
+
+#if defined(DMPLUG_PTP)
+    info->tx_types |=
+        BIT(HWTSTAMP_TX_ONESTEP_SYNC);
+#endif
+
+#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+    do
+    {
+        struct board_info *db  = netdev_priv(net_dev);
+        ptp_board_info_t  *pbi = &db->pbi;
+        info->phc_index        = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
+        // info->phc_index = -1; // Spenser - get phc_index
+    } while (0);
+#endif
+
+    return 0;
+}
+
+static inline void macro_msg_dbgrxc(struct device *dev, struct board_info *db)
+{
+    char buff[32];
+
+    sprintf(buff, "dm9051-DBGRXC: %d", DMPLUG_LOG_RXC);
+    USER_CONFIG(dev, db, buff);
+}
+
+static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //._dm9051_dump_data1
+{
+	int i, j, rowsize = 32;
+	int splen; //index of start row
+	int rlen; //remain/row length
+	char line[120];
+
+	netif_info(db, pktdata, db->ndev, "%s\n", db->bc.head);
+	for (i = 0; i < packet_len; i += rlen) {
+		//rlen = print_line(packet_data+i, min(rowsize, skb->len - i)); ...
+		rlen =  packet_len - i;
+		if (rlen >= rowsize) rlen = rowsize;
+
+		splen = 0;
+		splen += sprintf(line + splen, " %3d", i);
+		for (j = 0; j < rlen; j++) {
+			if (!(j % 8)) splen += sprintf(line + splen, " ");
+			if (!(j % 16)) splen += sprintf(line + splen, " ");
+			splen += sprintf(line + splen, " %02x", packet_data[i + j]);
+		}
+		netif_info(db, pktdata, db->ndev, "%s\n", line);
+	}
+}
+
+static inline void dm9051_rx_packet_dump(struct board_info *db, struct sk_buff *skb)
+{
+	if (db->ndev->stats.rx_packets < DMPLUG_LOG_RXC) { //test
+		sprintf(db->bc.head, "rx_packet %ld, len %d", db->ndev->stats.rx_packets, skb->len);
+		dump_data(db, skb->data, skb->len);
+		//dm9051_dump_data1(db, skb->data, skb->len);
+	}
+}

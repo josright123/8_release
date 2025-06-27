@@ -524,98 +524,13 @@ int  dm9051_mem_tx(struct board_info *db, u8 *p);
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 #endif
 
-/* main fakes
+#include "template.h"
+#include "dm9051_main_data.h"
+
+/* -----------------
+ * Extension Block.
+ * -----------------
  */
-#define INFO_CPU_BITS(dev, db)     USER_CONFIG(dev, db, "platform: __aarch64__")
-#define INFO_KERNEL_VER(dev, db)   USER_CONFIG(dev, db, "Linux: " UTS_RELEASE)
-#define INFO_INT(dev, db)          USER_CONFIG(dev, db, "dm9051: POL")
-#define INFO_WD(dev, db)           USER_CONFIG(dev, db, "dm9051: BD")
-#define INFO_MSG_ENABLE(dev, db)   MACRO_MSG_CONFIG(dev, db)
-#define INFO_CPU_MIS_CONF(dev, db) // silence conditionally
-#define INFO_INT_CLKOUT(dev, db)
-#define INFO_INT_TWOSTEP(dev, db)
-#define INFO_SKB_PROT(dev, db)
-#define INFO_MI_FIX(dev, db)
-#define INFO_LOG(dev, db)
-#define INFO_MSG_DBGRXC(dev, db)
-#define INFO_BMCR_WR(dev, db)
-#define INFO_MRR_WR(dev, db)
-#define INFO_BUSWORK(dev, db)
-#define INFO_CONTI(dev, db)
-#define INFO_LPBK_TST(dev, db)
-#define INFO_PTP(dev, db)
-#define INFO_PPS(dev, db)
-#define INFO_PTP2S(dev, db)
-#define INFO_PTP_SW_2S(dev, db)
-#define dm9051_dump_data1(b, p, l)
-/* int fakes */
-#define DM9051_STOP_FREEIRQ(b)    // empty
-#define DM9051_STOP_CANCELDLY2(b) // empty
-#define DM9051_PROBE_DLYSETUP(b)  // empty
-/* fake clkout */
-#define INT_SET_CLKOUT(db)        0 // empty(NoError)
-/* poll fakes */
-enum dm_req_not_support
-{
-    VOID_REQUEST_FUNCTION  = -9,
-    NOT_REQUEST_SUPPORTTED = 0,
-};
-enum dm_req_support
-{
-    REQUEST_SUPPORTTED = 1,
-};
-#define dm9051_int2_supp()    NOT_REQUEST_SUPPORTTED
-#define dm9051_int2_irq(d, h) VOID_REQUEST_FUNCTION
-#define dm9051_poll_supp()    NOT_REQUEST_SUPPORTTED
-#define dm9051_poll_sch(d)    VOID_REQUEST_FUNCTION
-/* wd fakes */
-#define BOUND_CONF_BIT        MBNDRY_BYTE
-#define PAD_LEN(len)          len
-#define PAD_TX(b, s)          // empty
-#define CHG_SKB_TX(b, s)      // empty
-/* mi fix fakes */
-#define MI_MUTEX_LOCK(b)      // empty
-#define MI_MUTEX_UNLOCK(b)    // empty
-/* fakes (ptp sw) */
-#define PTP_VER_SOFTWARE(b)   // empty (impl in dm9051_log.c)
-#define DMPLUG_PTP_TX_TIMESTAMPING_SW(s)
-/* final global fakes (ptp) */
-/* In struct board_info; */
-#define INIT_RCR(b)           b->rctl.rcr_all = (RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN)
-/* fakes and ptp sw */
-#define PTP_ETHTOOL_INFO(s)
-#define PTP_NETDEV_IOCTL(s)
-/* fakes(default) raw tx mode */
-#define LEN_TX(b, s)          dm9051_tx_len(b, s)
-#define MODE_TX(b, s)         dm9051_mode_tx(b, s) //~wd, i.e. bd (byte mode)
-/* fakes dm9051_log */
-#define SHOW_DEVLOG_TCR_WR(b)
-
-/* ptp raw used in 'dm9051.c'
- */
- 
-/* ptp */
-#define PTP_VER(b)
-#define PTP_SETUP(b)                b->pbi.ptp_enable = 0 // dm9051_operation_clear_extern(b)
-#define PTP_CHECKSUM_LIMIT(b, nd)
-// #define PTP_NEW(d)				0
-#define PTP_INIT(d)
-#define PTP_END(d)
-#define PTP_STATUS_BITS(b)          RSR_ERR_BITS
-#define PTP_CONSTRAIN(n, f)         f
-#define PTP_AT_RATE(b)
-
-int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
-                     int cmd); /* implement in "extern/dm9051_ptp1.c", "dm9051.c" */
-
-/* ptp2 */
-#define DMPLUG_RX_TS_MEM(b)         0
-#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b)
-#define DMPLUG_RX_HW_TS_SKB(b, s)
-#define SINGLE_TX(b, s)             dm9051_single_tx(b, s)
-
-#define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s)
-#define LOG_RX_PACKET_DUMP(b, s)
 
 /*#define DMPLUG_LOG */          //(debug dump data)
 /*#define DMPLUG_PTP */          //(ptp1588)
@@ -647,12 +562,6 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
     #endif
 #endif //(ptp)
 
-/* main data
- */
-#if defined(MAIN_DATA)
-    #include "dm9051_main_data.h"
-#endif
-
 /* log */
 #if defined(DMPLUG_LOG)
 	#include "extern/dump.h"
@@ -666,94 +575,5 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
 /* Extended support header files
  * #include "plug/plug.h"
  */
-
-/* ethtool_ops
- * netdev_ops
- */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
-static inline int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
-#else
-static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
-#endif
-{
-    info->so_timestamping = 0;
-
-#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-    info->tx_types   = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
-    info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
-#endif
-
-#if defined(DMPLUG_PTP_SW)
-    info->so_timestamping |=
-        SOF_TIMESTAMPING_TX_SOFTWARE |
-        SOF_TIMESTAMPING_RX_SOFTWARE |
-        SOF_TIMESTAMPING_SOFTWARE; /* .software ts */
-#endif
-
-#if defined(DMPLUG_PTP)
-    info->so_timestamping |=
-        SOF_TIMESTAMPING_TX_HARDWARE |
-        SOF_TIMESTAMPING_RX_HARDWARE |
-        SOF_TIMESTAMPING_RAW_HARDWARE;
-#endif
-
-#if defined(DMPLUG_PTP)
-    info->tx_types |=
-        BIT(HWTSTAMP_TX_ONESTEP_SYNC);
-#endif
-
-#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-    do
-    {
-        struct board_info *db  = netdev_priv(net_dev);
-        ptp_board_info_t  *pbi = &db->pbi;
-        info->phc_index        = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
-        // info->phc_index = -1; // Spenser - get phc_index
-    } while (0);
-#endif
-
-    return 0;
-}
-
-static inline void macro_msg_dbgrxc(struct device *dev, struct board_info *db)
-{
-    char buff[32];
-
-    sprintf(buff, "dm9051-DBGRXC: %d", DMPLUG_LOG_RXC);
-    USER_CONFIG(dev, db, buff);
-}
-
-static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //._dm9051_dump_data1
-{
-	int i, j, rowsize = 32;
-	int splen; //index of start row
-	int rlen; //remain/row length
-	char line[120];
-
-	netif_info(db, pktdata, db->ndev, "%s\n", db->bc.head);
-	for (i = 0; i < packet_len; i += rlen) {
-		//rlen = print_line(packet_data+i, min(rowsize, skb->len - i)); ...
-		rlen =  packet_len - i;
-		if (rlen >= rowsize) rlen = rowsize;
-
-		splen = 0;
-		splen += sprintf(line + splen, " %3d", i);
-		for (j = 0; j < rlen; j++) {
-			if (!(j % 8)) splen += sprintf(line + splen, " ");
-			if (!(j % 16)) splen += sprintf(line + splen, " ");
-			splen += sprintf(line + splen, " %02x", packet_data[i + j]);
-		}
-		netif_info(db, pktdata, db->ndev, "%s\n", line);
-	}
-}
-
-static inline void dm9051_rx_packet_dump(struct board_info *db, struct sk_buff *skb)
-{
-	if (db->ndev->stats.rx_packets < DMPLUG_LOG_RXC) { //test
-		sprintf(db->bc.head, "rx_packet %ld, len %d", db->ndev->stats.rx_packets, skb->len);
-		dump_data(db, skb->data, skb->len);
-		//dm9051_dump_data1(db, skb->data, skb->len);
-	}
-}
 
 #endif /* _DM9051_H_ */
