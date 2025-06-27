@@ -176,7 +176,7 @@ const struct param_config *param = &param_conf;
 
 	void ptp_ver_software(struct board_info *db);
 	void dm9051_ptp_tx_swtstamp(struct sk_buff *skb);
-#endif
+#endif //0
 
 /* system */
 #if (defined(__x86_64__) || defined(__aarch64__))
@@ -337,14 +337,12 @@ int  DM9051_POLL_SCHED(struct board_info *db);
  * netdev_ops
  */
 
-#ifdef DMPLUG_PTP_SW
+#if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
 void ptp_ver_software(struct board_info *db)
 {
     dev_info(&db->spidev->dev, "DMPLUG PTP Software Version\n");
 }
-#endif
 
-#ifdef DMPLUG_PTP_SW
 void dm9051_ptp_tx_swtstamp(struct sk_buff *skb) // SKBTX_SW_TSTAMP (on 'dm9051_start_xmit')
 {
     if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP)
@@ -354,7 +352,7 @@ void dm9051_ptp_tx_swtstamp(struct sk_buff *skb) // SKBTX_SW_TSTAMP (on 'dm9051_
 }
 #endif
 
-#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+#if (defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)) && defined(MAIN_DATA)
 int all_know_allow_show = 5;
 
 static int lan_ptp_get_ts_ioctl(struct net_device *netdev, struct ifreq *ifr)
@@ -547,7 +545,7 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
         return phy_mii_ioctl(ndev->phydev, rq, cmd); //'rq' is ifr
     }
 }
-#endif // defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+#endif // (defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)) && defined(MAIN_DATA)
 
 /* ----------------------
  * Inline function Block.

@@ -64,7 +64,7 @@
  *Hardware Transmit Timestamp Modes: none
  *Hardware Receive Filter Modes: none
  */
-// #define PLUG_PTP_1588_SW
+#define PLUG_PTP_1588_SW
 #ifdef PLUG_PTP_1588_SW
     #define DMPLUG_PTP_SW //(ptp S/W)
 #endif                    //(ptp S/W)
@@ -526,7 +526,7 @@ void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 #endif
 
 #include "template.h"
-#include "dm9051_main_data.h"
+//#include "dm9051_main_data.h"
 
 /* -----------------
  * Extension Block.
@@ -609,5 +609,6 @@ struct ptp_header *dm9051_rx_ptp_hdr_monitor(struct board_info *db);
 /* Extended support header files
  * #include "plug/plug.h"
  */
-
+ 
+#include "dm9051_main_data.h"
 #endif /* _DM9051_H_ */

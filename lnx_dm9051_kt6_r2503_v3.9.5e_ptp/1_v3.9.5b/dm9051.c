@@ -24,6 +24,9 @@
 #define MAIN_DATA
 #include "dm9051.h"
 
+#if 1
+/* #include "template_0.h" (NOT coerced to supperted, almost can give up...)
+ */
 /* ----------------------------------
  * Tempatory NOT coerced to supperted 
  * Template Block.
@@ -52,14 +55,13 @@
 #define INTERN_PHY_READ(d, n, av)  dm9051_phyread(d, n, av)
 #define MDIO_PHY_READ(d, n, av)    dm9051_phyread(d, n, av)
 #define LINKCHG_UPSTART(b)         dm9051_all_upfcr(b)
-
 /* ptp/ macro fakes
  * extern/ macro fakes
  */
-
 // #define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	//0
 // #define DMPLUG_PTP_TX_PRE(b,s)
 // #define DMPLUG_TX_EMIT_TS(b,s)
+#endif
 
 const struct plat_cnf_info *plat_cnf = &plat_misc_mode; //'&plat_align_mode'; /* Driver configuration */
 
