@@ -59,8 +59,6 @@
 
 //[rsrv, overlay]
 #if defined(PCO) && defined(DMPLUG_CRYPT) && defined(MAIN_DATA)
-//#undef BUS_SETUP
-//#define BUS_SETUP(db) bus_setup(struct board_info *db)
 #undef BUS_SETUP1
 #define BUS_SETUP1(f, b, r) \
     do { \
@@ -102,8 +100,15 @@ int dm9051_mode_tx_conti(struct board_info *db, struct sk_buff *skb);
 
 //[test loopback, overlay]
 #if defined(DMPLUG_LPBK_TST)
-#undef dmplug_loop_test
-#define dmplug_loop_test(b)	test_loop_test(b)
+#undef LOOPBACK_TEST1
+#define LOOPBACK_TEST1(f, b, r) \
+    do { \
+        if (f) { \
+            r = f(b); /* customization */ \
+            if (r) \
+                return r; \
+        } \
+    } while (0)
 
 //implement in plug/
 int test_loop_test(struct board_info *db); //implement in plug/dm9051_lpbk_test.c

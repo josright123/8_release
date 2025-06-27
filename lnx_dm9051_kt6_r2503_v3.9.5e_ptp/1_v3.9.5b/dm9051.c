@@ -34,10 +34,10 @@
  */
  
 /* raw (fake) */
-#define BUS_SETUP1(f, b, r)        //#define BUS_SETUP(db) 0 // empty(NoError)
+#define BUS_SETUP1(f, b, r)        //plug  BUS_SETUP(b) 0, or bus_setup(b)
 #define BUS_OPS1(f, b, bf, l)
-#define dmplug_loop_test(b)        0
-#define SHOW_BEGIN_LOG(d, b)
+#define LOOPBACK_TEST1(f, b, r)    //plug, loopback_test(b) 0, or test_loop_test(b)
+#define SHOW_BEGIN_LOG(d, b)       //extern
 #define SHOW_LOG_REFER_BEGIN(b)
 #define SHOW_DEVLOG_MODE(d)
 #define SHOW_DEVLOG_XMIT_THRD0(b)
@@ -46,15 +46,15 @@
 #define SHOW_PLAT_MODE(d)
 #define SHOW_MAC(b, a)
 #define SHOW_MONITOR_RXC(b, n)
-#define DMPLUG_LOG_RXPTR(h, b)     // #define dm9051_headlog_regs(h, b, r1, r2)
-#define DMPLUG_LOG_PHY(b)          // #define dm9051_phyread_headlog(h, b, r)	(void)0
-#define monitor_rxb0(b, rb)
-#define BMSR_OPERATION_CLEAR(b)
+#define DMPLUG_LOG_RXPTR(h, b)     //extern
+#define DMPLUG_LOG_PHY(b)
+#define monitor_rxb0(b, rb)        //extern
+#define BMSR_OPERATION_CLEAR(b)    //extern
 /* raw (fake) */
-#define SET_RCR(b)                 dm9051_set_rcr(b)
-#define INTERN_PHY_READ(d, n, av)  dm9051_phyread(d, n, av)
-#define MDIO_PHY_READ(d, n, av)    dm9051_phyread(d, n, av)
-#define LINKCHG_UPSTART(b)         dm9051_all_upfcr(b)
+#define SET_RCR(b)                 dm9051_set_rcr(b)         //plug.conti
+#define INTERN_PHY_READ(d, n, av)  dm9051_phyread(d, n, av)  //self
+#define MDIO_PHY_READ(d, n, av)    dm9051_phyread(d, n, av)  //extern.bmcr_wr
+#define LINKCHG_UPSTART(b)         dm9051_all_upfcr(b)       //extern.mrr_wr
 /* ptp/ macro fakes
  * extern/ macro fakes
  */
@@ -1261,9 +1261,8 @@ static int dm9051_all_start_mlock(struct board_info *db)
     int ret;
 
     mutex_lock(&db->spi_lockm); // open
-    ret = dmplug_loop_test(db); // DMPLUG_LPBK_TST
-    if (ret)
-        return ret;
+
+    LOOPBACK_TEST1(test_loop_test, db, ret); // DMPLUG_LPBK_TST
 
     ret = dm9051_all_start(db);
     if (ret)
