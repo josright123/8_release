@@ -477,10 +477,6 @@ static inline struct sk_buff *dm9051_chg_skb_wd(struct board_info *db, struct sk
     return skb;
 }
 
-// #if defined(MAIN_DATA)
-// #include "dm9051_main_data.h"
-// #endif
-
 //#if defined(_DMPLUG_LOG) || 1
 /* Consider: Put into dm9051.c */
 /* From dm9051_log.c to dm9051.c: directly use: allow */
@@ -525,7 +521,9 @@ int  dm9051_mem_tx(struct board_info *db, u8 *p);
 void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 #endif
 
-#include "template.h"
+//.
+//#include "template.h"
+//.
 //#include "dm9051_main_data.h"
 
 /* -----------------
@@ -594,21 +592,5 @@ int is_ptp_rxts_en(struct board_info *db);
 struct ptp_header *get_ptp_header(struct sk_buff *skb);
 u8  get_ptp_message_type005(struct ptp_header *ptp_hdr);
 struct ptp_header *dm9051_rx_ptp_hdr_monitor(struct board_info *db);
-
-/* log */
-#if defined(DMPLUG_LOG)
-	#include "extern/dump.h"
-#endif
-
-/* ptp */
-#if defined(DMPLUG_PTP)
-    #include "extern/dm9051_ptp_impl.h"
-    //#include "extern/dm9051_ptp1.h"
-#endif
-
-/* Extended support header files
- * #include "plug/plug.h"
- */
  
-#include "dm9051_main_data.h"
 #endif /* _DM9051_H_ */

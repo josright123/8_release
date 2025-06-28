@@ -1,8 +1,6 @@
 /* "dm9051_main_data.h"
  * main data
  */
-//#if defined(MAIN_DATA)
-//#endif // MAIN_DATA
 
 /* pragma
  */
