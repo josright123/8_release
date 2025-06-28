@@ -106,11 +106,11 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
 	#include "extern/dump.h" /* log */
 #endif
 #if defined(DMPLUG_PTP)
-    #include "extern/dm9051_ptp_impl.h" /* ptp */
-    //#include "extern/dm9051_ptp1.h"
+    #include "extern/dm9051_ptp_impl.h" /* #include "extern/dm9051_ptp1.h" */ /* ptp */
 #endif
 /* Extended support header files
- * #include "plug/plug.h" // plug
+ * #include "extern/extern.h" // extern
+ * #include "plugs/plugs.h" // plug
  */
 #include "dm9051_main_data.h" /* main_data */
 const struct plat_cnf_info *plat_cnf = &plat_misc_mode; //'&plat_align_mode'; /* Driver configuration */
