@@ -544,56 +544,7 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 }
 #endif // (defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)) && defined(MAIN_DATA)
 
-/* ----------------------
- * Inline function Block.
- * ----------------------
- */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
-static inline int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
-#else
-static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
-#endif
-{
-    info->so_timestamping = 0;
-
-#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-    info->tx_types   = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
-    info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
-#endif
-
-#if defined(DMPLUG_PTP_SW)
-    info->so_timestamping |=
-        SOF_TIMESTAMPING_TX_SOFTWARE |
-        SOF_TIMESTAMPING_RX_SOFTWARE |
-        SOF_TIMESTAMPING_SOFTWARE; /* .software ts */
-#endif
-
-#if defined(DMPLUG_PTP)
-    info->so_timestamping |=
-        SOF_TIMESTAMPING_TX_HARDWARE |
-        SOF_TIMESTAMPING_RX_HARDWARE |
-        SOF_TIMESTAMPING_RAW_HARDWARE;
-#endif
-
-#if defined(DMPLUG_PTP)
-    info->tx_types |=
-        BIT(HWTSTAMP_TX_ONESTEP_SYNC);
-#endif
-
-#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-    do
-    {
-        struct board_info *db  = netdev_priv(net_dev);
-        ptp_board_info_t  *pbi = &db->pbi;
-        info->phc_index        = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
-        // info->phc_index = -1; // Spenser - get phc_index
-    } while (0);
-#endif
-
-    return 0;
-}
-
-static inline void macro_msg_dbgrxc(struct device *dev, struct board_info *db)
+static inline void disp_dump_rx_cnt(struct device *dev, struct board_info *db)
 {
     char buff[32];
 

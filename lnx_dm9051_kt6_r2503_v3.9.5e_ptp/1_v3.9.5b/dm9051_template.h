@@ -72,14 +72,14 @@
  * ---------------------------
  */
 
-/*#define DMPLUG_LOG */          //(debug dump data)
+/*#define DMPLUG_DUMP_FUNC */    //(debug dump data)
 /*#define DMPLUG_PTP */          //(ptp1588)
 /*#define DMPLUG_PPS_CLKOUT */   //(ptp1588 pps)
 /*#define DMPLUG_PTP_TWO_STEP */ //(ptp1588 two step)
 
 #define PLUG_LOG
 #ifdef PLUG_LOG
-    #define DMPLUG_LOG //(extern, debug log, extra-print-log for detail observation!)
+    #define DMPLUG_DUMP_FUNC //(extern, debug log, extra-print-log for detail observation!)
 #endif
 
 /* Capabilities:
@@ -115,8 +115,8 @@
 #define INFO_INT_TWOSTEP(dev, db)
 #define INFO_SKB_PROT(dev, db)
 #define INFO_MI_FIX(dev, db)
-#define INFO_LOG(dev, db)
-#define INFO_MSG_DBGRXC(dev, db)
+#define INFO_DUMP_FUNC(dev, db)
+#define INFO_DUMP_RX_CNT(dev, db)
 #define INFO_BMCR_WR(dev, db)
 #define INFO_MRR_WR(dev, db)
 #define INFO_BUSWORK(dev, db)
@@ -197,7 +197,7 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq,
 //#include "dm9051.h"
 //#define MAIN_DATA
 
-#if defined(DMPLUG_LOG)
+#if defined(DMPLUG_DUMP_FUNC)
 	#include "extern/dump.h" /* log */
 #endif
 #if defined(DMPLUG_PTP)
@@ -230,8 +230,8 @@ static inline int SHOW_ALL_USER_CONFIG(char *head, struct device *dev, struct bo
     INFO_PTP2S(dev, db);
     INFO_PPS(dev, db);
     INFO_MI_FIX(dev, db);
-    INFO_LOG(dev, db);
-    INFO_MSG_DBGRXC(dev, db); // msg_enable
+    INFO_DUMP_FUNC(dev, db);
+    INFO_DUMP_RX_CNT(dev, db); // msg_enable
     INFO_BMCR_WR(dev, db);
     INFO_MRR_WR(dev, db);
     INFO_BUSWORK(dev, db);

@@ -24,8 +24,8 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-//#include "dm9051_ptpd.h"
 #include "../dm9051.h"
+#include "../dm9051_template.h"
 //#include "dm9051_ptp1.h" /* 0.1 ptpc */
 
 /*

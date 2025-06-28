@@ -3,12 +3,12 @@
  * Copyright (c) 2022 Davicom Semiconductor,Inc.
  * Davicom DM9051 SPI Fast Ethernet Linux driver
  */
-#ifndef _DM9051_TEMPLATE_H_
-#define _DM9051_TEMPLATE_H_
+#ifndef _TEMPLATE_H_
+#define _TEMPLATE_H_
 
 /* -----------------
  * Template Block.
  * -----------------
  */
 
-#endif //_DM9051_TEMPLATE_H_
+#endif //_TEMPLATE_H_

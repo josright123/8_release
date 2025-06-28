@@ -25,8 +25,8 @@
 //#include <linux/ptp_clock_kernel.h>
 //#include <linux/ptp_classify.h>
 
-//#include "dm9051_ptpd.h"
 #include "../dm9051.h"
+#include "../dm9051_template.h"
 //#include "dm9051_ptp1.h" /* 0.1 ptpc */
 
 /* PTP message type constants */

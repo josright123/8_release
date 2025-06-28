@@ -8,15 +8,15 @@
 
 /* pragma
  */
-#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
-	#pragma message("dm9051-DBG: LOG")
+#if defined(DMPLUG_DUMP_FUNC) && defined(MAIN_DATA)
+	#pragma message("dm9051: DUMP FUNC")
 #endif
 
-#if defined(DMPLUG_LOG)
-	#undef INFO_LOG
-	#define INFO_LOG(dev, db) USER_CONFIG(dev, db, "dm9051-DBG: LOG")
-	#undef INFO_MSG_DBGRXC
-	#define INFO_MSG_DBGRXC(dev, db) macro_msg_dbgrxc(dev, db)
+#if defined(DMPLUG_DUMP_FUNC)
+	#undef INFO_DUMP_FUNC
+	#define INFO_DUMP_FUNC(dev, db) USER_CONFIG(dev, db, "dm9051: DUMP FUNC")
+	#undef INFO_DUMP_RX_CNT
+	#define INFO_DUMP_RX_CNT(dev, db) disp_dump_rx_cnt(dev, db)
 #endif
 
 #undef dm9051_dump_data1
