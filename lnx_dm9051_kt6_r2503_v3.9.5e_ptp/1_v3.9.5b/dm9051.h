@@ -13,62 +13,6 @@
 #include <linux/ip.h>
 #include <linux/udp.h>
 
-/* Macro domain
- */
-/*#define DMPLUG_INT */         //(INT39)
-/*#define INT_CLKOUT */         //(INT39 ClkOut)
-/*#define INT_TWO_STEP */       //(INT39 two_step)
-/*#define DMPLUG_WD */          //(wd mode)
-/*#define DMPLUG_SKB_PROTECT */ //(wd mode skb protect)
-/*#define DMPLUG_MI_FIX */      //(driver config)
-/*#define DMPLUG_PTP_SW */      //(ptp1588 software)
-
-/* Macro for already known platforms
- */
-#define PLUG_ENABLE_INT
-#ifdef PLUG_ENABLE_INT
-    #define DMPLUG_INT //(INT39)
-
-    // #define PLUG_INT_CLKOUT
-    #ifdef PLUG_INT_CLKOUT
-        #define INT_CLKOUT //(INT39_CLKOUT)
-    #endif
-
-    // #define PLUG_INT_2STEP
-    #ifdef PLUG_INT_2STEP
-        #define INT_TWO_STEP //(INT39_TWO_STEP)
-    #endif
-#endif
-
-// #define PLUG_ENABLE_WD
-#ifdef PLUG_ENABLE_WD
-    #define DMPLUG_WD //(wd mode)
-
-    #define PLUG_SKB_PROTECT
-    #ifdef PLUG_SKB_PROTECT
-        #define DMPLUG_SKB_PROTECT // (skb protect)
-    #endif
-#endif
-
-//[#define MI_FIX  1] //(driver config)
-#define PLUG_MI_FIX
-#ifdef PLUG_MI_FIX
-    #define DMPLUG_MI_FIX //(driver config)
-#endif                    //(driver config)
-
-/*Capabilities:
- *        software-transmit
- *        software-receive
- *        software-system-clock
- *PTP Hardware Clock: none
- *Hardware Transmit Timestamp Modes: none
- *Hardware Receive Filter Modes: none
- */
-#define PLUG_PTP_1588_SW
-#ifdef PLUG_PTP_1588_SW
-    #define DMPLUG_PTP_SW //(ptp S/W)
-#endif                    //(ptp S/W)
-
 /* Device identification
  */
 #define DM9051_ID              0x9051
@@ -526,40 +470,36 @@ void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 //.
 //#include "dm9051_main_data.h"
 
-/* -----------------
- * Extension Block.
- * -----------------
+/* raw (fake) */
+/* #include "template_0.h"= (NOT coerced to supperted, almost can give up...)
  */
-
-/*#define DMPLUG_LOG */          //(debug dump data)
-/*#define DMPLUG_PTP */          //(ptp1588)
-/*#define DMPLUG_PPS_CLKOUT */   //(ptp1588 pps)
-/*#define DMPLUG_PTP_TWO_STEP */ //(ptp1588 two step)
-
-#define PLUG_LOG
-#ifdef PLUG_LOG
-    #define DMPLUG_LOG //(extern, debug log, extra-print-log for detail observation!)
-#endif
-
-/* Capabilities:
- *        hardware-transmit
- *        hardware-receive
- *        hardware-raw-clock
+#define BUS_SETUP1(f, b, r)        //plug  BUS_SETUP(b) 0, or bus_setup(b)
+#define BUS_OPS1(f, b, bf, l)
+#define LOOPBACK_TEST1(f, b, r)    //plug, loopback_test(b) 0, or test_loop_test(b)
+#define SHOW_BEGIN_LOG(d, b)       //extern
+#define SHOW_LOG_REFER_BEGIN(b)
+#define SHOW_DEVLOG_MODE(d)
+#define SHOW_DEVLOG_XMIT_THRD0(b)
+#define SHOW_DEVLOG_XMIT_THRD(b)
+#define SHOW_DEVLOG_XMIT_IN(b)
+#define SHOW_PLAT_MODE(d)
+#define SHOW_MAC(b, a)
+#define SHOW_MONITOR_RXC(b, n)
+#define DMPLUG_LOG_RXPTR(h, b)     //extern
+#define DMPLUG_LOG_PHY(b)
+#define monitor_rxb0(b, rb)        //extern
+#define BMSR_OPERATION_CLEAR(b)    //extern
+/* raw (fake) */
+#define SET_RCR(b)                 dm9051_set_rcr(b)         //plug.conti
+#define INTERN_PHY_READ(d, n, av)  dm9051_phyread(d, n, av)  //self
+#define MDIO_PHY_READ(d, n, av)    dm9051_phyread(d, n, av)  //extern.bmcr_wr
+#define LINKCHG_UPSTART(b)         dm9051_all_upfcr(b)       //extern.mrr_wr
+/* ptp/ macro fakes
+ * extern/ macro fakes
  */
-#define PLUG_PTP_1588
-#ifdef PLUG_PTP_1588
-    #define DMPLUG_PTP        //(ptp)
-
-    #define PLUG_PTP_TWO_STEP //(always essential mandartory)(if not support, master NO follow up send)
-    #ifdef PLUG_PTP_TWO_STEP
-        #define DMPLUG_PTP_TWO_STEP //(HW Two step)
-    #endif
-
-    #define PLUG_PTP_PPS
-    #ifdef PLUG_PTP_PPS
-        #define DMPLUG_PPS_CLKOUT //(REG0x3C_pps)
-    #endif
-#endif //(ptp)
+// #define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	//0
+// #define DMPLUG_PTP_TX_PRE(b,s)
+// #define DMPLUG_TX_EMIT_TS(b,s)
 
 /* ptp implementation
  */

@@ -22,6 +22,9 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
+#include "dm9051.h"
+
+#define MAIN_DATA
 #include "dm9051_template.h"
 
 #define DM9051_INTR_BACKUP    //
