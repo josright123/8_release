@@ -334,7 +334,6 @@ int  DM9051_POLL_SCHED(struct board_info *db);
 /* ethtool_ops
  * netdev_ops
  */
-
 #if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
 void ptp_ver_software(struct board_info *db)
 {

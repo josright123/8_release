@@ -37,7 +37,6 @@
 #include <linux/version.h>
 #include <linux/ptp_clock_kernel.h>
 
-//#define SECOND_MAIN //(sec)
 #include "../dm9051.h"
 #include "extern.h"
 //#include "../extern/dm9051_ptp1.h" /* 0.1 ptpc */

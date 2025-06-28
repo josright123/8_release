@@ -45,7 +45,7 @@
 #define ECO //(Coerce)
 
 /* re-direct bmsr_wr */
-#if defined(ECO) && defined(DMCONF_BMCR_WR) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+#if defined(ECO) && defined(DMCONF_BMCR_WR) && defined(MAIN_DATA)
 #undef BMSR_OPERATION_CLEAR
 #define BMSR_OPERATION_CLEAR(b) dm9051_bmsr_init(b)
 
@@ -63,7 +63,7 @@ int dm9051_phyread_nt_bmsr(struct board_info *db, unsigned int reg, unsigned int
 #endif
 
 /* re-direct log */
-#if defined(ECO) && defined(DMPLUG_LOG) && (defined(SECOND_MAIN) || defined(MAIN_DATA))
+#if defined(ECO) && defined(DMPLUG_LOG) && defined(MAIN_DATA)
 
 #undef SHOW_BEGIN_LOG
 #undef SHOW_LOG_REFER_BEGIN
