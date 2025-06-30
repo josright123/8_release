@@ -13,6 +13,7 @@
 #include <linux/mii.h>
 #include <linux/module.h>
 #include <linux/utsname.h>
+#include <generated/utsrelease.h> // For newer kernels
 #include <linux/netdevice.h>
 #include <linux/phy.h>
 #include <linux/regmap.h>
@@ -110,7 +111,7 @@ int is_ptp_rxts_en(struct board_info *db)
 	return (db->rxhdr.status & RSR_RXTS_EN) ? 1 : 0; //if T1/T4, // Is it inserted Timestamp?
 }
 
-#ifdef DMPLUG_PTP
+//#ifdef DMPLUG_PTP
 int ptp_9051_adjfine(struct ptp_clock_info *caps, long scaled_ppm)
 {
 //struct aq_ptp_s *aq_ptp = container_of(ptp, struct aq_ptp_s, ptp_info);
@@ -1055,7 +1056,7 @@ void ptp_end(struct board_info *db)
 {
 	dm9051_ptp_unregister(db); //_15888_ todo
 }
-#endif
+//#endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, ptp2"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
 MODULE_LICENSE("GPL");

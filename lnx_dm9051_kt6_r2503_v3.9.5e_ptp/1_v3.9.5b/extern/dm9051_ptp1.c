@@ -11,6 +11,7 @@
 #include <linux/mii.h>
 #include <linux/module.h>
 #include <linux/utsname.h>
+#include <generated/utsrelease.h> // For newer kernels
 #include <linux/netdevice.h>
 #include <linux/phy.h>
 #include <linux/regmap.h>
@@ -127,8 +128,8 @@ long long __aeabi_ldivmod(long long numerator, long long denominator)
 //	return 0;
 //}
 
-#if defined(DMPLUG_PTP) /* || defined(DMPLUG_PTP_SW) */
-netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev,
+//#if defined(DMPLUG_PTP)
+netdev_features_t dm9051_ptp_constrain_features(struct net_device *ndev,
 	netdev_features_t features)
 {
 	struct board_info *db = netdev_priv(ndev);
@@ -141,9 +142,9 @@ netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev,
 
 	return features;
 }
-#endif
+//#endif
 
-#ifdef DMPLUG_PTP
+//#ifdef DMPLUG_PTP
 /* Sync
  * Delay Request
  * Peer Delay Request
@@ -440,7 +441,7 @@ void ptp_checksum_limit(struct board_info *db, struct net_device *ndev)
 //#endif
 //}
 
-#endif
+//#endif
 
 MODULE_DESCRIPTION("Davicom DM9051 driver, ptp1"); //MODULE_DESCRIPTION("Davicom DM9051A 1588 driver");
 MODULE_LICENSE("GPL");

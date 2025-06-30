@@ -34,9 +34,13 @@
 	#endif
 #endif
 
+/* fakes dm9051_log */
+	#define SHOW_DEVLOG_TCR_WR(b)
+
 /* ptp casted, used in 'dm9051.c'
  */
-#if defined(DMPLUG_PTP) /*&& defined(MAIN_DATA) && defined(CO1) (re-direct ptpc) */
+//#if defined(DMPLUG_PTP) /*&& defined(CO1) */
+//#endif
 	#undef PTP_VER
 	#undef PTP_SETUP
 	#undef PTP_CHECKSUM_LIMIT
@@ -55,7 +59,7 @@
 	#define PTP_AT_RATE(b)            	on_core_init_ptp_rate(b)
 
 	#undef PTP_CONSTRAIN
-	#define PTP_CONSTRAIN(n, f) 		dm9051_ptp_fix_features(n, f)
+	#define PTP_CONSTRAIN(n, f) 		dm9051_ptp_constrain_features(n, f)
 	#undef DMPLUG_RX_TS_MEM
 	#undef DMPLUG_RX_HW_TS_SKB
 	#define DMPLUG_RX_TS_MEM(b)       dm9051_read_ptp_tstamp_mem(b)
@@ -64,7 +68,14 @@
 	#define DMPLUG_SHOW_ptp_rx_packet_monitor(b, s) dm9051_ptp_rx_packet_monitor(b, s)
 	#undef DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER
 	#define DMPLUG_NOT_CLIENT_DISPLAY_RXC_FROM_MASTER(b) dm9051_ptp_rxc_from_master(b)
-	#undef SINGLE_TX // udef
+
+	#undef LEN_TX
+	#define LEN_TX(b, s)          dm9051_tx_len(b, s)
+	#undef PAD_TX
+	#define PAD_TX(b, s)          // empty
+	#undef MODE_TX
+	#define MODE_TX(b, s)         dm9051_mode_tx(b, s) //~wd, i.e. bd (byte mode)
+	#undef SINGLE_TX
 	#define SINGLE_TX(b, s) dm9051_ptp_single_tx(b, s)
 	// #undef DMPLUG_PTP_TX_IN_PROGRESS
 	// #undef DMPLUG_PTP_TX_PRE
@@ -72,31 +83,11 @@
 	// #define DMPLUG_PTP_TX_IN_PROGRESS(b,s)	dm9051_ptp_tx_in_progress(b,s)
 	// #define DMPLUG_PTP_TX_PRE(b,s)			dm9051_ptp_tcr_2wr(b,s)
 	// #define DMPLUG_TX_EMIT_TS(b,s)			dm9051_ptp_txreq_hwtstamp(b,s)
-#endif
 
 /* ~(ptp sw ||) final global ptp */
-#if defined(DMPLUG_PTP) /* || defined(_DMPLUG_PTP_SW)*/
+//#if defined(DMPLUG_PTP) /* || defined(_DMPLUG_PTP_SW)*/
+//#endif
 	#undef INIT_RCR
 	#define INIT_RCR(b)           	  b->rctl.rcr_all = (RCR_ALL | RCR_DIS_LONG | RCR_RXEN) //ptp_init_rcr(d)
-#endif
-
-/* pragma
- */
-//#if defined(DMPLUG_LOG) && defined(MAIN_DATA)
-//	#pragma message("dm9051-DBG: LOG")
-//#endif
-
-//#if defined(DMPLUG_LOG)
-//	#undef INFO_LOG
-//	#define INFO_LOG(dev, db) USER_CONFIG(dev, db, "dm9051-DBG: LOG")
-//	#undef INFO_MSG_DBGRXC
-//	#define INFO_MSG_DBGRXC(dev, db) macro_msg_dbgrxc(dev, db)
-//#endif
-
-//#undef dm9051_dump_data1
-//#define dm9051_dump_data1(b, p, n) dump_data(b, p, n)
-
-//#undef LOG_RX_PACKET_DUMP
-//#define LOG_RX_PACKET_DUMP(b, s) dm9051_rx_packet_dump(b, s)
 
 #endif //_DM9051_PTP_IMPL_H_

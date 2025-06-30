@@ -421,56 +421,46 @@ static inline struct sk_buff *dm9051_chg_skb_wd(struct board_info *db, struct sk
     return skb;
 }
 
-#if 1
-/* ----------------------
- * Inline function Block.
- * ----------------------
- */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
-static inline int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
-#else
-static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
-#endif
+static inline void disp_dump_rx_cnt(struct device *dev, struct board_info *db)
 {
-    info->so_timestamping = 0;
+    char buff[32];
 
-#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-    info->tx_types   = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
-    info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
-#endif
-
-#if defined(DMPLUG_PTP_SW)
-    info->so_timestamping |=
-        SOF_TIMESTAMPING_TX_SOFTWARE |
-        SOF_TIMESTAMPING_RX_SOFTWARE |
-        SOF_TIMESTAMPING_SOFTWARE; /* .software ts */
-#endif
-
-#if defined(DMPLUG_PTP)
-    info->so_timestamping |=
-        SOF_TIMESTAMPING_TX_HARDWARE |
-        SOF_TIMESTAMPING_RX_HARDWARE |
-        SOF_TIMESTAMPING_RAW_HARDWARE;
-#endif
-
-#if defined(DMPLUG_PTP)
-    info->tx_types |=
-        BIT(HWTSTAMP_TX_ONESTEP_SYNC);
-#endif
-
-#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
-    do
-    {
-        struct board_info *db  = netdev_priv(net_dev);
-        ptp_board_info_t  *pbi = &db->pbi;
-        info->phc_index        = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
-        // info->phc_index = -1; // Spenser - get phc_index
-    } while (0);
-#endif
-
-    return 0;
+    sprintf(buff, "dm9051-DBGRXC: %d", DMPLUG_LOG_RXC);
+    USER_CONFIG(dev, db, buff);
 }
-#endif
+
+static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //._dm9051_dump_data1
+{
+	int i, j, rowsize = 32;
+	int splen; //index of start row
+	int rlen; //remain/row length
+	char line[120];
+
+	netif_info(db, pktdata, db->ndev, "%s\n", db->bc.head);
+	for (i = 0; i < packet_len; i += rlen) {
+		//rlen = print_line(packet_data+i, min(rowsize, skb->len - i)); ...
+		rlen =  packet_len - i;
+		if (rlen >= rowsize) rlen = rowsize;
+
+		splen = 0;
+		splen += sprintf(line + splen, " %3d", i);
+		for (j = 0; j < rlen; j++) {
+			if (!(j % 8)) splen += sprintf(line + splen, " ");
+			if (!(j % 16)) splen += sprintf(line + splen, " ");
+			splen += sprintf(line + splen, " %02x", packet_data[i + j]);
+		}
+		netif_info(db, pktdata, db->ndev, "%s\n", line);
+	}
+}
+
+static inline void dm9051_rx_packet_dump(struct board_info *db, struct sk_buff *skb)
+{
+	if (db->ndev->stats.rx_packets < DMPLUG_LOG_RXC) { //test
+		sprintf(db->bc.head, "rx_packet %ld, len %d", db->ndev->stats.rx_packets, skb->len);
+		dump_data(db, skb->data, skb->len);
+		//dm9051_dump_data1(db, skb->data, skb->len);
+	}
+}
 
 //#if defined(_DMPLUG_LOG) || 1
 /* Consider: Put into dm9051.c */
@@ -501,8 +491,8 @@ int  dm9051_mode_tx(struct board_info *db, struct sk_buff *skb); /* fake(default
 int  dm9051_single_tx(struct board_info *db, struct sk_buff *skb);
 
 #if 0
-unsigned int SHOW_BMSR(struct board_info *db);
-void dm9051_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
+.static inline unsigned int SHOW_BMSR(struct board_info *db);
+.static inline void dm9051_log_regs(char *head, struct board_info *db, unsigned int reg1, unsigned int reg2);
 // int dm9051_all_reinit(struct board_info *db);
 int dm9051_all_start(struct board_info *db);
 int dm9051_read_mem_rxb(struct board_info *db, unsigned int reg, void *buff, size_t len);
@@ -522,7 +512,7 @@ void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 //#include "dm9051_main_data.h"
 
 /* raw (fake) */
-/* #include "template_0.h"= (NOT coerced to supperted, almost can give up...)
+/* #include "template_0.h"= (For All C source code)(NOT coerced to supperted, almost can give up...)
  */
 #define BUS_SETUP1(f, b, r)        //plug  BUS_SETUP(b) 0, or bus_setup(b)
 #define BUS_OPS1(f, b, bf, l)
@@ -569,7 +559,7 @@ void dm9051_ptp_rx_hwtstamp(struct board_info *db, struct sk_buff *skb);
 void dm9051_ptp_rx_packet_monitor(struct board_info *db, struct sk_buff *skb);
 int  dm9051_ptp_tx_packet_monitor(struct board_info *db, struct sk_buff *skb);
 int  dm9051_ptp_single_tx(struct board_info *db, struct sk_buff *skb);
-netdev_features_t dm9051_ptp_fix_features(struct net_device *ndev, netdev_features_t features);
+netdev_features_t dm9051_ptp_constrain_features(struct net_device *ndev, netdev_features_t features);
 
 int is_ptp_announce_packet(u8 msgtype);
 int is_ptp_sync_packet(u8 msgtype);

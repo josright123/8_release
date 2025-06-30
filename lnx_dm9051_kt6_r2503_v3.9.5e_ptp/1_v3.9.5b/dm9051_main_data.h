@@ -14,6 +14,7 @@
         #pragma message("INT: TWO_STEP")
     #endif
 #endif
+
 #if !defined(DMPLUG_INT) && defined(MAIN_DATA)
     #pragma message("dm9051: POL")
 #endif
@@ -28,16 +29,13 @@
         #pragma message("WD: NO SKB_PROT")
     #endif
 #endif
+
 #if !defined(DMPLUG_WD) && defined(MAIN_DATA)
     #pragma message("dm9051: BD")
 #endif
 
 #if defined(DMPLUG_MI_FIX) && defined(MAIN_DATA)
     #pragma message("dm9051: MI_FIX")
-#endif
-
-#if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
-    #pragma message("dm9051: PTP (S/W TWO STEP)")
 #endif
 
 #if (defined(__x86_64__) || defined(__aarch64__)) && defined(MAIN_DATA)
@@ -59,7 +57,7 @@
 #if defined(MAIN_DATA)
     #define LINUX_STRING "Linux: " UTS_RELEASE
     #pragma message(LINUX_STRING)
-#endif // MAIN_DATA
+#endif // _MAIN_DATA
 
 enum
 {
@@ -97,7 +95,8 @@ const struct plat_cnf_info plat_misc_mode = {
     .checksuming = DEFAULT_CHECKSUM_OFF,
     .align       = {.mode = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 };
-#endif // MAIN_DATA
+const struct plat_cnf_info *plat_cnf = &plat_misc_mode; //'&plat_align_mode'; /* Driver configuration */
+#endif // _MAIN_DATA
 
 /* Param structures
  */
@@ -132,10 +131,19 @@ const struct param_config param_conf = {
 };
 
 const struct param_config *param = &param_conf;
-#endif // MAIN_DATA
+
+static inline void SHOW_PLAT_CONF(struct board_info *db)
+{
+    netif_crit(db, hw, db->ndev, "plat_cnf->test_device: %s", plat_cnf->test_device);
+    netif_crit(db, hw, db->ndev, "plat_cnf->align.mode: %s", plat_cnf->align.mode);
+    netif_crit(db, hw, db->ndev, "plat_cnf->align.txsize: %d", plat_cnf->align.tx_blk);
+    netif_crit(db, hw, db->ndev, "plat_cnf->align.rxsize: %d", plat_cnf->align.rx_blk);
+    netif_crit(db, hw, db->ndev, "plat_cnf->checksuming: %d", plat_cnf->checksuming);
+}
+#endif // _MAIN_DATA
 
 #if 0
-    #ifdef MAIN_DATA
+    #ifdef _MAIN_DATA
 	const struct plat_cnf_info plat_burst_mode = {
 		.test_device = "rpi4 bcm2711",
 		//.skb_wb_mode = SKB_WB_ON,
@@ -149,7 +157,7 @@ const struct param_config *param = &param_conf;
 		.checksuming = DEFAULT_CHECKSUM_OFF,
 		.align       = {.mode = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 	};
-    #endif // MAIN_DATA
+    #endif // _MAIN_DATA
 
 	// #define NOT_REQUEST_SUPPORTTED	0x0
 	// #define VOID_REQUEST_FUNCTION		-9
@@ -229,11 +237,6 @@ const struct param_config *param = &param_conf;
     #define INFO_MI_FIX(dev, db) USER_CONFIG(dev, db, "dm9051: MI_FIX")
 #endif
 
-#if defined(DMPLUG_PTP_SW)
-    #undef INFO_PTP_SW_2S
-    #define INFO_PTP_SW_2S(dev, db) USER_CONFIG(dev, db, "dm9051: PTP (S/W TWO STEP)")
-#endif
-
 /* MCO, re-direct, Verification */
 #define MCO //(MainCoerce)
 
@@ -262,7 +265,7 @@ const struct param_config *param = &param_conf;
 int dm9051_int_clkout(struct board_info *db); // in "dm9051.c"
 #endif
 
-#if defined(MCO) && defined(INT_TWO_STEP) /* && defined(MAIN_DATA)*/
+#if defined(MCO) && defined(INT_TWO_STEP)
     #undef dm9051_int2_supp
     #undef dm9051_int2_irq
     #define dm9051_int2_supp()    REQUEST_SUPPORTTED
@@ -276,7 +279,7 @@ irqreturn_t dm9051_rx_int2_delay(int voidirq, void *pw); // of "dm9051_int2.c"
 int DM9051_INT2_REQUEST(struct board_info *db, irq_handler_t handler);
 #endif
 
-#if defined(MCO) && !defined(DMPLUG_INT) && defined(MAIN_DATA)
+#if defined(MCO) && !defined(DMPLUG_INT) /* && defined(_MAIN_DATA) */
     #undef dm9051_poll_supp
     #undef dm9051_poll_sch
     #define dm9051_poll_supp() REQUEST_SUPPORTTED
@@ -314,15 +317,6 @@ int  DM9051_POLL_SCHED(struct board_info *db);
     #define MI_MUTEX_UNLOCK(b) mutex_unlock(&b->spi_lockm)
 #endif
 
-/* ptp sw */
-#if defined(DMPLUG_PTP_SW)
-    /* re-direct ptp sw */
-    #undef PTP_VER_SOFTWARE
-    #define PTP_VER_SOFTWARE(b) ptp_ver_software(b) /* impl in dm9051_log.c */
-    #undef DMPLUG_PTP_TX_TIMESTAMPING_SW
-    #define DMPLUG_PTP_TX_TIMESTAMPING_SW(s) dm9051_ptp_tx_swtstamp(s)
-#endif
-
 /* ptp and ptp sw */
 #if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
     #undef PTP_ETHTOOL_INFO
@@ -334,18 +328,54 @@ int  DM9051_POLL_SCHED(struct board_info *db);
 /* ethtool_ops
  * netdev_ops
  */
-#if defined(DMPLUG_PTP_SW) && defined(MAIN_DATA)
-void ptp_ver_software(struct board_info *db)
+#if (defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)) && defined(MAIN_DATA)
+/* ----------------------
+ * Inline function Block.
+ * ----------------------
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+static inline int dm9051_ts_info(struct net_device *net_dev, struct kernel_ethtool_ts_info *info)
+#else
+static inline int dm9051_ts_info(struct net_device *net_dev, struct ethtool_ts_info *info)
+#endif
 {
-    dev_info(&db->spidev->dev, "DMPLUG PTP Software Version\n");
-}
+    info->so_timestamping = 0;
 
-void dm9051_ptp_tx_swtstamp(struct sk_buff *skb) // SKBTX_SW_TSTAMP (on 'dm9051_start_xmit')
-{
-    if (skb_shinfo(skb)->tx_flags & SKBTX_SW_TSTAMP)
+#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+    info->tx_types   = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
+    info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
+#endif
+
+#if defined(DMPLUG_PTP_SW)
+    info->so_timestamping |=
+        SOF_TIMESTAMPING_TX_SOFTWARE |
+        SOF_TIMESTAMPING_RX_SOFTWARE |
+        SOF_TIMESTAMPING_SOFTWARE; /* .software ts */
+#endif
+
+#if defined(DMPLUG_PTP)
+    info->so_timestamping |=
+        SOF_TIMESTAMPING_TX_HARDWARE |
+        SOF_TIMESTAMPING_RX_HARDWARE |
+        SOF_TIMESTAMPING_RAW_HARDWARE;
+#endif
+
+#if defined(DMPLUG_PTP)
+    info->tx_types |=
+        BIT(HWTSTAMP_TX_ONESTEP_SYNC);
+#endif
+
+#if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+    do
     {
-        skb_tx_timestamp(skb); // Add SW_TSTAMP
-    }
+        struct board_info *db  = netdev_priv(net_dev);
+        ptp_board_info_t  *pbi = &db->pbi;
+        info->phc_index        = pbi->ptp_clock ? ptp_clock_index(pbi->ptp_clock) : -1;
+        // info->phc_index = -1; // Spenser - get phc_index
+    } while (0);
+#endif
+
+    return 0;
 }
 #endif
 
@@ -542,45 +572,4 @@ int dm9051_eth_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
         return phy_mii_ioctl(ndev->phydev, rq, cmd); //'rq' is ifr
     }
 }
-#endif // (defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)) && defined(MAIN_DATA)
-
-static inline void disp_dump_rx_cnt(struct device *dev, struct board_info *db)
-{
-    char buff[32];
-
-    sprintf(buff, "dm9051-DBGRXC: %d", DMPLUG_LOG_RXC);
-    USER_CONFIG(dev, db, buff);
-}
-
-static inline void dump_data(struct board_info *db, u8 *packet_data, int packet_len) //._dm9051_dump_data1
-{
-	int i, j, rowsize = 32;
-	int splen; //index of start row
-	int rlen; //remain/row length
-	char line[120];
-
-	netif_info(db, pktdata, db->ndev, "%s\n", db->bc.head);
-	for (i = 0; i < packet_len; i += rlen) {
-		//rlen = print_line(packet_data+i, min(rowsize, skb->len - i)); ...
-		rlen =  packet_len - i;
-		if (rlen >= rowsize) rlen = rowsize;
-
-		splen = 0;
-		splen += sprintf(line + splen, " %3d", i);
-		for (j = 0; j < rlen; j++) {
-			if (!(j % 8)) splen += sprintf(line + splen, " ");
-			if (!(j % 16)) splen += sprintf(line + splen, " ");
-			splen += sprintf(line + splen, " %02x", packet_data[i + j]);
-		}
-		netif_info(db, pktdata, db->ndev, "%s\n", line);
-	}
-}
-
-static inline void dm9051_rx_packet_dump(struct board_info *db, struct sk_buff *skb)
-{
-	if (db->ndev->stats.rx_packets < DMPLUG_LOG_RXC) { //test
-		sprintf(db->bc.head, "rx_packet %ld, len %d", db->ndev->stats.rx_packets, skb->len);
-		dump_data(db, skb->data, skb->len);
-		//dm9051_dump_data1(db, skb->data, skb->len);
-	}
-}
+#endif // (defined(_DMPLUG_PTP) || defined(_DMPLUG_PTP_SW)) && defined(_MAIN_DATA)

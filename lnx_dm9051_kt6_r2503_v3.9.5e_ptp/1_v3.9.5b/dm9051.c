@@ -22,9 +22,8 @@
 #include <linux/of.h>
 #include <linux/version.h>
 
-#include "dm9051.h"
-
 #define MAIN_DATA
+#include "dm9051.h"
 #include "dm9051_template.h"
 
 #define DM9051_INTR_BACKUP    //
@@ -1509,7 +1508,7 @@ int dm9051_single_tx(struct board_info *db, struct sk_buff *skb)
     #if defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
     if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP)
         netif_err(db, drv, db->ndev, "%s: non-hw-ptp mode, but sending a hw ptp tstamp frame\n", __func__);
-    #endif // defined(DMPLUG_PTP) || defined(DMPLUG_PTP_SW)
+    #endif // defined(_DMPLUG_PTP) || defined(_DMPLUG_PTP_SW)
 
     LEN_TX(db, skb);
     PAD_TX(db, skb);
