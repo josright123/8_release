@@ -1998,7 +1998,7 @@ static const struct net_device_ops dm9051_netdev_ops = {
     .ndo_validate_addr   = eth_validate_addr,
     .ndo_set_mac_address = dm9051_set_mac_address,
     .ndo_fix_features    = dm9051_fix_features,
-    .ndo_set_features    = dm9051_set_features,
+    .ndo_set_features    = dm9051_set_features, //netdev_ops set feature
     .ndo_get_stats       = dm9051_get_stats,
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5, 10, 11)
     PTP_NETDEV_IOCTL(.ndo_do_ioctl) /* 5 ptpc */ //_15888_
@@ -2034,18 +2034,10 @@ static void dm9051_operation_clear(struct board_info *db)
     BMSR_OPERATION_CLEAR(db); // earlier
 }
 
-static void dm9051_net_checksum_init(struct net_device *ndev)
+static void dm9051_checksum_config(struct board_info *db, struct net_device *ndev)
 {
     if (plat_cnf->checksuming)
         ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
-}
-
-static void dm9051_net_checksum_update(struct board_info *db, struct net_device *ndev)
-{
-    PTP_SETUP(db);                /* 2.0 ptpc, function name as PTP_UPDATION(db) is better! pbi.ptp_enable = 0 or ...*/
-    PTP_CHECKSUM_LIMIT(db, ndev); /* 2.0 ptpc */
-
-    ndev->hw_features |= ndev->features;
 }
 
 static int dm9051_mdio_register(struct board_info *db)
@@ -2138,8 +2130,13 @@ static int dm9051_probe(struct spi_device *spi)
 
     dm9051_operation_clear(db); // earlier
 
-    dm9051_net_checksum_init(ndev);       // Init default features
-    dm9051_net_checksum_update(db, ndev); // Fine tune updated features
+	// Init update default features
+	dm9051_checksum_config(db, ndev);
+
+    // Fine tune updated features
+    PTP_SETUP(db);                /* 2.0 ptpc */
+    PTP_CHECKSUM_LIMIT(db, ndev); /* 2.0 ptpc */
+    ndev->hw_features |= ndev->features;
 
     ndev->netdev_ops  = &dm9051_netdev_ops;
     ndev->ethtool_ops = &dm9051_ethtool_ops;
