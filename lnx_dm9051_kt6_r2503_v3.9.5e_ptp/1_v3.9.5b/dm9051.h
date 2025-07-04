@@ -41,6 +41,8 @@
 #define DM9051_PIDH            0x2B
 #define DM9051_SMCR            0x2F
 #define DM9051_ATCR            0x30
+#define DM9051_CSCR            0x31           /* check sum control register */
+#define DM9051_RCSSR           0x32           /* receive check sum status register */
 #define DM9051_SPIBCR          0x38
 #define DM9051_INTCR           0x39
 #define DM9051_TXFSSR          0x3B
@@ -122,6 +124,19 @@
 // 0x30
 #define ATCR_AUTO_TX           BIT(7)
 #define ATCR_TX_MODE2          BIT(4)
+// 0x31
+#define TCSCR_UDPCS_GEN        BIT(2)
+#define TCSCR_TCPCS_GEN        BIT(1)
+#define TCSCR_IPCS_GEN         BIT(0)
+// 0x32
+#define RCSSR_UDPS             BIT(7)
+#define RCSSR_TCPS             BIT(6)
+#define RCSSR_IPS              BIT(5)
+#define RCSSR_UDPP             BIT(4)
+#define RCSSR_TCPP             BIT(3)
+#define RCSSR_IPP              BIT(2)
+#define RCSSR_RCS_EN           BIT(1)          // Receive Checksum Checking Enable
+#define RCSSR_DCSE             BIT(0)          // Discard Checksum Error Packet
 // 0x39
 #define INTCR_POL_LOW          (1 << 0)
 #define INTCR_POL_HIGH         (0 << 0)

@@ -1202,7 +1202,16 @@ int dm9051_subconcl_and_rerxctrl(struct board_info *db)
     return dm9051_set_fcr(db);
 }
 
-#define DM9051_RX_BREAK(exp, yhndlr, nhndlr)                                                                           \
+#define DM9051_RX_BREAK(exp, yhndlr)                                                                                   \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        if ((exp))                                                                                                     \
+        {                                                                                                              \
+            yhndlr;                                                                                                    \
+        }                                                                                                              \
+    } while (0)
+
+#define DM9051_RX_TWIN_BREAK(exp, yhndlr, nhndlr)                                                                      \
     do                                                                                                                 \
     {                                                                                                                  \
         if ((exp))                                                                                                     \
@@ -1219,6 +1228,19 @@ int trap_clr(struct board_info *db)
 {
     db->bc.evaluate_rxb_counter = 0;
     return 0;
+}
+
+int rx_pointers_equ(struct board_info *db)
+{
+	unsigned int v1, v2;
+	unsigned int r1, r2;
+
+	dm9051_get_reg(db, 0x24, &v1);
+	dm9051_get_reg(db, 0x25, &v2);
+
+	dm9051_get_reg(db, DM9051_MRRL, &r1);
+	dm9051_get_reg(db, DM9051_MRRH, &r2);
+	return (v1 == r1) && (v2 == r2);
 }
 
 // check rxbs
@@ -1275,7 +1297,7 @@ int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t featu
     monitor_rxb0(db, rxbyte);
     if (features & NETIF_F_RXCSUM)
     {
-        // DM9051_RX_BREAK(((SCAN_BH(rxbyte) & 0x03) == DM9051_PKT_RDY), return 0,
+        // DM9051_RX_TWIN_BREAK(((SCAN_BH(rxbyte) & 0x03) == DM9051_PKT_RDY), return 0,
         //	netif_warn(db, rx_status, db->ndev, "YES checksum check\n");
         //	return -EINVAL);
 
@@ -1290,14 +1312,15 @@ int rx_break(struct board_info *db, unsigned int rxbyte, netdev_features_t featu
             else
             {
 
-                netif_warn(db, rx_status, db->ndev, "Oops checksum check\n");
+				if (SCAN_BH(rxbyte))
+					netif_warn(db, rx_status, db->ndev, "Oops checksum check\n");
 
                 return -EINVAL;
             }
         } while (0);
     }
     else
-        DM9051_RX_BREAK((SCAN_BH(rxbyte) == DM9051_PKT_RDY), return 0, return -EINVAL);
+        DM9051_RX_TWIN_BREAK((SCAN_BH(rxbyte) == DM9051_PKT_RDY), return 0, return -EINVAL);
 }
 
 int rx_head_break(struct board_info *db)
@@ -1386,6 +1409,15 @@ int dm9051_loop_rx(struct board_info *db)
                 dm9051_all_restart(db);
                 return -EINVAL;
             }
+
+			/* rxb is zero
+			 */
+			if (!rx_pointers_equ(db)) {
+                DMPLUG_LOG_RXPTR("rxb zero && wrong rx pointers", db);
+				netif_warn(db, hw, db->ndev, "rxb zero && wrong ex pointers\n");
+                //dm9051_all_restart(db);
+                //return -EINVAL;
+			}
             break;
         }
         trap_clr(db);
@@ -1942,8 +1974,8 @@ static int dm9051_set_features(struct net_device *ndev, netdev_features_t featur
     }
 
     MI_MUTEX_LOCK(db);
-    dm9051_set_reg(db, 0x31, db->csum_gen_val);
-    dm9051_set_reg(db, 0x32, db->csum_rcv_val);
+    dm9051_set_reg(db, DM9051_CSCR, db->csum_gen_val);
+    dm9051_set_reg(db, DM9051_RCSSR, db->csum_rcv_val);
     MI_MUTEX_UNLOCK(db);
 
     return 0;
