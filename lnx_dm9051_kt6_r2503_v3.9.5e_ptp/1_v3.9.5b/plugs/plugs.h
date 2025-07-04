@@ -82,6 +82,9 @@ void bus_ops(struct board_info *db, u8 *buff, unsigned int crlen);
 //#undef TX_PAD
 //#define TX_PAD(b,s) s //~wd~bd, cause by tc-conti 
 
+#undef TX_CONTI_CONSTRAIN
+#define TX_CONTI_CONSTRAIN(f) f = dm9051_tx_conti_constrain(f)
+
 #undef SET_RCR
 #define SET_RCR(b) TX_MOTE2_CONTI_RCR(b)
 int TX_MOTE2_CONTI_RCR(struct board_info *db);

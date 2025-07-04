@@ -135,9 +135,9 @@ netdev_features_t dm9051_ptp_constrain_features(struct net_device *ndev,
 	struct board_info *db = netdev_priv(ndev);
 
 	if (db->pbi.ptp_enable) {
-		if (features & (NETIF_F_HW_CSUM | NETIF_F_RXCSUM))
-			netif_crit(db, hw, db->ndev, "dm9051a: while ptp_enable, checksum offload is NOT allow!!\n");
-		features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM);
+		if (features & NETIF_F_HW_CSUM)
+			netif_crit(db, hw, db->ndev, "dm9051a: while ptp_enable, tx checksum offload is NOT allow!!\n");
+		return features & ~NETIF_F_HW_CSUM;
 	}
 
 	return features;
@@ -430,7 +430,7 @@ void ptp_operation_extern(struct board_info *db)
 void ptp_checksum_limit(struct board_info *db, struct net_device *ndev)
 {
 	if (db->pbi.ptp_enable) //(PTP_NEW(db))
-		ndev->features &= ~(NETIF_F_HW_CSUM | NETIF_F_RXCSUM); //"Run PTP must COERCE to disable checksum_offload"
+		ndev->features &= ~NETIF_F_HW_CSUM; //"Run PTP must COERCE to disable checksum_offload"
 }
 
 //void ptp_init_rcr(struct board_info *db)

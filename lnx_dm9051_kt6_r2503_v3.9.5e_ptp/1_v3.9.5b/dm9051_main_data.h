@@ -72,7 +72,8 @@ enum
 struct plat_cnf_info
 {
     char *test_device;
-    int checksuming;
+    int tx_checksuming;
+    int rx_checksuming;
     struct align_config
     {
         char *mode;
@@ -86,13 +87,15 @@ struct plat_cnf_info
 const struct plat_cnf_info plat_align_mode = {
     .test_device = "rpi5 bcm2712",
     //.skb_wb_mode = SKB_WB_ON, //SKB_WB_OFF, //SKB_WB_ON,
-    .checksuming = DEFAULT_CHECKSUM_OFF,
+    .tx_checksuming = DEFAULT_CHECKSUM_OFF,
+    .rx_checksuming = DEFAULT_CHECKSUM_OFF,
     .align       = {.mode = "Alignment", .burst_mode = BURST_MODE_ALIGN, .tx_blk = 32, .rx_blk = 64},
 };
 const struct plat_cnf_info plat_misc_mode = {
     .test_device = "Dev Cortex-A",
     //.skb_wb_mode = SKB_WB_OFF,
-    .checksuming = DEFAULT_CHECKSUM_OFF,
+    .tx_checksuming = DEFAULT_CHECKSUM_OFF,
+    .rx_checksuming = DEFAULT_CHECKSUM_OFF,
     .align       = {.mode = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 };
 const struct plat_cnf_info *plat_cnf = &plat_misc_mode; //'&plat_align_mode'; /* Driver configuration */
@@ -138,7 +141,8 @@ static inline void SHOW_PLAT_CONF(struct board_info *db)
     netif_crit(db, hw, db->ndev, "plat_cnf->align.mode: %s", plat_cnf->align.mode);
     netif_crit(db, hw, db->ndev, "plat_cnf->align.txsize: %d", plat_cnf->align.tx_blk);
     netif_crit(db, hw, db->ndev, "plat_cnf->align.rxsize: %d", plat_cnf->align.rx_blk);
-    netif_crit(db, hw, db->ndev, "plat_cnf->checksuming: %d", plat_cnf->checksuming);
+    netif_crit(db, hw, db->ndev, "plat_cnf->tx_checksuming: %d", plat_cnf->tx_checksuming);
+    netif_crit(db, hw, db->ndev, "plat_cnf->rx_checksuming: %d", plat_cnf->rx_checksuming);
 }
 #endif // _MAIN_DATA
 
@@ -147,14 +151,16 @@ static inline void SHOW_PLAT_CONF(struct board_info *db)
 	const struct plat_cnf_info plat_burst_mode = {
 		.test_device = "rpi4 bcm2711",
 		//.skb_wb_mode = SKB_WB_ON,
-		.checksuming = DEFAULT_CHECKSUM_OFF,
+		.tx_checksuming = DEFAULT_CHECKSUM_OFF,
+		.rx_checksuming = DEFAULT_CHECKSUM_OFF,
 		.align       = {.mode = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 	};
 
 	const struct plat_cnf_info plat_misc_mode = {
 		.test_device = "processor Cortex-A",
 		//.skb_wb_mode = SKB_WB_OFF,
-		.checksuming = DEFAULT_CHECKSUM_OFF,
+		.tx_checksuming = DEFAULT_CHECKSUM_OFF,
+		.rx_checksuming = DEFAULT_CHECKSUM_OFF,
 		.align       = {.mode = "Burst", .burst_mode = BURST_MODE_FULL, .tx_blk = 0, .rx_blk = 0},
 	};
     #endif // _MAIN_DATA

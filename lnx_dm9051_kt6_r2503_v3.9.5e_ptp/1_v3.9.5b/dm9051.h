@@ -546,6 +546,7 @@ void dm9051_thread_irq(void *pw); //(int voidirq, void *pw)
 #define monitor_rxb0(b, rb)        //extern
 #define BMSR_OPERATION_CLEAR(b)    //extern
 /* raw (fake) */
+#define TX_CONTI_CONSTRAIN(f)
 #define SET_RCR(b)                 dm9051_set_rcr(b)         //plug.conti
 #define INTERN_PHY_READ(d, n, av)  dm9051_phyread(d, n, av)  //self
 #define MDIO_PHY_READ(d, n, av)    dm9051_phyread(d, n, av)  //extern.bmcr_wr

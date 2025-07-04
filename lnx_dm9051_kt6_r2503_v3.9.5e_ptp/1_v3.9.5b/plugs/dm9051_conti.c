@@ -83,6 +83,13 @@ static unsigned int tx_free_poll_timeout(struct board_info *db, unsigned int tx_
 	return 0;
 }
 
+netdev_features_t dm9051_tx_conti_constrain(netdev_features_t features)
+{
+	if (features & NETIF_F_HW_CSUM)
+		netif_crit(db, hw, db->ndev, "dm9051a: while tx conti mode, tx checksum offload is NOT allow!!\n");
+	return features & ~NETIF_F_HW_CSUM;
+}
+
 int TX_MOTE2_CONTI_RCR(struct board_info *db)
 {
 	/* or, be OK to put in dm9051_set_rcr()

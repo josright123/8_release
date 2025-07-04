@@ -894,9 +894,10 @@ static char dm9051_stats_strings[][ETH_GSTRING_LEN] = {
 	"dump ALIGN Mode", //[9]
 	"dump TX BLK", //[9]
 	"dump RX BLK", //[9]
-	"dump Checksuming", //[9]
-	"dump BMSR register", //[14]
+	"dump tx_Checksuming", //[13]
+	"dump rx_Checksuming", //[14]
 	"dump BMSR register", //[15]
+	"dump BMSR register", //[16]
 };
 
 static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
@@ -919,9 +920,10 @@ static void dm9051_get_strings(struct net_device *ndev, u32 sget, u8 *data)
         sprintf(dm9051_stats_strings[10], "align.mode: %s =", plat_cnf->align.mode); // "Burst"
         sprintf(dm9051_stats_strings[11], "align.txsize");
         sprintf(dm9051_stats_strings[12], "align.rxsize");
-        sprintf(dm9051_stats_strings[13], "checksuming");
-        sprintf(dm9051_stats_strings[14], "BMSR %04x =", db->st_bmsr1);
-        sprintf(dm9051_stats_strings[15], "BMSR %04x =", db->st_bmsr2);
+        sprintf(dm9051_stats_strings[13], "tx_checksuming");
+        sprintf(dm9051_stats_strings[14], "rx_checksuming");
+        sprintf(dm9051_stats_strings[15], "BMSR %04x =", db->st_bmsr1);
+        sprintf(dm9051_stats_strings[16], "BMSR %04x =", db->st_bmsr2);
         memcpy(data, dm9051_stats_strings, sizeof(dm9051_stats_strings));
     }
 }
@@ -953,9 +955,10 @@ static void dm9051_get_ethtool_stats(struct net_device *ndev, struct ethtool_sta
     data[db->ucfg_count + 10] = 1;
     data[db->ucfg_count + 11] = plat_cnf->align.tx_blk;
     data[db->ucfg_count + 12] = plat_cnf->align.rx_blk;
-    data[db->ucfg_count + 13] = plat_cnf->checksuming;
-    data[db->ucfg_count + 14] = db->st_bmsr1; //_SHOW_BMSR(db);
-    data[db->ucfg_count + 15] = db->st_bmsr2; //_SHOW_BMSR(db);
+    data[db->ucfg_count + 13] = plat_cnf->tx_checksuming;
+    data[db->ucfg_count + 14] = plat_cnf->rx_checksuming;
+    data[db->ucfg_count + 15] = db->st_bmsr1; //_SHOW_BMSR(db);
+    data[db->ucfg_count + 16] = db->st_bmsr2; //_SHOW_BMSR(db);
 
     SHOW_XMIT_ANALYSIS(db);
 
@@ -1941,6 +1944,7 @@ static int dm9051_set_mac_address(struct net_device *ndev, void *p)
 
 static netdev_features_t dm9051_fix_features(struct net_device *ndev, netdev_features_t features)
 {
+	TX_CONTI_CONSTRAIN(features);
     return PTP_CONSTRAIN(ndev, features);
 }
 
@@ -2036,8 +2040,10 @@ static void dm9051_operation_clear(struct board_info *db)
 
 static void dm9051_checksum_config(struct board_info *db, struct net_device *ndev)
 {
-    if (plat_cnf->checksuming)
-        ndev->features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM;
+    if (plat_cnf->tx_checksuming)
+        ndev->features |= NETIF_F_HW_CSUM;
+    if (plat_cnf->rx_checksuming)
+        ndev->features |= NETIF_F_RXCSUM;
 }
 
 static int dm9051_mdio_register(struct board_info *db)
