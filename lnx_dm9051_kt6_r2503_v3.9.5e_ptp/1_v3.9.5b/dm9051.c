@@ -1233,6 +1233,7 @@ int trap_clr(struct board_info *db)
     return 0;
 }
 
+#if 0
 int rx_pointers_equ(struct board_info *db)
 {
 	unsigned int v1, v2;
@@ -1245,6 +1246,7 @@ int rx_pointers_equ(struct board_info *db)
 	dm9051_get_reg(db, DM9051_MRRH, &r2);
 	return (v1 == r1) && (v2 == r2);
 }
+#endif
 
 // check rxbs
 // return: 0 : Still not trap
@@ -1413,7 +1415,11 @@ int dm9051_loop_rx(struct board_info *db)
                 return -EINVAL;
             }
 
+			#if 0
 			/* rxb is zero
+			 */
+			/* could not treat
+			 * !rx_pointers_equ(db) as wrong for all restart.
 			 */
 			if (!rx_pointers_equ(db)) {
                 DMPLUG_LOG_RXPTR("rxb zero && wrong rx pointers", db);
@@ -1421,6 +1427,7 @@ int dm9051_loop_rx(struct board_info *db)
                 //dm9051_all_restart(db);
                 //return -EINVAL;
 			}
+			#endif
             break;
         }
         trap_clr(db);
