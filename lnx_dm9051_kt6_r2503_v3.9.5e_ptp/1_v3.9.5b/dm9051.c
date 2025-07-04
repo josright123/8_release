@@ -1952,30 +1952,18 @@ static int dm9051_set_features(struct net_device *ndev, netdev_features_t featur
 {
     struct board_info *db = to_dm9051_board(ndev);
 
-    if ((features & NETIF_F_RXCSUM) && (features & NETIF_F_HW_CSUM))
-    {
-        netif_info(db, drv, db->ndev, "_ndo set and write [Enabling TX/RX checksum]\n");
-        db->csum_gen_val = 0x7; // dm9051_set_reg(db, 0x31, 0x7);
-        db->csum_rcv_val = 0x3; // dm9051_set_reg(db, 0x32, 0x3);
-    }
-    else if (features & NETIF_F_RXCSUM)
-    {
-        netif_info(db, drv, db->ndev, "_ndo set and write [Enabling RX checksum only]\n");
-        db->csum_gen_val = 0x0; // dm9051_set_reg(db, 0x31, 0x0);
-        db->csum_rcv_val = 0x3; // dm9051_set_reg(db, 0x32, 0x3);
-    }
-    else if (features & NETIF_F_HW_CSUM)
-    {
-        netif_info(db, drv, db->ndev, "_ndo set and write [Enabling TX checksum only]\n");
-        db->csum_gen_val = 0x7; // dm9051_set_reg(db, 0x31, 0x7);
-        db->csum_rcv_val = 0x0; // dm9051_set_reg(db, 0x32, 0x0);
-    }
-    else
-    {
-        // netif_info(db, drv, db->ndev, "_ndo set and write [Disabling TX/RX checksum]\n");
-        db->csum_gen_val = 0x0; // dm9051_set_reg(db, 0x31, 0x0);
-        db->csum_rcv_val = 0x0; // dm9051_set_reg(db, 0x32, 0x0);
-    }
+	db->csum_gen_val = 0x0;
+	db->csum_rcv_val = 0x0;
+
+	if (features & NETIF_F_HW_CSUM) {
+        netif_info(db, drv, db->ndev, "_ndo set and write [Enabling TX checksum]\n");
+		db->csum_gen_val = TCSCR_UDPCS_GEN | TCSCR_TCPCS_GEN | TCSCR_IPCS_GEN;
+	}
+
+	if (features & NETIF_F_RXCSUM) {
+        netif_info(db, drv, db->ndev, "_ndo set and write [Enabling RX checksum]\n");
+        db->csum_rcv_val = RCSSR_RCS_EN | RCSSR_DCSE;
+	}
 
     MI_MUTEX_LOCK(db);
     dm9051_set_reg(db, DM9051_CSCR, db->csum_gen_val);
