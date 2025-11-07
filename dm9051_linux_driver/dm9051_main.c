@@ -22,6 +22,10 @@
 
 #include "dm9051.h"
 
+static bool dm9051_use_interrupt;
+module_param_named(use_interrupt, dm9051_use_interrupt, bool, 0644);
+MODULE_PARM_DESC(use_interrupt, "Enable interrupt-driven mode for dm9051 (default: polling)");
+
 int dm9051_get_reg(struct board_info *db, unsigned int reg, unsigned int *prb)
 {
 	int ret;
@@ -1438,16 +1442,20 @@ static void dm9051_irq_delayp(struct work_struct *work)
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct board_info *db = container_of(dwork, struct board_info, irq_workp);
 
-//	if (db->poll_count == 0)
-//		rx_pointers_monitor(db);
-//	db->poll_count++;
+	if (db->irq_requested)
+		return;
+
+	//	if (db->poll_count == 0)
+	//		rx_pointers_monitor(db);
+	//	db->poll_count++;
 
 	dm9051_rx_threaded_irq(0, db); // 0 is no-used.
 	/* consider not be 0, to alower and not occupy almost all CPU resource.
 	 * This is by CPU scheduling-poll, so is software driven!
 	 */
 	//[dbg].poll.extream.fast.[dbg]
-	schedule_delayed_work(&db->irq_workp, DM_TIMER_EXPIRE2);
+	if (!db->irq_requested)
+		schedule_delayed_work(&db->irq_workp, DM_TIMER_EXPIRE2);
 	//schedule_delayed_work(&db->irq_workp, DM_TIMER_EXPIRE1);
 }
 #endif
@@ -1468,20 +1476,28 @@ static int dm9051_open(struct net_device *ndev)
 	memset(db->rctl.hash_table, 0, sizeof(db->rctl.hash_table));
 
 	ndev->irq = spi->irq; /* by dts */
-#if 0
-	ret = request_threaded_irq(spi->irq, NULL, dm9051_rx_threaded_irq,
-				   dm9051_irq_flag(db) | IRQF_ONESHOT,
-				   ndev->name, db);
-	if (ret < 0) {
-		netdev_err(ndev, "failed to get irq\n");
-		return ret;
+	{
+		bool want_irq = dm9051_use_interrupt;
+
+		db->use_irq_mode = want_irq;
+		db->irq_requested = false;
+
+		if (db->use_irq_mode) {
+			ret = request_threaded_irq(spi->irq, NULL, dm9051_rx_threaded_irq,
+					   dm9051_irq_flag(db) | IRQF_ONESHOT,
+					   ndev->name, db);
+			if (ret) {
+				netdev_warn(ndev, "irq request failed (%d), fallback to polling mode\n", ret);
+				db->use_irq_mode = false;
+			} else {
+				db->irq_requested = true;
+				netdev_info(ndev, "interrupt mode enabled (use_interrupt=1)\n");
+			}
+		}
+
+		if (!db->irq_requested && want_irq)
+			netdev_info(ndev, "using polling mode (interrupt unavailable)\n");
 	}
-	//printk("dm9051_irq_flag(db) %d\n", dm9051_irq_flag(db));
-	//printk("request_irq, irqno %d, IRQF_TRIGGER_LOW %d, IRQF_TRIGGER_HIGH %d\n", spi->irq, IRQF_TRIGGER_LOW, IRQF_TRIGGER_HIGH);
-#elif 1
-	//~printk("dm9051_irq_flag(db) %d\n", dm9051_irq_flag(db));
-	//~printk("request_irq, irqno %d, IRQF_TRIGGER_LOW %d, IRQF_TRIGGER_HIGH %d\n", spi->irq, IRQF_TRIGGER_LOW, IRQF_TRIGGER_HIGH);
-#endif
 
 	phy_support_sym_pause(db->phydev);
 	phy_start(db->phydev);
@@ -1497,16 +1513,20 @@ static int dm9051_open(struct net_device *ndev)
 	ret = dm9051_all_start(db);
 	if (ret) {
 		phy_stop(db->phydev);
-		free_irq(spi->irq, db);
+		if (db->irq_requested) {
+			free_irq(spi->irq, db);
+			db->irq_requested = false;
+		}
 		return ret;
 	}
 
 	netif_wake_queue(ndev);
 
-#if 1
-	//if (threadedcfg.interrupt_supp == THREADED_POLL)
-	schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
-#endif
+	if (!db->irq_requested) {
+		schedule_delayed_work(&db->irq_workp, HZ * 1); // 1 second when start
+		if (db->use_irq_mode)
+			netdev_info(ndev, "falling back to polling mode\n");
+	}
 	return 0;
 }
 
@@ -1524,20 +1544,17 @@ static int dm9051_stop(struct net_device *ndev)
 	if (ret)
 		return ret;
 
-#if 1
 	cancel_delayed_work_sync(&db->irq_workp);
-#endif
 
 	flush_work(&db->tx_work);
 	flush_work(&db->rxctrl_work);
 
 	phy_stop(db->phydev);
 
-#if 0
-	free_irq(db->spidev->irq, db);
-#else
-	printk("free_irq, irqno %d\n", db->spidev->irq);
-#endif
+	if (db->irq_requested) {
+		free_irq(db->spidev->irq, db);
+		db->irq_requested = false;
+	}
 
 	netif_stop_queue(ndev);
 
@@ -1778,6 +1795,8 @@ static int dm9051_probe(struct spi_device *spi)
 	db->msg_enable = 0;
 	db->spidev = spi;
 	db->ndev = ndev;
+	db->use_irq_mode = dm9051_use_interrupt;
+	db->irq_requested = false;
 
 	ndev->netdev_ops = &dm9051_netdev_ops;
 	ndev->ethtool_ops = &dm9051_ethtool_ops;

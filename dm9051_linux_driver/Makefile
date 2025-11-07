@@ -46,6 +46,15 @@ install: default
 	sudo depmod -a
 	sudo modprobe dm9051
 
+interrupt:
+	sudo mkdir -p $(INSTALLDIR)
+	sudo cp dm9051.ko.xz $(INSTALLDIR)/
+	sudo depmod -a
+	sudo modprobe dm9051 use_interrupt=1
+
+	#手動插入 .ko
+	# insmod dm9051.ko use_interrupt=1
+
 remove:
 #	sudo ifconfig eth1 down
 	sudo rmmod dm9051

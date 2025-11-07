@@ -290,6 +290,8 @@ struct board_info {
 	struct work_struct              ptp_tx_work;
 	unsigned int                    debug_print;
 	int                             extts_work_count;
+	bool                            use_irq_mode;
+	bool                            irq_requested;
 	unsigned int                    extts_mask_gpio; // bitmask for GPIO pins used for PTP_EXTTS
 	// store requested extt flags for each GPIO pin,
 	// the work thread will use it to decide rising/falling edge
